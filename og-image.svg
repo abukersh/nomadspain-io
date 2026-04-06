@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="ogbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8422A"/>
+      <stop offset="100%" stop-color="#F5A623"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#ogbg)"/>
+  <!-- Logo mark -->
+  <path d="M340 440C340 440 320 300 370 220C405 160 450 180 440 240C430 300 390 290 400 240C410 190 460 150 500 180C540 210 510 440 510 440" stroke="#fff" stroke-width="55" stroke-linecap="round" fill="none" transform="translate(-100,0)"/>
+  <!-- Text -->
+  <text x="520" y="290" font-family="sans-serif" font-size="72" font-weight="800" fill="#fff">NomadSpain.io</text>
+  <text x="520" y="360" font-family="sans-serif" font-size="28" font-weight="400" fill="rgba(255,255,255,0.85)">Spain Digital Nomad Visa Specialists</text>
+  <text x="520" y="420" font-family="sans-serif" font-size="22" font-weight="400" fill="rgba(255,255,255,0.6)">98% Approval Rate · 500+ Visas · 4-6 Week Processing</text>
+</svg>
