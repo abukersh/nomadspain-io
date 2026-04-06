@@ -83,6 +83,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:76px;display:flex;ali
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.75);}}
 .hero h1{font-size:clamp(40px,5vw,72px);font-weight:800;letter-spacing:-2.5px;line-height:0.95;margin-bottom:24px;}
 .hero h1 em{font-style:normal;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero h1 em .emoji{-webkit-text-fill-color:initial;background:none;-webkit-background-clip:initial;background-clip:initial;}
 .hero-sub{font-size:17px;color:var(--text2);line-height:1.75;max-width:480px;margin-bottom:36px;}
 .hero-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:48px;}
 .hero-trust{display:flex;align-items:center;flex-wrap:wrap;}
@@ -993,7 +994,7 @@ body.portal-active nav{display:none!important;}
   <div class="hero-inner">
     <div>
       <div class="hero-badge"><span class="badge-dot"></span><span id="heroBadgeText">🏆 #1 Digital Nomad Visa Service</span></div>
-      <h1 id="heroH1">Live &amp; Work in<br><em>Espa&#x00F1;a &#x1F1EA;&#x1F1F8;</em></h1>
+      <h1 id="heroH1">Live &amp; Work in<br><em>Espa&#x00F1;a <span class="emoji">&#x1F1EA;&#x1F1F8;</span></em></h1>
       <p class="hero-sub" id="heroSub"><span class="online-dot"></span><strong style="color:var(--green)">Spain Digital Nomad Visa Specialists</strong> — We handle everything so you can focus on your next adventure.</p>
       <div class="hero-actions">
         <a onclick="showPage('portal')" class="btn btn-primary btn-lg">Start your application →</a>
