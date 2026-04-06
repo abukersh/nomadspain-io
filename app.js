@@ -370,7 +370,8 @@ function renderKbGrid() {
     var card=document.createElement('div'); card.className='blog-card';
     card.onclick=function(){openKbReader(a.id);};
     var imgHtml=a.image?'<img src="'+escHtml(a.image)+'" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'">':'<span style="font-size:36px;">'+(a.emoji||EMOJIS[a.category]||'\uD83D\uDCF0')+'</span>';
-    card.innerHTML='<div class="blog-card-img" style="background:'+(CARD_BG[a.category]||CARD_BG.visa)+';display:flex;align-items:center;justify-content:center;">'+imgHtml+'</div>'
+    card.innerHTML='<div class="blog-card-img" style="background:'+(CARD_BG[a.category]||CARD_BG.visa)+';display:flex;align-items:center;justify-content:center;">'+imgHtml
+      +'<div class="blog-card-overlay"><button class="blog-card-overlay-btn">\uD83D\uDCD6 Read Article</button></div></div>'
       +'<div class="blog-card-body"><span class="kb-tag">'+(TAG_LABELS[a.category]||a.category)+'</span><h3>'+escHtml(a.title)+'</h3><p>'+escHtml(a.summary)+'</p>'
       +'<div class="kb-meta">\uD83D\uDCD6 '+(a.readTime||'5 min')+' \u00B7 '+fmtDate(a.date)+'</div><div class="read-link">Read article \u2192</div></div>';
     grid.appendChild(card);
