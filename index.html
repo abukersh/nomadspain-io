@@ -73,6 +73,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:76px;display:flex;ali
 
 /* HERO */
 .hero{min-height:100vh;padding:0 5%;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;padding-top:72px;background:linear-gradient(135deg,#fff5f2 0%,#fffaf5 35%,#f5f3ff 65%,#fff0f5 100%);}
+/* Infinite grid */
+.hero-grid{position:absolute;inset:0;z-index:0;pointer-events:none;}
+.hero-grid svg{width:100%;height:100%;}
+.hero-grid-base{opacity:0.12;}
+.hero-grid-reveal{opacity:0.4;}
+@keyframes gridDrift{0%{transform:translate(0,0);}100%{transform:translate(40px,40px);}}
 .blob{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;}
 .b1{width:640px;height:640px;background:rgba(232,66,42,0.13);top:-160px;right:-120px;}
 .b2{width:480px;height:480px;background:rgba(245,166,35,0.11);bottom:-120px;left:-100px;}
@@ -990,6 +996,13 @@ body.portal-active nav{display:none!important;}
 
 <!-- HERO -->
 <section class="hero" id="hero-section">
+  <!-- Infinite grid background -->
+  <div class="hero-grid hero-grid-base" id="heroGridBase">
+    <svg><defs><pattern id="gridBase" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(0,0,0,0.6)" stroke-width="0.5"/></pattern></defs><rect width="200%" height="200%" fill="url(#gridBase)" style="animation:gridDrift 4s linear infinite;"/></svg>
+  </div>
+  <div class="hero-grid hero-grid-reveal" id="heroGridReveal" style="-webkit-mask-image:none;mask-image:none;">
+    <svg><defs><pattern id="gridReveal" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(232,66,42,0.5)" stroke-width="0.8"/></pattern></defs><rect width="200%" height="200%" fill="url(#gridReveal)" style="animation:gridDrift 4s linear infinite;"/></svg>
+  </div>
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
   <div class="hero-inner">
     <div>

@@ -2936,6 +2936,23 @@ function exportEmails(){
 }
 
 /* INIT */
+/* ══ HERO GRID MOUSE REVEAL ══ */
+(function(){
+  var hero=document.getElementById('hero-section');
+  var reveal=document.getElementById('heroGridReveal');
+  if(!hero||!reveal)return;
+  hero.addEventListener('mousemove',function(e){
+    var r=hero.getBoundingClientRect();
+    var x=e.clientX-r.left;
+    var y=e.clientY-r.top;
+    reveal.style.maskImage='radial-gradient(320px circle at '+x+'px '+y+'px, black, transparent)';
+    reveal.style.webkitMaskImage='radial-gradient(320px circle at '+x+'px '+y+'px, black, transparent)';
+  });
+  hero.addEventListener('mouseleave',function(){
+    reveal.style.maskImage='none';reveal.style.webkitMaskImage='none';
+  });
+})();
+
 window.addEventListener('DOMContentLoaded', function() {
   seedDefaultArticles();
   initCarousel();
