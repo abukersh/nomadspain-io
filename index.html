@@ -861,6 +861,83 @@ body.portal-active nav{display:none!important;}
 .cm-profile-tab:hover{border-color:#9b2c2c;color:#9b2c2c;}
 .cm-profile-tab.active{background:#9b2c2c;color:#fff;border-color:#9b2c2c;}
 
+/* ══ ANALYTICS FUNNEL ══ */
+.an-funnel{display:flex;gap:2px;margin-bottom:24px;}
+.an-funnel-step{flex:1;text-align:center;padding:14px 8px;position:relative;background:var(--bg2);transition:background 0.3s;}
+.an-funnel-step:first-child{border-radius:10px 0 0 10px;}
+.an-funnel-step:last-child{border-radius:0 10px 10px 0;}
+.an-funnel-step .an-f-count{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;color:var(--text);}
+.an-funnel-step .an-f-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-top:2px;}
+.an-funnel-step .an-f-pct{font-size:11px;color:#9b2c2c;font-weight:700;margin-top:4px;}
+.an-funnel-step .an-f-bar{position:absolute;bottom:0;left:0;right:0;height:4px;border-radius:0 0 0 0;}
+.an-funnel-step:first-child .an-f-bar{border-radius:0 0 0 10px;}
+.an-funnel-step:last-child .an-f-bar{border-radius:0 0 10px 0;}
+.an-f-bar{background:linear-gradient(90deg,#9b2c2c,#b45309);}
+.an-avg-stage{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}
+.an-avg-card{background:var(--bg2);border-radius:10px;padding:12px;text-align:center;}
+.an-avg-card .an-avg-val{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;color:#9b2c2c;}
+.an-avg-card .an-avg-lbl{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px;}
+
+/* ══ URGENCY FLAGS ══ */
+.urgency-flag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;}
+.urgency-flag.urgent{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+.urgency-flag.warning{background:#fffbeb;color:#d97706;border:1px solid #fde68a;}
+.urgency-flag.ok{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+.urgency-dot{width:6px;height:6px;border-radius:50%;display:inline-block;animation:urgencyPulse 1.5s infinite;}
+.urgency-flag.urgent .urgency-dot{background:#dc2626;}
+.urgency-flag.warning .urgency-dot{background:#d97706;}
+.urgency-flag.ok .urgency-dot{background:#16a34a;}
+@keyframes urgencyPulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+/* ══ DOC PROGRESS BAR ══ */
+.doc-prog-wrap{display:flex;align-items:center;gap:8px;min-width:120px;}
+.doc-prog-bar{flex:1;height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;}
+.doc-prog-fill{height:100%;border-radius:3px;transition:width 0.4s;}
+.doc-prog-fill.low{background:#dc2626;}
+.doc-prog-fill.mid{background:#d97706;}
+.doc-prog-fill.high{background:#16a34a;}
+.doc-prog-text{font-size:11px;font-weight:700;color:var(--text2);white-space:nowrap;}
+
+/* ══ CAPACITY BAR ══ */
+.cap-wrap{display:flex;align-items:center;gap:10px;}
+.cap-bar{flex:1;height:8px;background:var(--bg2);border-radius:4px;overflow:hidden;min-width:80px;}
+.cap-fill{height:100%;border-radius:4px;transition:width 0.4s;}
+.cap-fill.low{background:#16a34a;}
+.cap-fill.mid{background:#d97706;}
+.cap-fill.high{background:#dc2626;}
+.cap-text{font-size:12px;font-weight:700;white-space:nowrap;}
+.cap-card{background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
+.cap-card-name{font-size:14px;font-weight:700;margin-bottom:4px;}
+.cap-card-meta{font-size:11px;color:var(--text3);margin-bottom:8px;}
+
+/* ══ EXPIRY TRACKER ══ */
+.expiry-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;}
+.expiry-badge.expired{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+.expiry-badge.expiring{background:#fffbeb;color:#d97706;border:1px solid #fde68a;}
+.expiry-badge.valid{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+.expiry-alert-card{background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;}
+.expiry-alert-card.warn{background:#fffbeb;border-color:#fde68a;}
+.expiry-alert-icon{font-size:20px;flex-shrink:0;}
+.expiry-alert-body{flex:1;}
+.expiry-alert-title{font-size:13px;font-weight:700;}
+.expiry-alert-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* ══ REFERRAL/ROI CHART ══ */
+.roi-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.roi-bar-label{font-size:12px;font-weight:600;width:100px;text-align:right;color:var(--text2);}
+.roi-bar-track{flex:1;height:22px;background:var(--bg2);border-radius:6px;overflow:hidden;position:relative;}
+.roi-bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:800;color:#fff;min-width:30px;}
+.roi-bar-fill.src-organic{background:linear-gradient(90deg,#9b2c2c,#b45309);}
+.roi-bar-fill.src-referral{background:linear-gradient(90deg,#0369a1,#0ea5e9);}
+.roi-bar-fill.src-social{background:linear-gradient(90deg,#7c3aed,#a78bfa);}
+.roi-bar-fill.src-ads{background:linear-gradient(90deg,#065f46,#16a34a);}
+.roi-bar-fill.src-partner{background:linear-gradient(90deg,#92400e,#d97706);}
+.roi-bar-val{font-size:12px;font-weight:700;color:var(--text);margin-left:8px;white-space:nowrap;}
+
+/* ══ CM ASSIGN DROPDOWN ══ */
+.cm-assign-select{padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--white);cursor:pointer;outline:none;}
+.cm-assign-select:focus{border-color:#9b2c2c;}
+
 /* ADMIN MODAL */
 .admin-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
 .admin-modal-overlay.open{display:flex;}
@@ -1800,6 +1877,13 @@ body.portal-active nav{display:none!important;}
             <div id="cu-activity-feed"></div>
           </div>
         </div>
+        <!-- My Progress Stats -->
+        <div class="p-card">
+          <div class="p-card-title" style="margin-bottom:14px;">My Progress</div>
+          <div id="cu-my-progress"></div>
+        </div>
+        <!-- Document Expiry Alerts -->
+        <div id="cu-expiry-alerts-wrap"></div>
         <div class="p-card">
           <div class="p-card-hd"><div class="p-card-title">Quick Actions</div></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -2070,12 +2154,17 @@ body.portal-active nav{display:none!important;}
       </div>
       <!-- Analytics -->
       <div id="ad-analytics" class="p-panel active">
-        <div class="p-page-hd"><div class="p-page-title">Analytics</div><div class="p-page-sub">Global revenue and application performance metrics.</div></div>
+        <div class="p-page-hd"><div class="p-page-title">Analytics</div><div class="p-page-sub">Global revenue, funnel performance, and operational metrics.</div></div>
         <div class="p-stat-grid">
           <div class="p-stat-card"><div class="p-stat-icon">💰</div><div class="p-stat-label">Total Revenue</div><div class="p-stat-value" id="ad-stat-rev">€0</div><div class="p-stat-change up" id="ad-stat-rev-ch">This month</div></div>
           <div class="p-stat-card"><div class="p-stat-icon">📋</div><div class="p-stat-label">Applications</div><div class="p-stat-value" id="ad-stat-apps">0</div><div class="p-stat-change" id="ad-stat-apps-ch">Total</div></div>
-          <div class="p-stat-card"><div class="p-stat-icon">✅</div><div class="p-stat-label">Approved</div><div class="p-stat-value" id="ad-stat-approved">0</div><div class="p-stat-change up">Approval rate</div></div>
+          <div class="p-stat-card"><div class="p-stat-icon">✅</div><div class="p-stat-label">Approved</div><div class="p-stat-value" id="ad-stat-approved">0</div><div class="p-stat-change up" id="ad-stat-rate"></div></div>
           <div class="p-stat-card"><div class="p-stat-icon">👥</div><div class="p-stat-label">Customers</div><div class="p-stat-value" id="ad-stat-users">0</div><div class="p-stat-change">Registered</div></div>
+        </div>
+        <!-- Conversion Funnel -->
+        <div class="p-card">
+          <div class="p-card-title" style="margin-bottom:14px;">Conversion Funnel</div>
+          <div id="ad-funnel"></div>
         </div>
         <div class="p-grid2">
           <div class="p-card">
@@ -2083,8 +2172,18 @@ body.portal-active nav{display:none!important;}
             <div id="ad-stage-breakdown"></div>
           </div>
           <div class="p-card">
+            <div class="p-card-title" style="margin-bottom:14px;">Avg. Time in Stage</div>
+            <div id="ad-time-in-stage"></div>
+          </div>
+        </div>
+        <div class="p-grid2">
+          <div class="p-card">
             <div class="p-card-title" style="margin-bottom:14px;">Revenue by Package</div>
             <div id="ad-rev-breakdown"></div>
+          </div>
+          <div class="p-card">
+            <div class="p-card-title" style="margin-bottom:14px;">Revenue by Source</div>
+            <div id="ad-rev-source"></div>
           </div>
         </div>
         <div class="p-card">
@@ -2109,12 +2208,15 @@ body.portal-active nav{display:none!important;}
       <div id="ad-cms" class="p-panel">
         <div class="p-page-hd">
           <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div><div class="p-page-title">Case Managers</div><div class="p-page-sub">Create and manage your case manager team.</div></div>
+            <div><div class="p-page-title">Case Managers</div><div class="p-page-sub">Team capacity, load balancing, and case assignment.</div></div>
             <button class="p-btn p-btn-primary" onclick="pOpenModal('addCM')">+ Add Case Manager</button>
           </div>
         </div>
+        <!-- Capacity Overview Cards -->
+        <div id="ad-cms-capacity"></div>
         <div class="p-card">
-          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Name</th><th>Email</th><th>Assigned Clients</th><th>Active Cases</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="ad-cms-tbody"></tbody></table></div>
+          <div class="p-card-title" style="margin-bottom:14px;">All Case Managers</div>
+          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Name</th><th>Email</th><th>Assigned</th><th>Active</th><th>Capacity</th><th>Joined</th><th>Actions</th></tr></thead><tbody id="ad-cms-tbody"></tbody></table></div>
         </div>
       </div>
       <!-- Applications -->
@@ -2138,7 +2240,7 @@ body.portal-active nav{display:none!important;}
               <option value="5">Approved</option>
             </select>
           </div>
-          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Case Manager</th><th>Last Update</th><th>Actions</th></tr></thead><tbody id="ad-apps-tbody"></tbody></table></div>
+          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Docs</th><th>Case Manager</th><th>Urgency</th><th>Last Update</th><th>Actions</th></tr></thead><tbody id="ad-apps-tbody"></tbody></table></div>
         </div>
       </div>
       <!-- Product Engine -->
@@ -2161,15 +2263,26 @@ body.portal-active nav{display:none!important;}
       </div>
       <!-- Financials -->
       <div id="ad-financials" class="p-panel">
-        <div class="p-page-hd"><div class="p-page-title">Financials</div><div class="p-page-sub">Revenue logs, pending payments, and refund processing.</div></div>
-        <div class="p-stat-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="p-page-hd"><div class="p-page-title">Financials</div><div class="p-page-sub">Revenue logs, attribution, and refund processing.</div></div>
+        <div class="p-stat-grid" style="grid-template-columns:repeat(4,1fr);">
           <div class="p-stat-card"><div class="p-stat-icon">💰</div><div class="p-stat-label">Total Revenue</div><div class="p-stat-value" id="ad-fin-rev">€0</div></div>
           <div class="p-stat-card"><div class="p-stat-icon">⏳</div><div class="p-stat-label">Pending</div><div class="p-stat-value" id="ad-fin-pend">€0</div></div>
           <div class="p-stat-card"><div class="p-stat-icon">↩</div><div class="p-stat-label">Refunded</div><div class="p-stat-value" id="ad-fin-refund">€0</div></div>
+          <div class="p-stat-card"><div class="p-stat-icon">🎟️</div><div class="p-stat-label">Coupon Savings</div><div class="p-stat-value" id="ad-fin-coupons">€0</div></div>
+        </div>
+        <div class="p-grid2">
+          <div class="p-card">
+            <div class="p-card-title" style="margin-bottom:14px;">Revenue by Referral Source</div>
+            <div id="ad-fin-roi"></div>
+          </div>
+          <div class="p-card">
+            <div class="p-card-title" style="margin-bottom:14px;">Coupon Performance</div>
+            <div id="ad-fin-coupon-breakdown"></div>
+          </div>
         </div>
         <div class="p-card">
           <div class="p-card-hd"><div class="p-card-title">All Transactions</div><button class="p-btn p-btn-ghost p-btn-sm" onclick="pExportFinancials()">Export CSV</button></div>
-          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Date</th><th>Client</th><th>Description</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody id="ad-fin-tbody"></tbody></table></div>
+          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Date</th><th>Client</th><th>Description</th><th>Source</th><th>Coupon</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody id="ad-fin-tbody"></tbody></table></div>
         </div>
       </div>
       <!-- Support Hub -->
@@ -2191,9 +2304,19 @@ body.portal-active nav{display:none!important;}
       <div id="ad-compliance" class="p-panel">
         <div class="p-page-hd">
           <div style="display:flex;align-items:center;justify-content:space-between;">
-            <div><div class="p-page-title">Compliance</div><div class="p-page-sub">Manage required document templates per visa type.</div></div>
+            <div><div class="p-page-title">Compliance</div><div class="p-page-sub">Document expiry tracking, templates, and compliance alerts.</div></div>
             <button class="p-btn p-btn-primary" onclick="pOpenModal('addDocTemplate')">+ Add Template</button>
           </div>
+        </div>
+        <!-- Expiry Dashboard -->
+        <div class="p-card" style="margin-bottom:20px;">
+          <div class="p-card-title" style="margin-bottom:14px;">Document Expiry Tracker</div>
+          <div class="p-stat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px;">
+            <div class="p-stat-card" style="border-color:#fecaca;"><div class="p-stat-icon">🚨</div><div class="p-stat-label">Expired</div><div class="p-stat-value" id="ad-comp-expired" style="color:#dc2626;">0</div></div>
+            <div class="p-stat-card" style="border-color:#fde68a;"><div class="p-stat-icon">⏰</div><div class="p-stat-label">Expiring Soon</div><div class="p-stat-value" id="ad-comp-expiring" style="color:#d97706;">0</div></div>
+            <div class="p-stat-card" style="border-color:#bbf7d0;"><div class="p-stat-icon">✅</div><div class="p-stat-label">Valid</div><div class="p-stat-value" id="ad-comp-valid" style="color:#16a34a;">0</div></div>
+          </div>
+          <div id="ad-expiry-alerts"></div>
         </div>
         <div id="ad-compliance-list"></div>
       </div>
@@ -2231,22 +2354,38 @@ body.portal-active nav{display:none!important;}
       </div>
       <!-- Worklist -->
       <div id="cm-worklist" class="p-panel active">
-        <div class="p-page-hd"><div class="p-page-title">Worklist</div><div class="p-page-sub">Your assigned clients and priority tasks.</div></div>
-        <div class="p-stat-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="p-page-hd"><div class="p-page-title">Worklist</div><div class="p-page-sub">Your assigned clients, capacity, and priority tasks.</div></div>
+        <div class="p-stat-grid" style="grid-template-columns:repeat(4,1fr);">
           <div class="p-stat-card"><div class="p-stat-icon">👥</div><div class="p-stat-label">Assigned Clients</div><div class="p-stat-value" id="cm-stat-clients">0</div></div>
           <div class="p-stat-card"><div class="p-stat-icon">⚠️</div><div class="p-stat-label">Overdue Tasks</div><div class="p-stat-value" id="cm-stat-overdue">0</div></div>
           <div class="p-stat-card"><div class="p-stat-icon">💬</div><div class="p-stat-label">Unread Messages</div><div class="p-stat-value" id="cm-stat-msgs">0</div></div>
+          <div class="p-stat-card"><div class="p-stat-icon">📊</div><div class="p-stat-label">Capacity</div><div class="p-stat-value" id="cm-stat-cap">0%</div></div>
+        </div>
+        <!-- My Capacity Bar -->
+        <div class="p-card" style="margin-bottom:20px;">
+          <div class="p-card-title" style="margin-bottom:10px;">My Load</div>
+          <div id="cm-my-capacity"></div>
+        </div>
+        <!-- Peer Availability -->
+        <div class="p-card" style="margin-bottom:20px;">
+          <div class="p-card-title" style="margin-bottom:10px;">Team Availability (for transfers)</div>
+          <div id="cm-peer-capacity"></div>
+        </div>
+        <!-- Expiry Alerts for CM -->
+        <div class="p-card" style="margin-bottom:20px;">
+          <div class="p-card-title" style="margin-bottom:10px;">Document Expiry Alerts</div>
+          <div id="cm-expiry-alerts"></div>
         </div>
         <div class="p-card">
           <div class="p-card-title" style="margin-bottom:14px;">My Clients</div>
-          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Last Update</th><th>Priority</th><th>Actions</th></tr></thead><tbody id="cm-clients-tbody"></tbody></table></div>
+          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Docs</th><th>Last Update</th><th>Urgency</th><th>Actions</th></tr></thead><tbody id="cm-clients-tbody"></tbody></table></div>
         </div>
       </div>
       <!-- CM Applications -->
       <div id="cm-applications" class="p-panel">
         <div class="p-page-hd"><div class="p-page-title">Applications</div><div class="p-page-sub">Manage your assigned visa applications.</div></div>
         <div class="p-card">
-          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Documents</th><th>Last Update</th><th>Actions</th></tr></thead><tbody id="cm-apps-tbody"></tbody></table></div>
+          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Docs</th><th>Urgency</th><th>Last Update</th><th>Actions</th></tr></thead><tbody id="cm-apps-tbody"></tbody></table></div>
         </div>
       </div>
       <!-- CM Manage App (Kanban detail view) -->

@@ -799,24 +799,117 @@ var P_STAGES=['Onboarding','Document Prep','Under Review','Embassy Filing','Pend
 var P_PKG_NAMES={consultation:'360\u00b0 Strategy Session',solo:'The Nomad Solo',family:'Family Package'};
 var P_PKG_PRICES={consultation:50,solo:2500,family:2500};
 
+/* ══ ENUMS & RBAC ══ */
+var APP_STATUS={REGISTERED:'registered',PAID:'paid',APP_STARTED:'app_started',SUBMITTED:'submitted'};
+var REFERRAL_SOURCES=['organic','referral','social','ads','partner'];
+var CM_MAX_CAPACITY=20;
+var DOC_EXPIRY_WARN_DAYS=15;
+var URGENCY_DAYS=5;
+
+/* RBAC helpers */
+function isAdmin(){return pUser&&pUser.role==='admin';}
+function isManager(){return pUser&&pUser.role==='case_manager';}
+function isCustomer(){return pUser&&pUser.role==='customer';}
+
+/* Derive APP_STATUS from app data */
+function getAppStatus(app){
+  if(!app)return null;
+  var pays=pGetPays();var hasPaid=pays.some(function(p){return p.appId===app.id&&p.status==='paid';});
+  if(app.stage>=3)return APP_STATUS.SUBMITTED;
+  if(app.stage>=1)return APP_STATUS.APP_STARTED;
+  if(hasPaid)return APP_STATUS.PAID;
+  return APP_STATUS.REGISTERED;
+}
+
+/* Urgency flag renderer */
+function pUrgencyFlag(lastDate){
+  var now=new Date();var last=new Date(lastDate);
+  var diffDays=Math.floor((now-last)/(1000*60*60*24));
+  if(diffDays>URGENCY_DAYS) return '<span class="urgency-flag urgent"><span class="urgency-dot"></span>'+diffDays+'d idle</span>';
+  if(diffDays>3) return '<span class="urgency-flag warning"><span class="urgency-dot"></span>'+diffDays+'d</span>';
+  return '<span class="urgency-flag ok"><span class="urgency-dot"></span>Active</span>';
+}
+
+/* Doc progress bar renderer */
+function pDocProgressBar(app){
+  var required=app.requiredDocs||['passport','income','criminal','degree','insurance','other'];
+  var total=required.length;
+  var uploaded=0;
+  required.forEach(function(k){var s=(app.docs||{})[k];if(s==='uploaded'||s==='verified')uploaded++;});
+  var pct=total?Math.round(uploaded/total*100):0;
+  var cls=pct<40?'low':pct<75?'mid':'high';
+  return '<div class="doc-prog-wrap"><div class="doc-prog-bar"><div class="doc-prog-fill '+cls+'" style="width:'+pct+'%;"></div></div><span class="doc-prog-text">'+uploaded+'/'+total+'</span></div>';
+}
+
+/* Capacity bar renderer */
+function pCapacityBar(active,max){
+  var pct=max?Math.round(active/max*100):0;
+  var cls=pct<50?'low':pct<80?'mid':'high';
+  return '<div class="cap-wrap"><div class="cap-bar"><div class="cap-fill '+cls+'" style="width:'+Math.min(pct,100)+'%;"></div></div><span class="cap-text">'+active+'/'+max+'</span></div>';
+}
+
+/* Document expiry checker */
+function pGetDocExpiries(apps,users){
+  var results=[];
+  apps.forEach(function(app){
+    var u=users.find(function(x){return x.id===app.userId;})||{first:'Unknown',last:''};
+    var docExpiries=app.docExpiries||{};
+    Object.keys(docExpiries).forEach(function(docKey){
+      var expDate=new Date(docExpiries[docKey]);
+      var now=new Date();
+      var daysLeft=Math.floor((expDate-now)/(1000*60*60*24));
+      results.push({appId:app.id,userId:app.userId,userName:u.first+' '+u.last,docKey:docKey,expiryDate:docExpiries[docKey],daysLeft:daysLeft,status:daysLeft<0?'expired':daysLeft<=DOC_EXPIRY_WARN_DAYS?'expiring':'valid'});
+    });
+  });
+  return results.sort(function(a,b){return a.daysLeft-b.daysLeft;});
+}
+
+/* Avg time-in-stage calculator */
+function pCalcAvgTimeInStage(apps){
+  var stageTimes={};
+  P_STAGES.forEach(function(s,i){stageTimes[i]=[];});
+  apps.forEach(function(app){
+    if(!app.stageDates)return;
+    var keys=Object.keys(app.stageDates).map(Number).sort(function(a,b){return a-b;});
+    for(var k=0;k<keys.length-1;k++){
+      var from=new Date(app.stageDates[keys[k]]);
+      var to=new Date(app.stageDates[keys[k+1]]);
+      var days=Math.max(0,Math.round((to-from)/(1000*60*60*24)));
+      stageTimes[keys[k]].push(days);
+    }
+  });
+  var avgs={};
+  Object.keys(stageTimes).forEach(function(k){
+    var arr=stageTimes[k];
+    avgs[k]=arr.length?Math.round(arr.reduce(function(s,v){return s+v;},0)/arr.length):0;
+  });
+  return avgs;
+}
+
 /* ── SEED ── */
 function pSeedData(){
   if(localStorage.getItem('ns_pu_seeded')) return;
   var users=[
     {id:'u_admin',email:'ahmed@ahmed.com',pass:'ahmed@ahmed.com',role:'admin',first:'Ahmed',last:'Al-Admin',phone:'',created:'2024-01-01T00:00:00Z'},
-    {id:'u_cm1',email:'sarah@nomadspain.io',pass:'cm1234',role:'case_manager',first:'Sarah',last:'Gonzalez',phone:'+34 600 111 222',created:'2024-01-05T00:00:00Z'},
+    {id:'u_cm1',email:'sarah@nomadspain.io',pass:'cm1234',role:'case_manager',first:'Sarah',last:'Gonzalez',phone:'+34 600 111 222',created:'2024-01-05T00:00:00Z',maxCapacity:20},
     {id:'u_c1',email:'john@example.com',pass:'demo1234',role:'customer',first:'John',last:'Carter',phone:'+44 7700 900001',cmId:'u_cm1',created:'2024-02-01T00:00:00Z'},
     {id:'u_c2',email:'maria@example.com',pass:'demo1234',role:'customer',first:'Maria',last:'Santos',phone:'+1 555 000 1234',cmId:'u_cm1',created:'2024-02-15T00:00:00Z'}
   ];
   var apps=[
     {id:'app1',userId:'u_c1',pkg:'solo',stage:2,status:'in_progress',cmId:'u_cm1',created:'2024-02-02T00:00:00Z',updated:'2024-03-10T00:00:00Z',
      docs:{passport:'uploaded',income:'uploaded',criminal:'pending',degree:'missing',insurance:'missing',other:'missing'},
+     requiredDocs:['passport','income','criminal','degree','insurance','other'],
+     docExpiries:{passport:'2026-08-15T00:00:00Z',criminal:'2026-04-20T00:00:00Z'},
      notes:'Priority client. Passport apostille pending.',
-     stageDates:{0:'2024-02-02T10:30:00Z',1:'2024-02-20T14:15:00Z'}},
+     stageDates:{0:'2024-02-02T10:30:00Z',1:'2024-02-20T14:15:00Z',2:'2024-03-10T00:00:00Z'},
+     statusHistory:[{status:'registered',at:'2024-02-02T10:30:00Z'},{status:'paid',at:'2024-02-05T00:00:00Z'},{status:'app_started',at:'2024-02-20T14:15:00Z'}]},
     {id:'app2',userId:'u_c2',pkg:'consultation',stage:0,status:'new',cmId:'u_cm1',created:'2024-02-16T00:00:00Z',updated:'2024-02-16T00:00:00Z',
      docs:{passport:'missing',income:'missing',criminal:'missing',degree:'missing',insurance:'missing',other:'missing'},
+     requiredDocs:['passport','income','criminal','degree','insurance','other'],
+     docExpiries:{},
      notes:'Initial consultation booked.',
-     stageDates:{0:'2024-02-16T09:00:00Z'}}
+     stageDates:{0:'2024-02-16T09:00:00Z'},
+     statusHistory:[{status:'registered',at:'2024-02-16T09:00:00Z'}]}
   ];
   var msgs=[
     {id:'m1',fromId:'u_c1',toId:'u_cm1',appId:'app1',body:'Hi Sarah, I\'ve uploaded my passport. Can you confirm you received it?',ts:'2024-03-10T09:00:00Z',read:true},
@@ -824,8 +917,8 @@ function pSeedData(){
     {id:'m3',fromId:'u_c1',toId:'u_cm1',appId:'app1',body:'I\'ll get the criminal record apostilled this week.',ts:'2024-03-10T10:00:00Z',read:false}
   ];
   var pays=[
-    {id:'pay1',userId:'u_c1',appId:'app1',amount:2500,type:'payment',status:'paid',date:'2024-02-05T00:00:00Z',desc:'Nomad Solo — Full payment'},
-    {id:'pay2',userId:'u_c2',appId:'app2',amount:30,type:'payment',status:'paid',date:'2024-02-16T00:00:00Z',desc:'360\u00b0 Strategy Session'}
+    {id:'pay1',userId:'u_c1',appId:'app1',amount:2500,type:'payment',status:'paid',date:'2024-02-05T00:00:00Z',desc:'Nomad Solo — Full payment',referral_source:'organic',coupon_code:'',coupon_discount:0},
+    {id:'pay2',userId:'u_c2',appId:'app2',amount:30,type:'payment',status:'paid',date:'2024-02-16T00:00:00Z',desc:'360\u00b0 Strategy Session',referral_source:'referral',coupon_code:'WELCOME30',coupon_discount:30}
   ];
   var promos=[
     {id:'pr1',code:'NOMAD5',discount:5,type:'percent',active:true,uses:12,max:100},
@@ -866,8 +959,40 @@ function pMigrateStageDates(){
   });
   if(changed) pSaveApps(apps);
 }
+function pMigrateNewFields(){
+  var apps=pGetApps();var changed=false;
+  apps=apps.map(function(a){
+    if(!a.requiredDocs){a.requiredDocs=['passport','income','criminal','degree','insurance','other'];changed=true;}
+    if(!a.docExpiries){a.docExpiries={};changed=true;}
+    if(!a.statusHistory){
+      a.statusHistory=[{status:APP_STATUS.REGISTERED,at:a.created}];
+      var pays=pGetPays();
+      if(pays.some(function(p){return p.appId===a.id&&p.status==='paid';}))a.statusHistory.push({status:APP_STATUS.PAID,at:a.created});
+      if(a.stage>=1)a.statusHistory.push({status:APP_STATUS.APP_STARTED,at:a.stageDates&&a.stageDates[1]?a.stageDates[1]:a.updated});
+      if(a.stage>=3)a.statusHistory.push({status:APP_STATUS.SUBMITTED,at:a.stageDates&&a.stageDates[3]?a.stageDates[3]:a.updated});
+      changed=true;
+    }
+    return a;
+  });
+  if(changed)pSaveApps(apps);
+  /* Migrate payments */
+  var pays=pGetPays();var pc=false;
+  pays=pays.map(function(p){
+    if(!p.referral_source){p.referral_source='organic';pc=true;}
+    if(p.coupon_code===undefined){p.coupon_code='';p.coupon_discount=0;pc=true;}
+    return p;
+  });
+  if(pc)pSavePays(pays);
+  /* Migrate CM maxCapacity */
+  var users=pGetUsers();var uc=false;
+  users=users.map(function(u){
+    if(u.role==='case_manager'&&!u.maxCapacity){u.maxCapacity=CM_MAX_CAPACITY;uc=true;}
+    return u;
+  });
+  if(uc)pSaveUsers(users);
+}
 function renderPortalBg(){
-  pSeedData();pMigrateStageDates();
+  pSeedData();pMigrateStageDates();pMigrateNewFields();
   try{var s=localStorage.getItem('ns_portal_session');if(s){pUser=JSON.parse(s);pShowDashboard();return;}}catch(e){}
   pShowAuth();
 }
@@ -1041,18 +1166,19 @@ function pRenderCuOverview(){
   var apps=pGetApps().filter(function(a){return a.userId===pUser.id;});
   var pays=pGetPays().filter(function(p){return p.userId===pUser.id&&p.status==='paid';});
   var msgs=pGetMsgs().filter(function(m){return m.toId===pUser.id&&!m.read;});
-  var docs=app?Object.values(app.docs||{}):{};
-  var uploaded=app?Object.values(app.docs||{}).filter(function(v){return v==='uploaded';}).length:0;
-  setText('cu-stat-apps',apps.length);setText('cu-stat-docs',uploaded+'/6');
-  setText('cu-stat-msgs',msgs.length);setText('cu-stat-balance',app&&pays.length===0?'€'+P_PKG_PRICES[app.pkg||'solo'].toLocaleString():'€0');
+  var uploaded=app?Object.values(app.docs||{}).filter(function(v){return v==='uploaded'||v==='verified';}).length:0;
+  var required=app?(app.requiredDocs||['passport','income','criminal','degree','insurance','other']):[];
+  var totalDocs=required.length||6;
+  setText('cu-stat-apps',apps.length);setText('cu-stat-docs',uploaded+'/'+totalDocs);
+  setText('cu-stat-msgs',msgs.length);setText('cu-stat-balance',app&&pays.length===0?'\u20AC'+P_PKG_PRICES[app.pkg||'solo'].toLocaleString():'\u20AC0');
   /* stepper */
   var stage=app?app.stage:0;
   setHTML('cu-overview-stepper',pBuildStepper(stage,4));
-  setText('cu-overview-stage',app?'Stage '+(stage+1)+'/'+P_STAGES.length+' — '+P_STAGES[stage]:'No active application');
+  setText('cu-overview-stage',app?'Stage '+(stage+1)+'/'+P_STAGES.length+' \u2014 '+P_STAGES[stage]:'No active application');
   /* feed */
   var feed=[
     {dot:'green',text:'<strong>Account created</strong>',time:fmtDate(pUser.created)},
-    app?{dot:'brand',text:'<strong>Application started</strong> — '+P_PKG_NAMES[app.pkg||'solo'],time:fmtDate(app.created)}:null,
+    app?{dot:'brand',text:'<strong>Application started</strong> \u2014 '+P_PKG_NAMES[app.pkg||'solo'],time:fmtDate(app.created)}:null,
     app&&app.stage>=1?{dot:'brand',text:'<strong>Document checklist sent</strong>',time:fmtDate(app.updated)}:null,
     app&&uploaded>0?{dot:'green',text:'<strong>'+uploaded+' document(s) uploaded</strong>',time:'Recently'}:null,
     app&&app.stage>=2?{dot:'grey',text:'<strong>Application under review</strong>',time:'In progress'}:null
@@ -1060,6 +1186,59 @@ function pRenderCuOverview(){
   setHTML('cu-activity-feed',feed.map(function(f){
     return '<div class="p-feed-item"><div class="p-feed-dot '+(f.dot==='brand'?'':f.dot)+(f.dot==='brand'?' ':' ')+'"></div><div><div class="p-feed-text">'+f.text+'</div><div class="p-feed-time">'+f.time+'</div></div></div>';
   }).join('')||'<p style="font-size:13px;color:var(--text3);">No recent activity.</p>');
+
+  /* ═══ My Progress ═══ */
+  var progressHtml='';
+  if(app){
+    var appStatus=getAppStatus(app);
+    var statusLabel={registered:'Registered',paid:'Payment Complete',app_started:'Application In Progress',submitted:'Submitted for Review'};
+    var docPct=totalDocs?Math.round(uploaded/totalDocs*100):0;
+    var daysInStage=0;
+    if(app.stageDates&&app.stageDates[app.stage]){
+      daysInStage=Math.floor((new Date()-new Date(app.stageDates[app.stage]))/(1000*60*60*24));
+    }
+    progressHtml+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">'
+      +'<div style="background:var(--bg2);border-radius:10px;padding:14px;text-align:center;">'
+      +'<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Status</div>'
+      +'<div style="font-size:14px;font-weight:700;color:#9b2c2c;">'+(statusLabel[appStatus]||'Unknown')+'</div></div>'
+      +'<div style="background:var(--bg2);border-radius:10px;padding:14px;text-align:center;">'
+      +'<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Documents</div>'
+      +pDocProgressBar(app)+'</div>'
+      +'<div style="background:var(--bg2);border-radius:10px;padding:14px;text-align:center;">'
+      +'<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Days in Stage</div>'
+      +'<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:22px;font-weight:800;color:var(--text);">'+daysInStage+'</div></div>'
+      +'</div>';
+  } else {
+    progressHtml='<p style="color:var(--text3);font-size:13px;">No active application. Start by choosing a package.</p>';
+  }
+  setHTML('cu-my-progress',progressHtml);
+
+  /* ═══ Document Expiry Alerts (Customer) ═══ */
+  var expiryWrap=document.getElementById('cu-expiry-alerts-wrap');
+  if(expiryWrap&&app){
+    var expiries=pGetDocExpiries([app],[pUser]);
+    var urgent=expiries.filter(function(e){return e.status==='expired'||e.status==='expiring';});
+    if(urgent.length){
+      var alertHtml='<div class="p-card" style="margin-bottom:0;">'
+        +'<div class="p-card-title" style="margin-bottom:10px;">Document Renewal Alerts</div>';
+      urgent.forEach(function(e){
+        var isExpired=e.status==='expired';
+        alertHtml+='<div class="expiry-alert-card'+(isExpired?'':' warn')+'">'
+          +'<div class="expiry-alert-icon">'+(isExpired?'\uD83D\uDEA8':'\u23F0')+'</div>'
+          +'<div class="expiry-alert-body">'
+          +'<div class="expiry-alert-title">'+escHtml(e.docKey.replace(/_/g,' '))+'</div>'
+          +'<div class="expiry-alert-sub">'+(isExpired?'This document expired '+Math.abs(e.daysLeft)+' days ago. Please re-upload.':'Expires in '+e.daysLeft+' days. Please renew before expiry.')+'</div>'
+          +'</div>'
+          +'<span class="expiry-badge '+e.status+'">'+(isExpired?'Expired':'Renew Soon')+'</span>'
+          +'</div>';
+      });
+      alertHtml+='</div>';
+      expiryWrap.innerHTML=alertHtml;
+      expiryWrap.style.marginBottom='20px';
+    } else {
+      expiryWrap.innerHTML='';expiryWrap.style.marginBottom='0';
+    }
+  }
 }
 function pBuildStepper(current,showCount){
   var total=Math.min(showCount||6,P_STAGES.length);
@@ -1857,10 +2036,36 @@ function pRenderAdmin(){pRenderAdAnalytics();}
 function pRenderAdAnalytics(){
   var apps=pGetApps();var pays=pGetPays();var users=pGetUsers();
   var customers=users.filter(function(u){return u.role==='customer';});
-  var rev=pays.filter(function(p){return p.status==='paid';}).reduce(function(s,p){return s+p.amount;},0);
+  var paidPays=pays.filter(function(p){return p.status==='paid';});
+  var rev=paidPays.reduce(function(s,p){return s+p.amount;},0);
   var approved=apps.filter(function(a){return a.stage===5;}).length;
+  var approvalRate=apps.length?Math.round(approved/apps.length*100):0;
   setText('ad-stat-rev','\u20AC'+rev.toLocaleString());
   setText('ad-stat-apps',apps.length);setText('ad-stat-approved',approved);setText('ad-stat-users',customers.length);
+  setText('ad-stat-rate',approvalRate+'% rate');
+
+  /* ═══ Conversion Funnel ═══ */
+  var funnelMap={};Object.values(APP_STATUS).forEach(function(s){funnelMap[s]=0;});
+  apps.forEach(function(app){var st=getAppStatus(app);if(st)funnelMap[st]++;});
+  var funnelOrder=[APP_STATUS.REGISTERED,APP_STATUS.PAID,APP_STATUS.APP_STARTED,APP_STATUS.SUBMITTED];
+  var funnelLabels={registered:'Registered',paid:'Paid',app_started:'App Started',submitted:'Submitted'};
+  var funnelTotal=customers.length||1;
+  var funnelHtml='<div class="an-funnel">';
+  funnelOrder.forEach(function(status,i){
+    var count=0;
+    /* Funnel counts should be cumulative — everyone at or beyond this status */
+    funnelOrder.forEach(function(s,j){if(j>=i)count+=funnelMap[s];});
+    var pct=Math.round(count/funnelTotal*100);
+    funnelHtml+='<div class="an-funnel-step">'
+      +'<div class="an-f-count">'+count+'</div>'
+      +'<div class="an-f-label">'+funnelLabels[status]+'</div>'
+      +'<div class="an-f-pct">'+pct+'%</div>'
+      +'<div class="an-f-bar" style="width:'+pct+'%;"></div>'
+      +'</div>';
+  });
+  funnelHtml+='</div>';
+  setHTML('ad-funnel',funnelHtml);
+
   /* Stage breakdown */
   var stages={};P_STAGES.forEach(function(s,i){stages[s]=apps.filter(function(a){return a.stage===i;}).length;});
   setHTML('ad-stage-breakdown',Object.entries(stages).map(function(e){
@@ -1868,11 +2073,36 @@ function pRenderAdAnalytics(){
     return '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>'+e[0]+'</span><span style="font-weight:700;">'+e[1]+'</span></div>'
       +'<div style="background:var(--bg2);border-radius:4px;height:6px;overflow:hidden;"><div style="background:var(--grad);width:'+pct+'%;height:100%;border-radius:4px;"></div></div></div>';
   }).join(''));
+
+  /* ═══ Avg. Time in Stage ═══ */
+  var avgTimes=pCalcAvgTimeInStage(apps);
+  var timeHtml='<div class="an-avg-stage">';
+  P_STAGES.forEach(function(name,i){
+    if(i>=P_STAGES.length-1)return;
+    timeHtml+='<div class="an-avg-card"><div class="an-avg-val">'+(avgTimes[i]||0)+'d</div><div class="an-avg-lbl">'+name+'</div></div>';
+  });
+  timeHtml+='</div>';
+  setHTML('ad-time-in-stage',timeHtml);
+
   /* Revenue by pkg */
-  var pkgRev={};['consultation','solo','family'].forEach(function(k){pkgRev[k]=pays.filter(function(p){return p.status==='paid';}).filter(function(p){var a=apps.find(function(a){return a.id===p.appId;});return a&&a.pkg===k;}).reduce(function(s,p){return s+p.amount;},0);});
+  var pkgRev={};['consultation','solo','family'].forEach(function(k){pkgRev[k]=paidPays.filter(function(p){var a=apps.find(function(a){return a.id===p.appId;});return a&&a.pkg===k;}).reduce(function(s,p){return s+p.amount;},0);});
   setHTML('ad-rev-breakdown',Object.entries(pkgRev).map(function(e){
     return '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;"><span>'+P_PKG_NAMES[e[0]]+'</span><span style="font-weight:800;font-family:\'Bricolage Grotesque\',sans-serif;">\u20AC'+e[1].toLocaleString()+'</span></div>';
   }).join(''));
+
+  /* ═══ Revenue by Source ═══ */
+  var srcRev={};REFERRAL_SOURCES.forEach(function(s){srcRev[s]=0;});
+  paidPays.forEach(function(p){var src=p.referral_source||'organic';if(!srcRev[src])srcRev[src]=0;srcRev[src]+=p.amount;});
+  var maxSrc=Math.max.apply(null,Object.values(srcRev).concat([1]));
+  var srcHtml='';
+  Object.entries(srcRev).forEach(function(e){
+    if(e[1]===0)return;
+    var pct=Math.round(e[1]/maxSrc*100);
+    srcHtml+='<div class="roi-bar-row"><div class="roi-bar-label">'+e[0].charAt(0).toUpperCase()+e[0].slice(1)+'</div>'
+      +'<div class="roi-bar-track"><div class="roi-bar-fill src-'+e[0]+'" style="width:'+pct+'%;">\u20AC'+e[1].toLocaleString()+'</div></div></div>';
+  });
+  setHTML('ad-rev-source',srcHtml||'<p style="color:var(--text3);font-size:13px;">No revenue data.</p>');
+
   /* Recent activity */
   var recent=pays.sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,5);
   setHTML('ad-recent-activity',recent.map(function(p){
@@ -1907,36 +2137,85 @@ function pDeleteUser(id){
 }
 function pRenderAdCMs(){
   var cms=pGetUsers().filter(function(u){return u.role==='case_manager';});
-  var apps=pGetApps();
-  setHTML('ad-cms-tbody',cms.map(function(cm){
-    var assigned=pGetUsers().filter(function(u){return u.role==='customer'&&u.cmId===cm.id;}).length;
+  var apps=pGetApps();var allUsers=pGetUsers();
+
+  /* Capacity overview cards */
+  var capHtml='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:20px;">';
+  cms.forEach(function(cm){
     var active=apps.filter(function(a){return a.cmId===cm.id&&a.stage<5;}).length;
+    var max=cm.maxCapacity||CM_MAX_CAPACITY;
+    var pct=Math.round(active/max*100);
+    var cls=pct<50?'low':pct<80?'mid':'high';
+    capHtml+='<div class="cap-card">'
+      +'<div class="cap-card-name">'+escHtml(cm.first+' '+cm.last)+'</div>'
+      +'<div class="cap-card-meta">'+escHtml(cm.email)+' · '+active+' active / '+max+' max</div>'
+      +pCapacityBar(active,max)
+      +'</div>';
+  });
+  capHtml+='</div>';
+  setHTML('ad-cms-capacity',capHtml);
+
+  /* Table */
+  setHTML('ad-cms-tbody',cms.map(function(cm){
+    var assigned=allUsers.filter(function(u){return u.role==='customer'&&u.cmId===cm.id;}).length;
+    var active=apps.filter(function(a){return a.cmId===cm.id&&a.stage<5;}).length;
+    var max=cm.maxCapacity||CM_MAX_CAPACITY;
     return '<tr><td style="font-weight:600;">'+escHtml(cm.first+' '+cm.last)+'</td>'
       +'<td><a href="mailto:'+escHtml(cm.email)+'" style="color:var(--brand);">'+escHtml(cm.email)+'</a></td>'
       +'<td>'+assigned+'</td><td>'+active+'</td>'
+      +'<td>'+pCapacityBar(active,max)+'</td>'
       +'<td style="font-size:12px;color:var(--text3);">'+fmtDate(cm.created)+'</td>'
       +'<td><div class="p-tbl-actions">'
       +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="pOpenModal(\'editCM\',\''+cm.id+'\')">Edit</button>'
       +'<button class="p-btn p-btn-danger p-btn-sm" onclick="pDeleteCM(\''+cm.id+'\')">Del</button></div></td></tr>';
-  }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">No case managers yet.</td></tr>');
+  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px;">No case managers yet.</td></tr>');
 }
 function pDeleteCM(id){if(!confirm('Delete this case manager?'))return;var users=pGetUsers().filter(function(u){return u.id!==id;});pSaveUsers(users);pRenderAdCMs();showToast('Case manager deleted');}
 function pRenderAdApps(filter,stageFilter){
   var apps=pGetApps();var users=pGetUsers();
+  var cms=users.filter(function(u){return u.role==='case_manager';});
   if(filter)apps=apps.filter(function(a){var u=users.find(function(u){return u.id===a.userId;})||{};return (u.first+' '+u.last+' '+u.email).toLowerCase().includes(filter.toLowerCase());});
   if(stageFilter!==undefined&&stageFilter!=='')apps=apps.filter(function(a){return a.stage===parseInt(stageFilter);});
   setHTML('ad-apps-tbody',apps.map(function(a){
     var u=users.find(function(u){return u.id===a.userId;})||{first:'Unknown',last:''};
-    var cm=a.cmId?users.find(function(u){return u.id===a.cmId;}):null;
+    /* CM assignment dropdown */
+    var cmSelect='<select class="cm-assign-select" onchange="pAssignCM(\''+a.id+'\',this.value)">'
+      +'<option value="">Unassigned</option>';
+    cms.forEach(function(cm){cmSelect+='<option value="'+cm.id+'"'+(a.cmId===cm.id?' selected':'')+'>'+escHtml(cm.first+' '+cm.last)+'</option>';});
+    cmSelect+='</select>';
     return '<tr><td style="font-weight:600;">'+escHtml(u.first+' '+u.last)+'</td>'
       +'<td>'+escHtml(P_PKG_NAMES[a.pkg]||a.pkg)+'</td>'
       +'<td><span class="p-badge '+(a.stage===5?'bd-done':'bd-prog')+'">'+P_STAGES[a.stage]+'</span></td>'
-      +'<td>'+(cm?escHtml(cm.first+' '+cm.last):'<span style="color:var(--text3);">Unassigned</span>')+'</td>'
+      +'<td>'+pDocProgressBar(a)+'</td>'
+      +'<td>'+cmSelect+'</td>'
+      +'<td>'+pUrgencyFlag(a.updated)+'</td>'
       +'<td style="font-size:12px;color:var(--text3);">'+fmtDate(a.updated)+'</td>'
       +'<td><div class="p-tbl-actions">'
       +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="pOpenModal(\'editApp\',\''+a.id+'\')">Manage</button>'
       +'<button class="p-btn p-btn-danger p-btn-sm" onclick="pDeleteApp(\''+a.id+'\')">Del</button></div></td></tr>';
-  }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">No applications found.</td></tr>');
+  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:24px;">No applications found.</td></tr>');
+}
+/* Admin: Assign CM to application */
+function pAssignCM(appId,cmId){
+  var apps=pGetApps();var users=pGetUsers();
+  apps=apps.map(function(a){
+    if(a.id===appId){
+      a.cmId=cmId||null;a.updated=new Date().toISOString();
+      if(!a.activityLog)a.activityLog=[];
+      var cmUser=cmId?users.find(function(u){return u.id===cmId;}):null;
+      a.activityLog.push({ts:new Date().toISOString(),icon:'👤',type:'action',text:'Case manager '+(cmUser?'assigned: '+cmUser.first+' '+cmUser.last:'unassigned')});
+    }
+    return a;
+  });
+  /* Also update the user's cmId */
+  if(cmId){
+    var app=apps.find(function(a){return a.id===appId;});
+    if(app){
+      users=users.map(function(u){if(u.id===app.userId){u.cmId=cmId;}return u;});
+      pSaveUsers(users);
+    }
+  }
+  pSaveApps(apps);showToast('\u2713 Case manager updated');
 }
 function pFilterApps(q){pRenderAdApps(q);}
 function pFilterAppStage(s){pRenderAdApps('',s);}
@@ -1964,19 +2243,55 @@ function pSavePricing(){
 function pDeletePromo(id){pSavePromos(pGetPromos().filter(function(p){return p.id!==id;}));pRenderAdProducts();showToast('Promo deleted');}
 function pRenderAdFinancials(){
   var pays=pGetPays();var users=pGetUsers();
-  var rev=pays.filter(function(p){return p.status==='paid';}).reduce(function(s,p){return s+p.amount;},0);
+  var paidPays=pays.filter(function(p){return p.status==='paid';});
+  var rev=paidPays.reduce(function(s,p){return s+p.amount;},0);
   var pend=pays.filter(function(p){return p.status==='pending';}).reduce(function(s,p){return s+p.amount;},0);
   var refund=pays.filter(function(p){return p.status==='refunded';}).reduce(function(s,p){return s+p.amount;},0);
-  setText('ad-fin-rev','\u20AC'+rev.toLocaleString());setText('ad-fin-pend','\u20AC'+pend.toLocaleString());setText('ad-fin-refund','\u20AC'+refund.toLocaleString());
+  var totalCouponSavings=paidPays.reduce(function(s,p){return s+(p.coupon_discount||0);},0);
+  setText('ad-fin-rev','\u20AC'+rev.toLocaleString());setText('ad-fin-pend','\u20AC'+pend.toLocaleString());setText('ad-fin-refund','\u20AC'+refund.toLocaleString());setText('ad-fin-coupons','\u20AC'+totalCouponSavings.toLocaleString());
+
+  /* Revenue by referral source (ROI chart) */
+  var srcRev={};REFERRAL_SOURCES.forEach(function(s){srcRev[s]=0;});
+  paidPays.forEach(function(p){var src=p.referral_source||'organic';if(!srcRev[src])srcRev[src]=0;srcRev[src]+=p.amount;});
+  var maxSrc=Math.max.apply(null,Object.values(srcRev).concat([1]));
+  var roiHtml='';
+  Object.entries(srcRev).forEach(function(e){
+    if(e[1]===0)return;
+    var pct=Math.round(e[1]/maxSrc*100);
+    roiHtml+='<div class="roi-bar-row"><div class="roi-bar-label">'+e[0].charAt(0).toUpperCase()+e[0].slice(1)+'</div>'
+      +'<div class="roi-bar-track"><div class="roi-bar-fill src-'+e[0]+'" style="width:'+pct+'%;">\u20AC'+e[1].toLocaleString()+'</div></div></div>';
+  });
+  setHTML('ad-fin-roi',roiHtml||'<p style="color:var(--text3);font-size:13px;">No source data.</p>');
+
+  /* Coupon performance */
+  var couponMap={};
+  paidPays.forEach(function(p){
+    if(p.coupon_code){
+      if(!couponMap[p.coupon_code])couponMap[p.coupon_code]={uses:0,discount:0,revenue:0};
+      couponMap[p.coupon_code].uses++;
+      couponMap[p.coupon_code].discount+=(p.coupon_discount||0);
+      couponMap[p.coupon_code].revenue+=p.amount;
+    }
+  });
+  var couponHtml=Object.entries(couponMap).map(function(e){
+    return '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;">'
+      +'<div><span style="font-weight:700;">'+escHtml(e[0])+'</span> <span style="color:var(--text3);">('+e[1].uses+' uses)</span></div>'
+      +'<div><span style="color:#dc2626;font-weight:600;">-\u20AC'+e[1].discount.toLocaleString()+'</span> / <span style="color:#16a34a;font-weight:600;">\u20AC'+e[1].revenue.toLocaleString()+' rev</span></div></div>';
+  }).join('');
+  setHTML('ad-fin-coupon-breakdown',couponHtml||'<p style="color:var(--text3);font-size:13px;">No coupons used.</p>');
+
+  /* Transactions table */
   setHTML('ad-fin-tbody',pays.sort(function(a,b){return new Date(b.date)-new Date(a.date);}).map(function(p){
     var u=users.find(function(u){return u.id===p.userId;})||{first:'Unknown',last:''};
     return '<tr><td style="font-size:12px;color:var(--text3);">'+fmtDate(p.date)+'</td>'
       +'<td style="font-weight:600;">'+escHtml(u.first+' '+u.last)+'</td>'
       +'<td>'+escHtml(p.desc)+'</td>'
+      +'<td><span style="font-size:11px;color:var(--text3);">'+(p.referral_source||'organic')+'</span></td>'
+      +'<td>'+(p.coupon_code?'<span class="p-badge bd-new">'+escHtml(p.coupon_code)+'</span>':'<span style="color:var(--text3);">—</span>')+'</td>'
       +'<td style="font-family:\'Bricolage Grotesque\',sans-serif;font-weight:700;">\u20AC'+p.amount.toLocaleString()+'</td>'
       +'<td><span class="p-badge '+(p.status==='paid'?'bd-paid':p.status==='pending'?'bd-pending':'bd-reject')+'">'+p.status+'</span></td>'
       +'<td><div class="p-tbl-actions">'+(p.status==='paid'?'<button class="p-btn p-btn-warn p-btn-sm" onclick="pRefund(\''+p.id+'\')">Refund</button>':'')+'</div></td></tr>';
-  }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">No transactions.</td></tr>');
+  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:24px;">No transactions.</td></tr>');
 }
 function pRefund(id){
   if(!confirm('Process refund for this payment?'))return;
@@ -1984,7 +2299,7 @@ function pRefund(id){
 }
 function pExportFinancials(){
   var pays=pGetPays();var users=pGetUsers();
-  var csv='Date,Client,Description,Amount,Status\n'+pays.map(function(p){var u=users.find(function(u){return u.id===p.userId;})||{first:'',last:''};return [fmtDate(p.date),u.first+' '+u.last,p.desc,p.amount,p.status].map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var csv='Date,Client,Description,Source,Coupon,Amount,Status\n'+pays.map(function(p){var u=users.find(function(u){return u.id===p.userId;})||{first:'',last:''};return [fmtDate(p.date),u.first+' '+u.last,p.desc,p.referral_source||'organic',p.coupon_code||'',p.amount,p.status].map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
   var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='nomadspain-financials.csv';a.click();
 }
 function pRenderAdSupport(){
@@ -2001,7 +2316,32 @@ function pRenderAdSupport(){
   }).join('')||'<div style="padding:16px;font-size:13px;color:var(--text3);">No customers.</div>');
 }
 function pRenderAdCompliance(){
-  var tpls=pGetTemplates();
+  var tpls=pGetTemplates();var apps=pGetApps();var users=pGetUsers();
+
+  /* ═══ Expiry Dashboard ═══ */
+  var expiries=pGetDocExpiries(apps,users);
+  var expired=expiries.filter(function(e){return e.status==='expired';});
+  var expiring=expiries.filter(function(e){return e.status==='expiring';});
+  var valid=expiries.filter(function(e){return e.status==='valid';});
+  setText('ad-comp-expired',expired.length);
+  setText('ad-comp-expiring',expiring.length);
+  setText('ad-comp-valid',valid.length);
+
+  var alertsHtml='';
+  expired.concat(expiring).slice(0,10).forEach(function(e){
+    var isExpired=e.status==='expired';
+    alertsHtml+='<div class="expiry-alert-card'+(isExpired?'':' warn')+'">'
+      +'<div class="expiry-alert-icon">'+(isExpired?'\uD83D\uDEA8':'\u23F0')+'</div>'
+      +'<div class="expiry-alert-body">'
+      +'<div class="expiry-alert-title">'+escHtml(e.userName)+' — '+escHtml(e.docKey.replace(/_/g,' '))+'</div>'
+      +'<div class="expiry-alert-sub">'+(isExpired?'Expired '+Math.abs(e.daysLeft)+' days ago':'Expires in '+e.daysLeft+' days — '+fmtDate(e.expiryDate))+'</div>'
+      +'</div>'
+      +'<span class="expiry-badge '+e.status+'">'+(isExpired?'Expired':'Expiring')+'</span>'
+      +'</div>';
+  });
+  setHTML('ad-expiry-alerts',alertsHtml||'<p style="color:var(--text3);font-size:13px;">No expiry alerts.</p>');
+
+  /* Templates list */
   setHTML('ad-compliance-list',tpls.map(function(t){
     return '<div class="p-card" style="margin-bottom:14px;">'
       +'<div class="p-card-hd"><div class="p-card-title">'+escHtml(t.visaType)+'</div>'
@@ -2021,36 +2361,83 @@ function pGetMyCMApps(){
   return pGetApps().filter(function(a){return a.cmId===pUser.id;});
 }
 function pRenderCMWorklist(){
-  var myApps=pGetMyCMApps();var users=pGetUsers();
+  var myApps=pGetMyCMApps();var users=pGetUsers();var allApps=pGetApps();
   var msgs=pGetMsgs().filter(function(m){return !m.read&&m.toId===pUser.id;});
   var clients=users.filter(function(u){return u.cmId===pUser.id;});
-  setText('cm-stat-clients',clients.length);setText('cm-stat-overdue',myApps.filter(function(a){return a.stage<2&&new Date()-new Date(a.created)>7*24*3600*1000;}).length);setText('cm-stat-msgs',msgs.length);
+  var activeCount=myApps.filter(function(a){return a.stage<5;}).length;
+  var maxCap=pUser.maxCapacity||CM_MAX_CAPACITY;
+  var capPct=Math.round(activeCount/maxCap*100);
+  setText('cm-stat-clients',clients.length);
+  setText('cm-stat-overdue',myApps.filter(function(a){return a.stage<2&&new Date()-new Date(a.created)>7*24*3600*1000;}).length);
+  setText('cm-stat-msgs',msgs.length);
+  setText('cm-stat-cap',capPct+'%');
+
+  /* My capacity bar */
+  setHTML('cm-my-capacity',pCapacityBar(activeCount,maxCap)
+    +'<div style="font-size:12px;color:var(--text3);margin-top:6px;">'+activeCount+' active cases out of '+maxCap+' maximum capacity</div>');
+
+  /* Peer availability */
+  var otherCMs=users.filter(function(u){return u.role==='case_manager'&&u.id!==pUser.id;});
+  var peerHtml='';
+  if(otherCMs.length){
+    otherCMs.forEach(function(cm){
+      var cmActive=allApps.filter(function(a){return a.cmId===cm.id&&a.stage<5;}).length;
+      var cmMax=cm.maxCapacity||CM_MAX_CAPACITY;
+      peerHtml+='<div style="margin-bottom:10px;"><div style="font-size:13px;font-weight:600;margin-bottom:4px;">'+escHtml(cm.first+' '+cm.last)+'</div>'+pCapacityBar(cmActive,cmMax)+'</div>';
+    });
+  } else {
+    peerHtml='<p style="color:var(--text3);font-size:13px;">No other case managers.</p>';
+  }
+  setHTML('cm-peer-capacity',peerHtml);
+
+  /* Expiry alerts for assigned apps */
+  var expiries=pGetDocExpiries(myApps,users);
+  var urgentExpiries=expiries.filter(function(e){return e.status==='expired'||e.status==='expiring';}).slice(0,5);
+  var expHtml='';
+  if(urgentExpiries.length){
+    urgentExpiries.forEach(function(e){
+      var isExpired=e.status==='expired';
+      expHtml+='<div class="expiry-alert-card'+(isExpired?'':' warn')+'">'
+        +'<div class="expiry-alert-icon">'+(isExpired?'\uD83D\uDEA8':'\u23F0')+'</div>'
+        +'<div class="expiry-alert-body">'
+        +'<div class="expiry-alert-title">'+escHtml(e.userName)+' — '+escHtml(e.docKey.replace(/_/g,' '))+'</div>'
+        +'<div class="expiry-alert-sub">'+(isExpired?'Expired '+Math.abs(e.daysLeft)+' days ago':'Expires in '+e.daysLeft+' days')+'</div>'
+        +'</div>'
+        +'<span class="expiry-badge '+e.status+'">'+(isExpired?'Expired':'Expiring')+'</span>'
+        +'</div>';
+    });
+  } else {
+    expHtml='<p style="color:var(--text3);font-size:13px;">No expiry alerts for your clients.</p>';
+  }
+  setHTML('cm-expiry-alerts',expHtml);
+
+  /* Client table with urgency & doc progress */
   setHTML('cm-clients-tbody',clients.map(function(u){
     var app=myApps.find(function(a){return a.userId===u.id;});
-    var isOverdue=app&&app.stage<2&&new Date()-new Date(app.created)>7*24*3600*1000;
     return '<tr><td style="font-weight:600;">'+escHtml(u.first+' '+u.last)+'</td>'
       +'<td>'+(app?escHtml(P_PKG_NAMES[app.pkg]||app.pkg):'—')+'</td>'
       +'<td>'+(app?'<span class="p-badge bd-prog">'+P_STAGES[app.stage]+'</span>':'—')+'</td>'
+      +'<td>'+(app?pDocProgressBar(app):'—')+'</td>'
       +'<td style="font-size:12px;color:var(--text3);">'+(app?fmtDate(app.updated):'—')+'</td>'
-      +'<td>'+(isOverdue?'<span class="p-badge bd-reject">Overdue</span>':'<span class="p-badge bd-done">On Track</span>')+'</td>'
+      +'<td>'+(app?pUrgencyFlag(app.updated):'—')+'</td>'
       +'<td><div class="p-tbl-actions">'
       +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="pOpenThread(\''+u.id+'\',\'cm\');pNav(\'cm\',\'support\',null)">Message</button>'
       +(app?'<button class="p-btn p-btn-primary p-btn-sm" onclick="pCMManageApp(\''+app.id+'\')">Manage</button>':'')
       +'</div></td></tr>';
-  }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">No clients assigned.</td></tr>');
+  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px;">No clients assigned.</td></tr>');
 }
 function pRenderCMApps(){
   var apps=pGetMyCMApps();var users=pGetUsers();
   setHTML('cm-apps-tbody',apps.map(function(a){
     var u=users.find(function(u){return u.id===a.userId;})||{first:'Unknown',last:''};
-    var uploaded=Object.values(a.docs||{}).filter(function(v){return v==='uploaded';}).length;
     return '<tr><td style="font-weight:600;">'+escHtml(u.first+' '+u.last)+'</td>'
       +'<td>'+escHtml(P_PKG_NAMES[a.pkg]||a.pkg)+'</td>'
       +'<td><span class="p-badge '+(a.stage===5?'bd-done':'bd-prog')+'">'+P_STAGES[a.stage]+'</span></td>'
-      +'<td>'+uploaded+'/6 uploaded</td>'
+      +'<td>'+pDocProgressBar(a)+'</td>'
+      +'<td>'+pUrgencyFlag(a.updated)+'</td>'
       +'<td style="font-size:12px;color:var(--text3);">'+fmtDate(a.updated)+'</td>'
       +'<td><button class="p-btn p-btn-primary p-btn-sm" onclick="pCMManageApp(\''+a.id+'\')">Manage</button></td></tr>';
-  }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px;">No applications.</td></tr>');
+  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px;">No applications.</td></tr>');
 }
 function pRenderCMSupport(){
   var clients=pGetUsers().filter(function(u){return u.cmId===pUser.id;});
@@ -2301,16 +2688,20 @@ function pCMMoveStage(appId,dir){
       var newStage=Math.max(0,Math.min(P_STAGES.length-1,a.stage+dir));
       if(newStage!==a.stage){
         if(!a.activityLog)a.activityLog=[];
-        a.activityLog.push({ts:now,icon:'🔄',type:'stage',text:'Stage changed: '+P_STAGES[a.stage]+' → '+P_STAGES[newStage],detail:null});
+        a.activityLog.push({ts:now,icon:'🔄',type:'stage',text:'Stage changed: '+P_STAGES[a.stage]+' \u2192 '+P_STAGES[newStage],detail:null});
         if(!a.stageDates)a.stageDates={};
         a.stageDates[newStage]=now;
+        /* Update statusHistory */
+        if(!a.statusHistory)a.statusHistory=[];
+        var newStatus=newStage>=3?APP_STATUS.SUBMITTED:newStage>=1?APP_STATUS.APP_STARTED:APP_STATUS.REGISTERED;
+        a.statusHistory.push({status:newStatus,at:now});
         a.stage=newStage;a.updated=now;
       }
     }
     return a;
   });
   pSaveApps(apps);pRenderCMManage();
-  showToast('✓ Stage updated');
+  showToast('\u2713 Stage updated');
 }
 
 function pCMDocAction(appId,profileId,docKey,action){
