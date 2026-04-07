@@ -861,6 +861,138 @@ body.portal-active nav{display:none!important;}
 .cm-profile-tab:hover{border-color:#9b2c2c;color:#9b2c2c;}
 .cm-profile-tab.active{background:#9b2c2c;color:#fff;border-color:#9b2c2c;}
 
+/* ══ SIDE-BY-SIDE DOC REVIEWER ══ */
+.doc-rv-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.doc-rv-list-item{padding:6px 12px;border-radius:8px;border:1.5px solid var(--border);cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;transition:all 0.15s;}
+.doc-rv-list-item:hover{border-color:#9b2c2c;}
+.doc-rv-list-item.active{background:#9b2c2c;color:#fff;border-color:#9b2c2c;}
+.doc-rv-list-item.active .cm-doc-badge{background:rgba(255,255,255,0.2);color:#fff;}
+.doc-rv-list-name{white-space:nowrap;}
+.doc-rv-ocr{padding:10px 18px;border-bottom:1px solid var(--border);}
+.doc-rv-ocr-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:6px;}
+.doc-reviewer{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1.5px solid var(--border);border-radius:14px;overflow:hidden;min-height:520px;background:var(--white);}
+@media(max-width:768px){.doc-reviewer{grid-template-columns:1fr;}}
+.doc-rv-left{background:#1a1a1a;display:flex;flex-direction:column;position:relative;}
+.doc-rv-preview{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+.doc-rv-preview img{max-width:100%;max-height:100%;object-fit:contain;transition:transform 0.3s;}
+.doc-rv-preview .no-doc{color:#666;font-size:14px;text-align:center;padding:40px;}
+.doc-rv-toolbar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#2a2a2a;border-top:1px solid #333;}
+.doc-rv-tool{background:#444;border:none;color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:background 0.15s;}
+.doc-rv-tool:hover{background:#666;}
+.doc-rv-tool.active{background:#9b2c2c;}
+.doc-rv-zoom{font-size:12px;color:#999;margin-left:auto;}
+.doc-rv-right{display:flex;flex-direction:column;overflow-y:auto;max-height:600px;}
+.doc-rv-section{padding:16px 18px;border-bottom:1px solid var(--border);}
+.doc-rv-section:last-child{border-bottom:none;}
+.doc-rv-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:10px;}
+.doc-rv-field{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;}
+.doc-rv-field-label{color:var(--text2);font-weight:500;}
+.doc-rv-field-value{font-weight:700;color:var(--text);}
+.doc-rv-field-value.match{color:#16a34a;}
+.doc-rv-field-value.mismatch{color:#dc2626;background:#fef2f2;padding:2px 8px;border-radius:4px;}
+.doc-rv-ocr{font-size:12px;padding:3px 8px;border-radius:4px;font-weight:700;}
+.doc-rv-ocr.high{background:#d1fae5;color:#065f46;}
+.doc-rv-ocr.mid{background:#fef3c7;color:#92400e;}
+.doc-rv-ocr.low{background:#fee2e2;color:#dc2626;}
+.doc-rv-actions{display:flex;gap:8px;padding:16px 18px;border-top:1px solid var(--border);background:var(--bg2);}
+.doc-rv-actions .p-btn{flex:1;justify-content:center;}
+
+/* Rejection dropdown */
+.reject-dropdown{margin-top:8px;display:none;background:var(--white);border:1.5px solid #fecaca;border-radius:10px;padding:12px;}
+.reject-dropdown.open{display:block;}
+.reject-reason{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);transition:all 0.15s;}
+.reject-reason:hover{background:#fef2f2;color:#dc2626;}
+.reject-reason.selected{background:#fee2e2;color:#dc2626;font-weight:700;}
+
+/* Apostille/Translation sub-tasks */
+.doc-subtask{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;transition:all 0.15s;}
+.doc-subtask input[type="checkbox"]{width:16px;height:16px;accent-color:#9b2c2c;cursor:pointer;}
+.doc-subtask.done{color:#065f46;text-decoration:line-through;opacity:0.7;}
+.doc-subtask.blocking{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;}
+
+/* ══ TRI-STATE PROGRESS BAR ══ */
+.tri-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e5e5e5;min-width:100px;}
+.tri-bar-seg{height:100%;transition:width 0.4s;}
+.tri-bar-green{background:#16a34a;}
+.tri-bar-yellow{background:#eab308;}
+.tri-bar-grey{background:#d4d4d4;}
+.tri-bar-wrap{display:flex;align-items:center;gap:8px;}
+.tri-bar-label{font-size:10px;font-weight:700;color:var(--text3);white-space:nowrap;}
+
+/* ══ FINANCIAL HEALTH WIDGET ══ */
+.fin-health{background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+.fin-health-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.fin-health-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:0;}
+.fin-health-status{font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px;}
+.fin-health-status.sufficient{background:#d1fae5;color:#065f46;}
+.fin-health-status.close{background:#fef3c7;color:#92400e;}
+.fin-health-status.insufficient{background:#fee2e2;color:#dc2626;}
+.fin-health-bar{height:12px;background:var(--bg2);border-radius:6px;overflow:hidden;margin-bottom:6px;}
+.fin-health-fill{height:100%;border-radius:6px;transition:width 0.4s;}
+.fin-health-fill.sufficient{background:linear-gradient(90deg,#16a34a,#22c55e);}
+.fin-health-fill.surplus{background:linear-gradient(90deg,#16a34a,#22c55e);}
+.fin-health-fill.close{background:linear-gradient(90deg,#d97706,#eab308);}
+.fin-health-fill.insufficient{background:linear-gradient(90deg,#dc2626,#ef4444);}
+.fin-health-fill.deficit{background:linear-gradient(90deg,#dc2626,#ef4444);}
+.fin-health-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+.fin-health-gap{font-size:13px;font-weight:800;text-align:center;margin-top:6px;color:#dc2626;}
+.fin-health-gap.surplus{color:#16a34a;}
+.fin-health-gap.deficit{color:#dc2626;}
+
+/* ══ APPOINTMENTS ══ */
+.appt-card{background:var(--white);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:border-color 0.15s;}
+.appt-card:hover{border-color:#9b2c2c;}
+.appt-card.urgent{border-color:#dc2626;background:#fef2f2;}
+.appt-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.appt-icon.cert{background:#dbeafe;}.appt-icon.submit{background:#d1fae5;}.appt-icon.finger{background:#fef3c7;}
+.appt-body{flex:1;}
+.appt-type{font-size:13px;font-weight:700;}
+.appt-meta{font-size:11px;color:var(--text3);margin-top:2px;}
+.appt-status{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;}
+.appt-status.scheduled,.appt-status.sched{background:#dbeafe;color:#1e40af;}
+.appt-status.completed,.appt-status.done{background:#d1fae5;color:#065f46;}
+.appt-status.missed,.appt-status.miss{background:#fee2e2;color:#dc2626;}
+.appt-status.cancelled,.appt-status.cancel{background:var(--bg2);color:var(--text3);}
+
+/* ══ PRIORITY SCORE ══ */
+.priority-score{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;padding:3px 8px;border-radius:6px;}
+.priority-score.crit{background:#fef2f2;color:#dc2626;}
+.priority-score.high{background:#fffbeb;color:#d97706;}
+.priority-score.med{background:#f0fdf4;color:#16a34a;}
+.priority-score.low{background:var(--bg2);color:var(--text3);}
+.priority-score.crit{background:#fef2f2;color:#dc2626;}
+.priority-score.mod{background:#fef3c7;color:#92400e;}
+.priority-score.easy{background:#d1fae5;color:#065f46;}
+
+/* ══ SYSTEM STATUS BANNER ══ */
+.system-status-banner{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:12px;border:1.5px solid var(--border);margin-bottom:14px;}
+.system-status-banner.status-normal{background:#f0fdf4;border-color:#bbf7d0;}
+.system-status-banner.status-moderate{background:#fffbeb;border-color:#fde68a;}
+.system-status-banner.status-critical{background:#fef2f2;border-color:#fecaca;animation:pulse-border 2s infinite;}
+@keyframes pulse-border{0%,100%{border-color:#fecaca;}50%{border-color:#dc2626;}}
+.system-status-icon{font-size:28px;flex-shrink:0;}
+.system-status-body{flex:1;}
+.system-status-title{font-size:14px;font-weight:800;margin-bottom:2px;}
+.system-status-detail{font-size:12px;color:var(--text2);line-height:1.5;}
+.system-status-controls{flex-shrink:0;}
+
+/* ══ EX-17 AUTO-FILL FORM ══ */
+.ex17-form{background:var(--white);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;}
+.ex17-section{padding:16px 18px;border-bottom:1px solid var(--border);}
+.ex17-section:last-child{border-bottom:none;}
+.ex17-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#9b2c2c;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.ex17-section-title::before{content:'';width:3px;height:14px;background:var(--grad);border-radius:2px;}
+.ex17-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.ex17-field{background:var(--bg2);border-radius:8px;padding:8px 10px;}
+.ex17-field-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:2px;}
+.ex17-field-value{font-size:13px;font-weight:700;color:var(--text);}
+.ex17-field-value.empty{color:#dc2626;font-style:italic;font-weight:500;}
+.ex17-checkboxes{display:flex;gap:12px;flex-wrap:wrap;}
+.ex17-check{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:6px;background:var(--bg2);color:var(--text2);}
+.ex17-check.checked{background:#d1fae5;color:#065f46;}
+.ex17-check-box{font-size:16px;}
+.ex17-completeness{padding:16px 18px;background:var(--bg2);border-top:1px solid var(--border);}
+
 /* ══ ANALYTICS FUNNEL ══ */
 .an-funnel{display:flex;gap:2px;margin-bottom:24px;}
 .an-funnel-step{flex:1;text-align:center;padding:14px 8px;position:relative;background:var(--bg2);transition:background 0.3s;}
@@ -2152,6 +2284,8 @@ body.portal-active nav{display:none!important;}
       <div class="p-nav-section">Operations</div>
       <div class="p-nav-item" onclick="pNav('admin','support',this)"><span class="p-nav-icon">🎧</span> Support Hub</div>
       <div class="p-nav-item" onclick="pNav('admin','compliance',this)"><span class="p-nav-icon">📜</span> Compliance</div>
+      <div class="p-nav-section">Intelligence</div>
+      <div class="p-nav-item" onclick="pNav('admin','provinces',this)"><span class="p-nav-icon">🗺️</span> Province Tracker</div>
       <div class="p-nav-logout"><button onclick="pLogout()">↩ Sign Out</button></div>
     </aside>
     <div class="p-main">
@@ -2164,6 +2298,7 @@ body.portal-active nav{display:none!important;}
       </div>
       <!-- Analytics -->
       <div id="ad-analytics" class="p-panel active">
+        <div id="ad-analytics-status"></div>
         <div class="p-page-hd"><div class="p-page-title">Analytics</div><div class="p-page-sub">Global revenue, funnel performance, and operational metrics.</div></div>
         <div class="p-stat-grid">
           <div class="p-stat-card"><div class="p-stat-icon">💰</div><div class="p-stat-label">Total Revenue</div><div class="p-stat-value" id="ad-stat-rev">€0</div><div class="p-stat-change up" id="ad-stat-rev-ch">This month</div></div>
@@ -2330,6 +2465,17 @@ body.portal-active nav{display:none!important;}
         </div>
         <div id="ad-compliance-list"></div>
       </div>
+      <!-- Admin: Province Tracker -->
+      <div id="ad-provinces" class="p-panel">
+        <div class="p-page-hd">
+          <div><div class="p-page-title">Province Wait-Time Tracker</div><div class="p-page-sub">Crowdsourced Cita Previa intelligence across Spain. Manage system status and reroute strategies.</div></div>
+        </div>
+        <div id="ad-system-status" style="margin-bottom:16px;"></div>
+        <div class="p-card">
+          <div class="p-card-title" style="margin-bottom:14px;">Province Heatmap</div>
+          <div id="ad-province-heatmap"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2353,6 +2499,8 @@ body.portal-active nav{display:none!important;}
       <div class="p-nav-item active" onclick="pNav('cm','worklist',this)"><span class="p-nav-icon">📋</span> Worklist</div>
       <div class="p-nav-item" onclick="pNav('cm','applications',this)"><span class="p-nav-icon">📁</span> Applications</div>
       <div class="p-nav-item" onclick="pNav('cm','support',this)"><span class="p-nav-icon">💬</span> Support</div>
+      <div class="p-nav-section">Intelligence</div>
+      <div class="p-nav-item" onclick="pNav('cm','provinces',this)"><span class="p-nav-icon">🗺️</span> Province Tracker</div>
       <div class="p-nav-section">Account</div>
       <div class="p-nav-item" onclick="pNav('cm','settings',this)"><span class="p-nav-icon">⚙️</span> Settings</div>
       <div class="p-nav-logout"><button onclick="pLogout()">↩ Sign Out</button></div>
@@ -2364,6 +2512,7 @@ body.portal-active nav{display:none!important;}
       </div>
       <!-- Worklist -->
       <div id="cm-worklist" class="p-panel active">
+        <div id="cm-worklist-status"></div>
         <div class="p-page-hd"><div class="p-page-title">Worklist</div><div class="p-page-sub">Your assigned clients, capacity, and priority tasks.</div></div>
         <div class="p-stat-grid" style="grid-template-columns:repeat(4,1fr);">
           <div class="p-stat-card"><div class="p-stat-icon">👥</div><div class="p-stat-label">Assigned Clients</div><div class="p-stat-value" id="cm-stat-clients">0</div></div>
@@ -2388,14 +2537,14 @@ body.portal-active nav{display:none!important;}
         </div>
         <div class="p-card">
           <div class="p-card-title" style="margin-bottom:14px;">My Clients</div>
-          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Docs</th><th>Last Update</th><th>Urgency</th><th>Actions</th></tr></thead><tbody id="cm-clients-tbody"></tbody></table></div>
+          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Docs</th><th>Priority</th><th>Urgency</th><th>Actions</th></tr></thead><tbody id="cm-clients-tbody"></tbody></table></div>
         </div>
       </div>
       <!-- CM Applications -->
       <div id="cm-applications" class="p-panel">
         <div class="p-page-hd"><div class="p-page-title">Applications</div><div class="p-page-sub">Manage your assigned visa applications.</div></div>
         <div class="p-card">
-          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Docs</th><th>Urgency</th><th>Last Update</th><th>Actions</th></tr></thead><tbody id="cm-apps-tbody"></tbody></table></div>
+          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Docs</th><th>Priority</th><th>Urgency</th><th>Actions</th></tr></thead><tbody id="cm-apps-tbody"></tbody></table></div>
         </div>
       </div>
       <!-- CM Manage App (Kanban detail view) -->
@@ -2415,6 +2564,17 @@ body.portal-active nav{display:none!important;}
               <button class="p-btn p-btn-primary" onclick="pSendMsg('cm')">Send</button>
             </div>
           </div>
+        </div>
+      </div>
+      <!-- CM Province Tracker -->
+      <div id="cm-provinces" class="p-panel">
+        <div class="p-page-hd">
+          <div><div class="p-page-title">Province Wait-Time Tracker</div><div class="p-page-sub">Crowdsourced Cita Previa intelligence. Log slots and get reroute suggestions.</div></div>
+        </div>
+        <div id="cm-system-status" style="margin-bottom:16px;"></div>
+        <div class="p-card">
+          <div class="p-card-title" style="margin-bottom:14px;">Province Heatmap</div>
+          <div id="cm-province-heatmap"></div>
         </div>
       </div>
       <!-- CM Settings -->

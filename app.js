@@ -755,6 +755,16 @@ function pGetAppDocuments(appId){return pGetDocuments().filter(function(d){retur
 /* Leads table */
 function pGetLeads(){return JSON.parse(localStorage.getItem('ns_leads')||'[]');}
 function pSaveLeads(l){localStorage.setItem('ns_leads',JSON.stringify(l));}
+/* Appointments table */
+function pGetAppointments(){return JSON.parse(localStorage.getItem('ns_appointments')||'[]');}
+function pSaveAppointments(a){localStorage.setItem('ns_appointments',JSON.stringify(a));}
+function pGetAppAppointments(appId){return pGetAppointments().filter(function(a){return a.application_id===appId;});}
+/* Province metrics table */
+function pGetProvinceMetrics(){return JSON.parse(localStorage.getItem('ns_province_metrics')||'[]');}
+function pSaveProvinceMetrics(m){localStorage.setItem('ns_province_metrics',JSON.stringify(m));}
+/* System status */
+function pGetSystemStatus(){return localStorage.getItem('ns_system_status')||'Normal';}
+function pSaveSystemStatus(s){localStorage.setItem('ns_system_status',s);}
 
 var PROFILE_CHECKLISTS={
   main:[
@@ -855,6 +865,43 @@ var REFERRAL_SOURCES=['organic','referral','social','ads','partner'];
 var CM_MAX_CAPACITY=20;
 var DOC_EXPIRY_WARN_DAYS=15;
 var URGENCY_DAYS=5;
+
+/* ══ REJECTION REASONS ══ */
+var REJECTION_REASONS=[
+  'Document expired','Illegible / low quality','Wrong document type',
+  'Missing apostille','Missing translation','Name mismatch',
+  'Incomplete document','Fraudulent / tampered','Not notarised',
+  'Income insufficient','Other (see notes)'
+];
+
+/* ══ APPOINTMENT TYPES ══ */
+var APPT_TYPES={DIGITAL_CERT:'digital_cert',SUBMISSION:'submission',FINGERPRINTS:'fingerprints'};
+var APPT_TYPE_LABELS={digital_cert:'Digital Certificate',submission:'Embassy Submission',fingerprints:'Fingerprints / Biometrics'};
+var APPT_STATUS={SCHEDULED:'scheduled',COMPLETED:'completed',CANCELLED:'cancelled',MISSED:'missed'};
+var APPT_URGENT_DAYS=3;
+
+/* ══ PROVINCE METRICS ══ */
+var DIFFICULTY_RATINGS=['Easy','Moderate','Critical'];
+var SPAIN_PROVINCES=[
+  'Madrid','Barcelona','Valencia','Sevilla','Málaga','Zaragoza','Bilbao',
+  'Alicante','Granada','Girona','Guadalajara','Murcia','Palma de Mallorca',
+  'Las Palmas','Santa Cruz de Tenerife','A Coruña','Cádiz','Tarragona'
+];
+
+/* ══ EX-17 FIELD MAPPING ══ */
+/* Maps profile/user fields → official EX-17 PDF form field IDs */
+var EX17_MAPPING={
+  passport:'f1_1',nie:'f1_2',surname:'f1_3',name:'f1_4',
+  birth_date:'f1_5',nationality:'f1_6',sex:'f1_7',
+  marital_status:'f1_8',father_name:'f1_9',mother_name:'f1_10',
+  address:'f2_1',city:'f2_2',province:'f2_3',postal_code:'f2_4',
+  phone:'f2_5',email:'f2_6',
+  initial_residence_box:'f4_1_1',renewal_box:'f4_1_2',
+  residence_auth_box:'f4_2_1'
+};
+
+/* ══ SYSTEM STATUS (Regularisation Surge) ══ */
+var SYSTEM_STATUS_OPTIONS=['Normal','Moderate Congestion','High Congestion','Critical — Regularisation Surge'];
 
 /* ══ SMI (Salario Mínimo Interprofesional) 2026 ══ */
 var SMI_100=1424.50;
@@ -981,6 +1028,816 @@ function pCalcAvgTimeInStage(apps){
   return avgs;
 }
 
+/* ══ PRIORITY SCORE ══ */
+/* Formula: (days_since_update * 2) + (missing_docs * 5) */
+function calculatePriorityScore(app){
+  var now=new Date();
+  var lastUpdate=new Date(app.last_activity||app.updated||app.created);
+  var daysSinceUpdate=Math.max(0,Math.floor((now-lastUpdate)/(1000*60*60*24)));
+  var docs=pGetAppDocuments(app.id);
+  var missingDocs=0;
+  if(docs.length){
+    docs.forEach(function(d){if(d.status==='missing')missingDocs++;});
+  } else {
+    /* Fallback to legacy app.docs */
+    var requiredDocs=app.requiredDocs||['passport','income','criminal','degree','insurance','other'];
+    requiredDocs.forEach(function(k){if(!(app.docs||{})[k]||((app.docs||{})[k]==='missing'))missingDocs++;});
+  }
+  return (daysSinceUpdate*2)+(missingDocs*5);
+}
+
+function pPriorityBadge(score){
+  var cls=score>=20?'high':score>=10?'med':'low';
+  var label=score>=20?'High':score>=10?'Medium':'Low';
+  return '<span class="priority-score '+cls+'">'+score+' — '+label+'</span>';
+}
+
+/* ══ FINANCIAL HEALTH (SMI 2026 Gap Analysis) ══ */
+function calculateFinancialHealth(app,profile){
+  var familyCount=app.family_members_count||0;
+  var required=calcIncomeThreshold(familyCount);
+  var proven=profile?profile.monthly_income||0:0;
+  var gap=Math.max(0,required-proven);
+  var pct=required>0?Math.min(100,Math.round(proven/required*100)):0;
+  var status=pct>=100?'sufficient':pct>=75?'close':'insufficient';
+  return {required:required,proven:proven,gap:gap,pct:pct,status:status,familyCount:familyCount};
+}
+
+function pRenderFinancialHealth(app,profile){
+  var fh=calculateFinancialHealth(app,profile);
+  var statusLabel=fh.status==='sufficient'?'✓ Income Sufficient':fh.status==='close'?'⚠ Almost There':'✗ Insufficient Income';
+  var statusCls=fh.status==='sufficient'?'sufficient':fh.status==='close'?'close':'insufficient';
+  var html='<div class="fin-health">'
+    +'<div class="fin-health-header">'
+    +'<div class="fin-health-title">Financial Health — SMI 2026</div>'
+    +'<span class="fin-health-status '+statusCls+'">'+statusLabel+'</span>'
+    +'</div>'
+    +'<div class="fin-health-bar"><div class="fin-health-fill '+statusCls+'" style="width:'+fh.pct+'%;"></div></div>'
+    +'<div class="fin-health-row"><span>Proven Monthly Income</span><span style="font-weight:700;">€'+fh.proven.toLocaleString()+'</span></div>'
+    +'<div class="fin-health-row"><span>Required (200% SMI'+(fh.familyCount>0?' + '+fh.familyCount+' dep'+(fh.familyCount>1?'s':''):'')+')</span><span style="font-weight:700;">€'+fh.required.toLocaleString()+'</span></div>';
+  if(fh.gap>0){
+    html+='<div class="fin-health-gap">Gap: €'+fh.gap.toLocaleString()+'/mo needed</div>';
+  }
+  html+='</div>';
+  return html;
+}
+
+/* ══ TRI-STATE PROGRESS BAR ══ */
+/* green=verified, yellow=uploaded/pending, grey=missing */
+function pTriStateBar(app){
+  var docs=pGetAppDocuments(app.id);
+  var verified=0,pending=0,missing=0,total=0;
+  if(docs.length){
+    total=docs.length;
+    docs.forEach(function(d){
+      if(d.status==='verified')verified++;
+      else if(d.status==='uploaded'||d.status==='apostilled'||d.status==='translated')pending++;
+      else missing++;
+    });
+  } else {
+    /* Fallback to legacy app.docs */
+    var required=app.requiredDocs||['passport','income','criminal','degree','insurance','other'];
+    total=required.length;
+    required.forEach(function(k){
+      var s=(app.docs||{})[k]||'missing';
+      if(s==='verified')verified++;
+      else if(s==='uploaded'||s==='pending'||s==='apostilled'||s==='translated')pending++;
+      else missing++;
+    });
+  }
+  if(!total)total=1;
+  var pctV=Math.round(verified/total*100);
+  var pctP=Math.round(pending/total*100);
+  var pctM=100-pctV-pctP;
+  return '<div class="tri-bar" title="'+verified+' verified · '+pending+' pending · '+missing+' missing">'
+    +'<div class="tri-bar-green" style="width:'+pctV+'%;"></div>'
+    +'<div class="tri-bar-yellow" style="width:'+pctP+'%;"></div>'
+    +'<div class="tri-bar-grey" style="width:'+pctM+'%;"></div>'
+    +'</div>'
+    +'<div style="font-size:10px;color:var(--text3);margin-top:2px;">'+verified+'✓ '+pending+'⏳ '+missing+'—</div>';
+}
+
+/* ══ SIDE-BY-SIDE DOCUMENT REVIEWER ══ */
+var cmReviewDocId=null;
+
+function pCMDocReview(appId,docId){
+  cmReviewDocId=docId;
+  cmManageTab='reviewer';
+  cmManageAppId=appId;
+  pRenderCMManage();
+}
+
+function pCMRenderReviewer(app){
+  var docs=pGetAppDocuments(app.id);
+  if(!docs.length) return '<div class="p-card" style="text-align:center;padding:30px;color:var(--text3);">No normalised documents found. Documents need to be uploaded first.</div>';
+
+  var selectedDoc=cmReviewDocId?docs.find(function(d){return d.id===cmReviewDocId;}):docs[0];
+  if(!selectedDoc) selectedDoc=docs[0];
+  cmReviewDocId=selectedDoc.id;
+
+  var profile=pGetProfile(app.userId);
+  var user=(pGetUsers()).find(function(u){return u.id===app.userId;})||{first:'Unknown',last:''};
+
+  /* Doc list sidebar */
+  var docListHtml='<div class="doc-rv-list">';
+  docs.forEach(function(d){
+    var active=d.id===selectedDoc.id?' active':'';
+    var sBadge=d.status==='verified'?'verified':d.status==='uploaded'?'uploaded':d.status==='apostilled'?'apostilled':d.status==='translated'?'translated':d.status==='missing'?'missing':'uploaded';
+    docListHtml+='<div class="doc-rv-list-item'+active+'" onclick="pCMDocReview(\''+app.id+'\',\''+d.id+'\')">'
+      +'<div class="doc-rv-list-name">'+escHtml(d.name)+'</div>'
+      +'<span class="cm-doc-badge '+sBadge+'">'+escHtml(d.status)+'</span>'
+      +'</div>';
+  });
+  docListHtml+='</div>';
+
+  /* Left pane — Preview */
+  var leftHtml='<div class="doc-rv-left">'
+    +'<div class="doc-rv-toolbar">'
+    +'<span style="font-weight:700;">'+escHtml(selectedDoc.name)+'</span>'
+    +'<span class="cm-doc-badge '+selectedDoc.status+'">'+escHtml(selectedDoc.status)+'</span>'
+    +'</div>'
+    +'<div class="doc-rv-preview">';
+  if(selectedDoc.file_url){
+    leftHtml+='<img src="'+escHtml(selectedDoc.file_url)+'" style="max-width:100%;border-radius:8px;" onerror="this.parentElement.innerHTML=\'<div style=padding:40px;text-align:center;color:var(--text3)>Could not load preview</div>\'">';
+  } else {
+    leftHtml+='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);">'
+      +'<div style="font-size:48px;margin-bottom:12px;">📄</div>'
+      +'<div style="font-size:14px;font-weight:600;">No file uploaded</div>'
+      +'<div style="font-size:12px;margin-top:4px;">Document preview will appear here once uploaded</div>'
+      +'</div>';
+  }
+  leftHtml+='</div></div>';
+
+  /* Right pane — Verification engine */
+  var ocrConf=selectedDoc.ocr_confidence||0;
+  var ocrBar=ocrConf>0?'<div class="doc-rv-ocr"><div class="doc-rv-ocr-label">OCR Confidence</div>'
+    +'<div class="fin-health-bar"><div class="fin-health-fill '+(ocrConf>=80?'sufficient':ocrConf>=50?'close':'insufficient')+'" style="width:'+ocrConf+'%;"></div></div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:2px;">'+ocrConf+'% — '+(ocrConf>=80?'High confidence':ocrConf>=50?'Review recommended':'Manual verification required')+'</div>'
+    +'</div>':'';
+
+  /* Comparison flags */
+  var compFlags='<div class="doc-rv-section"><div class="doc-rv-section-title">Comparison Flags</div>';
+  var flagItems=[];
+  if(profile){
+    if(selectedDoc.name.toLowerCase().indexOf('passport')!==-1){
+      var nameMatch=(profile.full_name||'').toLowerCase()===(user.first+' '+user.last).toLowerCase();
+      flagItems.push({label:'Name Match',value:nameMatch?'✓ Match':'✗ Mismatch',ok:nameMatch});
+      if(profile.passport_expiry){
+        var pExp=new Date(profile.passport_expiry);
+        var validPP=pExp>new Date(Date.now()+365*24*3600*1000);
+        flagItems.push({label:'Passport Expiry',value:profile.passport_expiry+(validPP?' ✓':' ⚠ <1yr'),ok:validPP});
+      }
+    }
+    if(selectedDoc.name.toLowerCase().indexOf('income')!==-1||selectedDoc.name.toLowerCase().indexOf('proof')!==-1){
+      var fh=calculateFinancialHealth(app,profile);
+      flagItems.push({label:'Income vs Required',value:'€'+fh.proven.toLocaleString()+' / €'+fh.required.toLocaleString(),ok:fh.pct>=100});
+    }
+  }
+  if(selectedDoc.expiry_date){
+    var expDt=new Date(selectedDoc.expiry_date);
+    var dLeft=Math.floor((expDt-new Date())/(1000*60*60*24));
+    flagItems.push({label:'Document Expiry',value:selectedDoc.expiry_date+(dLeft<0?' EXPIRED':dLeft<30?' ⚠ '+dLeft+'d':' ✓'),ok:dLeft>30});
+  }
+  if(!flagItems.length) flagItems.push({label:'Status',value:'No automated flags for this document type',ok:true});
+  flagItems.forEach(function(f){
+    compFlags+='<div class="doc-rv-field"><span class="doc-rv-field-label">'+f.label+'</span><span style="color:'+(f.ok?'#065f46':'#dc2626')+';font-weight:600;">'+f.value+'</span></div>';
+  });
+  compFlags+='</div>';
+
+  /* Apostille & Translation sub-tasks */
+  var isCriminal=selectedDoc.name.toLowerCase().indexOf('criminal')!==-1;
+  var isApostilled=selectedDoc.is_apostilled||false;
+  var isTranslated=selectedDoc.is_translated||false;
+  var subTasksHtml='';
+  if(isCriminal||selectedDoc.name.toLowerCase().indexOf('degree')!==-1){
+    subTasksHtml='<div class="doc-rv-section"><div class="doc-rv-section-title">Sub-Task Requirements</div>'
+      +'<label class="doc-subtask"><input type="checkbox" '+(isApostilled?'checked':'')+' onchange="pCMToggleSubtask(\''+app.id+'\',\''+selectedDoc.id+'\',\'is_apostilled\',this.checked)"> Apostille obtained</label>'
+      +'<label class="doc-subtask"><input type="checkbox" '+(isTranslated?'checked':'')+' onchange="pCMToggleSubtask(\''+app.id+'\',\''+selectedDoc.id+'\',\'is_translated\',this.checked)"> Sworn translation complete</label>';
+    if(isCriminal&&(!isApostilled||!isTranslated)){
+      subTasksHtml+='<div style="font-size:11px;color:#dc2626;margin-top:6px;font-weight:600;">⚠ Cannot approve criminal record without apostille AND translation</div>';
+    }
+    subTasksHtml+='</div>';
+  }
+
+  /* Internal notes */
+  var notesHtml='<div class="doc-rv-section"><div class="doc-rv-section-title">Internal Notes</div>'
+    +'<textarea class="cm-note-area" id="rv-doc-notes" rows="2" style="width:100%;font-size:12px;">'+escHtml(selectedDoc.internal_notes||'')+'</textarea>'
+    +'<button class="p-btn p-btn-ghost p-btn-sm" style="margin-top:6px;" onclick="pCMSaveDocNote(\''+app.id+'\',\''+selectedDoc.id+'\')">Save Note</button>'
+    +'</div>';
+
+  /* Rejection reason (if rejected) */
+  var rejReasonHtml='';
+  if(selectedDoc.rejection_reason){
+    rejReasonHtml='<div class="doc-rv-section"><div class="doc-rv-section-title" style="color:#dc2626;">Rejection Reason</div>'
+      +'<div style="font-size:13px;color:#dc2626;font-weight:600;">'+escHtml(selectedDoc.rejection_reason)+'</div></div>';
+  }
+
+  /* Action buttons */
+  var canApprove=isManager()||isAdmin();
+  var blockApproval=isCriminal&&(!isApostilled||!isTranslated);
+  var actionsHtml='<div class="doc-rv-actions">';
+  if(canApprove&&selectedDoc.status!=='verified'){
+    actionsHtml+='<button class="p-btn p-btn-success" '+(blockApproval?'disabled title="Apostille & translation required"':'')+' onclick="pCMReviewAction(\''+app.id+'\',\''+selectedDoc.id+'\',\'verified\')">✓ Approve</button>';
+  }
+  if(canApprove&&selectedDoc.status!=='missing'){
+    actionsHtml+='<div style="position:relative;display:inline-block;">'
+      +'<button class="p-btn p-btn-danger" onclick="pCMToggleRejectDropdown(\''+selectedDoc.id+'\')">✗ Reject</button>'
+      +'<div class="reject-dropdown" id="reject-dd-'+selectedDoc.id+'">'
+      +'<div style="font-weight:700;font-size:12px;margin-bottom:6px;">Select Reason:</div>';
+    REJECTION_REASONS.forEach(function(reason){
+      actionsHtml+='<div class="reject-reason" onclick="pCMReviewAction(\''+app.id+'\',\''+selectedDoc.id+'\',\'rejected\',\''+escHtml(reason)+'\')">'+escHtml(reason)+'</div>';
+    });
+    actionsHtml+='</div></div>';
+  }
+  if(!canApprove){
+    actionsHtml+='<div style="font-size:12px;color:var(--text3);font-style:italic;">Only managers and admins can approve/reject documents.</div>';
+  }
+  actionsHtml+='</div>';
+
+  var rightHtml='<div class="doc-rv-right">'
+    +ocrBar
+    +compFlags
+    +subTasksHtml
+    +rejReasonHtml
+    +notesHtml
+    +actionsHtml
+    +'</div>';
+
+  return docListHtml+'<div class="doc-reviewer">'+leftHtml+rightHtml+'</div>';
+}
+
+/* Reviewer helpers */
+function pCMToggleRejectDropdown(docId){
+  var dd=document.getElementById('reject-dd-'+docId);
+  if(dd) dd.classList.toggle('open');
+}
+
+function pCMReviewAction(appId,docId,newStatus,rejReason){
+  var docs=pGetDocuments();var now=new Date().toISOString();
+  docs=docs.map(function(d){
+    if(d.id===docId){
+      d.status=newStatus;
+      if(newStatus==='rejected'&&rejReason){d.rejection_reason=rejReason;}
+      else{d.rejection_reason=null;}
+      d.reviewed_at=now;d.reviewed_by=pUser.id;
+    }
+    return d;
+  });
+  pSaveDocuments(docs);
+
+  /* Log activity on app */
+  var apps=pGetApps();
+  apps=apps.map(function(a){
+    if(a.id===appId){
+      if(!a.activityLog)a.activityLog=[];
+      var doc=docs.find(function(dd){return dd.id===docId;});
+      var actionLabel=newStatus==='verified'?'Approved':newStatus==='rejected'?'Rejected':'Updated';
+      a.activityLog.push({ts:now,icon:newStatus==='verified'?'✅':'❌',type:'doc',text:actionLabel+': '+(doc?doc.name:'document')+(rejReason?' — '+rejReason:'')});
+      a.updated=now;a.last_activity=now;
+
+      /* Update app_status if rejected */
+      if(newStatus==='rejected'){
+        a.app_status=APP_STATUS_ENUM.REJECTED;
+        if(!a.statusHistory)a.statusHistory=[];
+        a.statusHistory.push({status:APP_STATUS_ENUM.REJECTED,at:now});
+      }
+    }
+    return a;
+  });
+  pSaveApps(apps);
+
+  /* Notify client */
+  if(newStatus==='rejected'&&rejReason){
+    var msgs=pGetMsgs();
+    var app=apps.find(function(a){return a.id===appId;});
+    if(app){
+      var doc=docs.find(function(dd){return dd.id===docId;});
+      msgs.push({id:'msg'+Date.now(),fromId:pUser.id,toId:app.userId,body:'❌ Document Rejected: '+(doc?doc.name:'document')+' — Reason: '+rejReason+'. Please re-upload.',ts:now,read:false});
+      pSaveMsgs(msgs);
+    }
+  }
+
+  pRenderCMManage();
+  showToast(newStatus==='verified'?'✓ Document approved':newStatus==='rejected'?'Document rejected — client notified':'Status updated');
+}
+
+function pCMToggleSubtask(appId,docId,field,checked){
+  var docs=pGetDocuments();
+  docs=docs.map(function(d){
+    if(d.id===docId){d[field]=checked;}
+    return d;
+  });
+  pSaveDocuments(docs);
+
+  /* Log */
+  var apps=pGetApps();var now=new Date().toISOString();
+  apps=apps.map(function(a){
+    if(a.id===appId){
+      if(!a.activityLog)a.activityLog=[];
+      var label=field==='is_apostilled'?'Apostille':'Translation';
+      a.activityLog.push({ts:now,icon:'📋',type:'doc',text:label+(checked?' confirmed':' removed')+' for document'});
+      a.updated=now;a.last_activity=now;
+    }
+    return a;
+  });
+  pSaveApps(apps);
+  pRenderCMManage();
+}
+
+function pCMSaveDocNote(appId,docId){
+  var note=((document.getElementById('rv-doc-notes')||{}).value||'').trim();
+  var docs=pGetDocuments();
+  docs=docs.map(function(d){
+    if(d.id===docId){d.internal_notes=note;}
+    return d;
+  });
+  pSaveDocuments(docs);
+  showToast('✓ Note saved');
+}
+
+/* ══ APPOINTMENT CRUD ══ */
+function pCMRenderAppointments(app){
+  var appts=pGetAppAppointments(app.id);
+  var user=(pGetUsers()).find(function(u){return u.id===app.userId;})||{first:'Unknown',last:''};
+  var now=new Date();
+
+  var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+    +'<div style="font-size:15px;font-weight:700;">Appointments</div>'
+    +'<button class="p-btn p-btn-primary p-btn-sm" onclick="pCMShowAddAppt(\''+app.id+'\')">+ New Appointment</button>'
+    +'</div>';
+
+  /* Add appointment form (hidden by default) */
+  html+='<div id="appt-add-form" style="display:none;margin-bottom:16px;" class="p-card">'
+    +'<div class="p-field"><label>Type</label><select id="appt-type" class="p-input">';
+  Object.keys(APPT_TYPE_LABELS).forEach(function(k){
+    html+='<option value="'+k+'">'+APPT_TYPE_LABELS[k]+'</option>';
+  });
+  html+='</select></div>'
+    +'<div class="p-field-row"><div class="p-field"><label>Date</label><input type="date" id="appt-date" class="p-input"></div>'
+    +'<div class="p-field"><label>Time</label><input type="time" id="appt-time" class="p-input" value="10:00"></div></div>'
+    +'<div class="p-field"><label>Location / Notes</label><input type="text" id="appt-location" class="p-input" placeholder="Embassy, police station, etc."></div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px;">'
+    +'<button class="p-btn p-btn-primary p-btn-sm" onclick="pCMSaveAppt(\''+app.id+'\')">Save</button>'
+    +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="document.getElementById(\'appt-add-form\').style.display=\'none\'">Cancel</button>'
+    +'</div></div>';
+
+  if(!appts.length){
+    html+='<div class="p-card" style="text-align:center;padding:24px;color:var(--text3);">No appointments scheduled.</div>';
+    return html;
+  }
+
+  /* Sort by date ascending */
+  appts.sort(function(a,b){return new Date(a.datetime)-new Date(b.datetime);});
+
+  appts.forEach(function(apt){
+    var dt=new Date(apt.datetime);
+    var daysUntil=Math.floor((dt-now)/(1000*60*60*24));
+    var isUrgent=daysUntil>=0&&daysUntil<=APPT_URGENT_DAYS&&apt.status==='scheduled';
+    var isPast=dt<now;
+    var icon=apt.type==='digital_cert'?'💻':apt.type==='submission'?'🏛️':'🖐️';
+    var statusCls=apt.status==='completed'?'done':apt.status==='cancelled'?'cancel':apt.status==='missed'?'miss':'sched';
+
+    html+='<div class="appt-card'+(isUrgent?' urgent':'')+'">'
+      +'<div class="appt-icon">'+icon+'</div>'
+      +'<div style="flex:1;">'
+      +'<div style="font-weight:700;font-size:14px;">'+escHtml(APPT_TYPE_LABELS[apt.type]||apt.type)+'</div>'
+      +'<div style="font-size:12px;color:var(--text3);margin-top:2px;">'+fmtDate(apt.datetime)+(apt.location?' · '+escHtml(apt.location):'')+'</div>'
+      +(isUrgent?'<div style="font-size:11px;color:#dc2626;font-weight:700;margin-top:4px;">⚠ '+daysUntil+' day'+(daysUntil!==1?'s':'')+' away!</div>':'')
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +'<span class="appt-status '+statusCls+'">'+escHtml(apt.status)+'</span>';
+    if(apt.status==='scheduled'){
+      html+='<button class="p-btn p-btn-success p-btn-sm" onclick="pCMApptStatus(\''+apt.id+'\',\'completed\')">✓</button>'
+        +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="pCMApptStatus(\''+apt.id+'\',\'cancelled\')">✗</button>';
+    }
+    html+='</div></div>';
+  });
+  return html;
+}
+
+function pCMShowAddAppt(appId){
+  var form=document.getElementById('appt-add-form');
+  if(form)form.style.display='block';
+}
+
+function pCMSaveAppt(appId){
+  var type=(document.getElementById('appt-type')||{}).value;
+  var date=(document.getElementById('appt-date')||{}).value;
+  var time=(document.getElementById('appt-time')||{}).value||'10:00';
+  var location=(document.getElementById('appt-location')||{}).value||'';
+  if(!date){showToast('Please select a date');return;}
+  var datetime=date+'T'+time+':00';
+  var appts=pGetAppointments();
+  appts.push({id:'appt'+Date.now(),application_id:appId,type:type,datetime:datetime,location:location,status:'scheduled',created:new Date().toISOString()});
+  pSaveAppointments(appts);
+
+  /* Log */
+  var apps=pGetApps();var now=new Date().toISOString();
+  apps=apps.map(function(a){
+    if(a.id===appId){
+      if(!a.activityLog)a.activityLog=[];
+      a.activityLog.push({ts:now,icon:'📅',type:'action',text:'Appointment scheduled: '+APPT_TYPE_LABELS[type]+' on '+date});
+      a.updated=now;a.last_activity=now;
+    }
+    return a;
+  });
+  pSaveApps(apps);
+  pRenderCMManage();
+  showToast('✓ Appointment scheduled');
+}
+
+function pCMApptStatus(apptId,newStatus){
+  var appts=pGetAppointments();
+  appts=appts.map(function(a){
+    if(a.id===apptId){a.status=newStatus;}
+    return a;
+  });
+  pSaveAppointments(appts);
+  pRenderCMManage();
+  showToast('✓ Appointment '+newStatus);
+}
+
+/* ══════════════════════════════════════════
+   PROVINCE WAIT-TIME TRACKER (Heatmap)
+══════════════════════════════════════════ */
+
+function pRenderProvinceHeatmap(containerId,isAdmin){
+  var metrics=pGetProvinceMetrics();
+  if(!metrics.length){setHTML(containerId,'<p style="color:var(--text3);font-size:13px;">No province data yet.</p>');return;}
+
+  /* Sort by wait days desc */
+  metrics.sort(function(a,b){return b.avg_wait_days-a.avg_wait_days;});
+  var maxWait=metrics[0].avg_wait_days||1;
+
+  var html='';
+
+  /* Smart reroute suggestions for CM */
+  if(!isAdmin){
+    var myApps=pGetApps().filter(function(a){return a.cmId===pUser.id;});
+    var profiles=pGetProfiles();
+    var suggestions=[];
+    myApps.forEach(function(app){
+      var prof=profiles[app.userId];
+      if(!prof||!prof.preferred_province)return;
+      var userProv=metrics.find(function(m){return m.province===prof.preferred_province;});
+      if(!userProv||userProv.difficulty!=='Critical')return;
+      /* Find nearby easy provinces */
+      var nearby=pGetNearbyProvinces(prof.preferred_province);
+      var alternatives=metrics.filter(function(m){return nearby.indexOf(m.province)!==-1&&m.difficulty==='Easy';});
+      if(alternatives.length){
+        var user=pGetUsers().find(function(u){return u.id===app.userId;})||{first:'Unknown',last:''};
+        suggestions.push({user:user.first+' '+user.last,from:prof.preferred_province,fromWait:userProv.avg_wait_days,to:alternatives[0].province,toWait:alternatives[0].avg_wait_days,notes:alternatives[0].notes});
+      }
+    });
+    if(suggestions.length){
+      html+='<div class="p-card" style="margin-bottom:14px;border-color:#3b82f6;background:#eff6ff;">';
+      html+='<div class="p-card-title" style="margin-bottom:10px;color:#1e40af;">💡 Smart Reroute Suggestions</div>';
+      suggestions.forEach(function(s){
+        html+='<div style="padding:8px 0;border-bottom:1px solid #bfdbfe;font-size:13px;">'
+          +'<strong>'+escHtml(s.user)+'</strong> is in <span style="color:#dc2626;font-weight:700;">'+escHtml(s.from)+' ('+s.fromWait+'d wait)</span>. '
+          +'Suggest <span style="color:#16a34a;font-weight:700;">'+escHtml(s.to)+' ('+s.toWait+'d wait)</span>.'
+          +(s.notes?' <em style="color:var(--text3);">'+escHtml(s.notes)+'</em>':'')
+          +'</div>';
+      });
+      html+='</div>';
+    }
+  }
+
+  /* Heatmap table */
+  html+='<div class="p-table-wrap"><table class="p-table"><thead><tr>'
+    +'<th>Province</th><th>Avg Wait</th><th>Difficulty</th><th>Last Slot</th>'
+    +(isAdmin?'<th>Notes</th><th>Actions</th>':'<th>Notes</th>')
+    +'</tr></thead><tbody>';
+
+  metrics.forEach(function(m){
+    var diffCls=m.difficulty==='Critical'?'crit':m.difficulty==='Moderate'?'mod':'easy';
+    var diffIcon=m.difficulty==='Critical'?'🔴':m.difficulty==='Moderate'?'🟡':'🟢';
+    var barPct=Math.round(m.avg_wait_days/maxWait*100);
+    var barColor=m.difficulty==='Critical'?'#dc2626':m.difficulty==='Moderate'?'#d97706':'#16a34a';
+    var lastSlot=m.last_slot_found?fmtDate(m.last_slot_found):'Never';
+    var daysSinceSlot=m.last_slot_found?Math.floor((new Date()-new Date(m.last_slot_found))/(1000*60*60*24)):999;
+
+    html+='<tr>'
+      +'<td style="font-weight:700;">'+escHtml(m.province)+'</td>'
+      +'<td><div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:6px;background:#e5e5e5;border-radius:3px;overflow:hidden;min-width:60px;"><div style="height:100%;width:'+barPct+'%;background:'+barColor+';border-radius:3px;"></div></div><span style="font-weight:800;font-size:13px;">'+m.avg_wait_days+'d</span></div></td>'
+      +'<td><span class="priority-score '+diffCls+'" style="text-transform:capitalize;">'+diffIcon+' '+escHtml(m.difficulty)+'</span></td>'
+      +'<td style="font-size:12px;">'+lastSlot+(daysSinceSlot>3?' <span style="color:#dc2626;">⚠</span>':'')+'</td>'
+      +'<td style="font-size:12px;max-width:200px;color:var(--text2);">'+escHtml(m.notes||'')+'</td>';
+    if(isAdmin){
+      html+='<td><div class="p-tbl-actions">'
+        +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="pEditProvince(\''+escHtml(m.province)+'\')">Edit</button>'
+        +'</div></td>';
+    }
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+
+  /* Log Cita button (for CMs) */
+  if(!isAdmin){
+    html+='<div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+      +'<select id="cita-province" class="p-input" style="max-width:200px;"><option value="">Select province…</option>';
+    SPAIN_PROVINCES.forEach(function(p){html+='<option value="'+p+'">'+p+'</option>';});
+    html+='</select>'
+      +'<input type="date" id="cita-date" class="p-input" style="max-width:160px;">'
+      +'<button class="p-btn p-btn-primary p-btn-sm" onclick="pLogCitaFound()">📍 Log Cita Found</button>'
+      +'</div>';
+  }
+
+  setHTML(containerId,html);
+}
+
+/* Nearby province mapping for reroute suggestions */
+function pGetNearbyProvinces(province){
+  var nearby={
+    'Madrid':['Guadalajara','Toledo','Segovia','Ávila'],
+    'Barcelona':['Girona','Tarragona','Lleida'],
+    'Valencia':['Castellón','Alicante','Murcia'],
+    'Sevilla':['Cádiz','Huelva','Córdoba'],
+    'Málaga':['Granada','Cádiz','Córdoba'],
+    'Alicante':['Murcia','Valencia','Albacete'],
+    'Bilbao':['San Sebastián','Santander','Vitoria'],
+    'Palma de Mallorca':[] /* Island — no reroute */
+  };
+  return nearby[province]||[];
+}
+
+function pLogCitaFound(){
+  var province=(document.getElementById('cita-province')||{}).value;
+  var date=(document.getElementById('cita-date')||{}).value;
+  if(!province){showToast('Select a province');return;}
+  if(!date){showToast('Select the appointment date');return;}
+
+  var metrics=pGetProvinceMetrics();
+  var now=new Date();
+  var apptDate=new Date(date);
+  var waitDays=Math.max(0,Math.floor((apptDate-now)/(1000*60*60*24)));
+
+  var existing=metrics.find(function(m){return m.province===province;});
+  if(existing){
+    /* Rolling average */
+    existing.avg_wait_days=Math.round((existing.avg_wait_days+waitDays)/2);
+    existing.last_slot_found=now.toISOString();
+    /* Auto-update difficulty based on wait */
+    existing.difficulty=waitDays<=14?'Easy':waitDays<=40?'Moderate':'Critical';
+    metrics=metrics.map(function(m){return m.province===province?existing:m;});
+  } else {
+    metrics.push({
+      province:province,
+      avg_wait_days:waitDays,
+      last_slot_found:now.toISOString(),
+      difficulty:waitDays<=14?'Easy':waitDays<=40?'Moderate':'Critical',
+      notes:'First logged by '+pUser.first+' '+pUser.last
+    });
+  }
+  pSaveProvinceMetrics(metrics);
+  /* Re-render whichever panel is showing the heatmap */
+  var cmEl=document.getElementById('cm-province-heatmap');
+  if(cmEl) pRenderProvinceHeatmap('cm-province-heatmap',false);
+  var adEl=document.getElementById('ad-province-heatmap');
+  if(adEl) pRenderProvinceHeatmap('ad-province-heatmap',true);
+  showToast('✓ Cita logged: '+province+' — '+waitDays+' day wait');
+}
+
+function pEditProvince(province){
+  var metrics=pGetProvinceMetrics();
+  var m=metrics.find(function(x){return x.province===province;});
+  if(!m)return;
+  var overlay=document.getElementById('pModalOverlay');var body=document.getElementById('pModalBody');var title=document.getElementById('pModalTitle');
+  if(!overlay||!body||!title)return;
+  overlay.classList.add('open');
+  title.textContent='Edit Province: '+province;
+  body.innerHTML='<div class="p-field"><label>Average Wait (days)</label><input type="number" id="pm-prov-wait" class="p-input" value="'+m.avg_wait_days+'"></div>'
+    +'<div class="p-field"><label>Difficulty Rating</label><select id="pm-prov-diff" class="p-input">';
+  DIFFICULTY_RATINGS.forEach(function(d){body.innerHTML;});
+  /* rebuild properly */
+  var h='<div class="p-field"><label>Average Wait (days)</label><input type="number" id="pm-prov-wait" class="p-input" value="'+m.avg_wait_days+'"></div>'
+    +'<div class="p-field"><label>Difficulty Rating</label><select id="pm-prov-diff" class="p-input">';
+  DIFFICULTY_RATINGS.forEach(function(d){h+='<option value="'+d+'"'+(m.difficulty===d?' selected':'')+'>'+d+'</option>';});
+  h+='</select></div>'
+    +'<div class="p-field"><label>Notes</label><textarea id="pm-prov-notes" class="p-input" rows="3">'+escHtml(m.notes||'')+'</textarea></div>'
+    +'<button class="p-btn p-btn-primary" style="width:100%;justify-content:center;margin-top:10px;" onclick="pSaveProvinceEdit(\''+escHtml(province)+'\')">Save Changes</button>';
+  body.innerHTML=h;
+}
+
+function pSaveProvinceEdit(province){
+  var wait=parseInt((document.getElementById('pm-prov-wait')||{}).value)||0;
+  var diff=(document.getElementById('pm-prov-diff')||{}).value||'Moderate';
+  var notes=((document.getElementById('pm-prov-notes')||{}).value||'').trim();
+  var metrics=pGetProvinceMetrics();
+  metrics=metrics.map(function(m){
+    if(m.province===province){m.avg_wait_days=wait;m.difficulty=diff;m.notes=notes;}
+    return m;
+  });
+  pSaveProvinceMetrics(metrics);
+  pCloseModal();
+  pRenderProvinceHeatmap('ad-province-heatmap',true);
+  showToast('✓ Province updated');
+}
+
+/* ══════════════════════════════════════════
+   SYSTEM STATUS BANNER (Regularisation Surge)
+══════════════════════════════════════════ */
+
+function pRenderSystemStatusBanner(containerId,isAdmin){
+  var status=pGetSystemStatus();
+  var isNormal=status==='Normal';
+  var isCritical=status.indexOf('Critical')!==-1||status.indexOf('High')!==-1;
+  var bannerCls=isNormal?'status-normal':isCritical?'status-critical':'status-moderate';
+
+  var html='<div class="system-status-banner '+bannerCls+'">';
+  html+='<div class="system-status-icon">'+(isNormal?'🟢':isCritical?'🔴':'🟡')+'</div>';
+  html+='<div class="system-status-body">'
+    +'<div class="system-status-title">Cita Previa System Status: '+escHtml(status)+'</div>';
+  if(isCritical){
+    html+='<div class="system-status-detail">⚠ Spain\'s 2026 Regularisation Programme (500,000 applicants) is causing severe delays across all provinces. Plan for extended processing times and consider alternative provinces.</div>';
+  } else if(!isNormal){
+    html+='<div class="system-status-detail">Moderate delays across major cities. Monitor province metrics for optimal booking windows.</div>';
+  } else {
+    html+='<div class="system-status-detail">All systems operating normally. Standard processing times apply.</div>';
+  }
+  html+='</div>';
+
+  if(isAdmin){
+    html+='<div class="system-status-controls">'
+      +'<select id="system-status-select" class="p-input" style="min-width:180px;" onchange="pUpdateSystemStatus(this.value)">';
+    SYSTEM_STATUS_OPTIONS.forEach(function(opt){
+      html+='<option value="'+opt+'"'+(status===opt?' selected':'')+'>'+opt+'</option>';
+    });
+    html+='</select></div>';
+  }
+  html+='</div>';
+
+  setHTML(containerId,html);
+}
+
+function pUpdateSystemStatus(newStatus){
+  pSaveSystemStatus(newStatus);
+  /* Re-render all status banners */
+  var adEl=document.getElementById('ad-system-status');
+  if(adEl) pRenderSystemStatusBanner('ad-system-status',true);
+  var cmEl=document.getElementById('cm-system-status');
+  if(cmEl) pRenderSystemStatusBanner('cm-system-status',false);
+  showToast('✓ System status updated to: '+newStatus);
+}
+
+/* ══════════════════════════════════════════
+   EX-17 AUTO-FILL (TIE Application Form)
+══════════════════════════════════════════ */
+
+function pCMRenderEX17(app){
+  var user=pGetUsers().find(function(u){return u.id===app.userId;})||{first:'Unknown',last:''};
+  var profile=pGetProfile(app.userId)||{};
+  var isInitial=profile.is_initial_application!==false;
+
+  var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+    +'<div><div style="font-size:15px;font-weight:700;">EX-17 Auto-Fill</div>'
+    +'<div style="font-size:12px;color:var(--text3);">Solicitud de Tarjeta de Identidad de Extranjero (TIE)</div></div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button class="p-btn p-btn-primary p-btn-sm" onclick="pPrintEX17(\''+app.id+'\')">🖨️ Print (×2 copies)</button>'
+    +'</div></div>';
+
+  html+='<div class="ex17-form">';
+
+  /* Section 1: Datos del Extranjero */
+  html+='<div class="ex17-section">'
+    +'<div class="ex17-section-title">Sección 1 — Datos del Extranjero</div>'
+    +'<div class="ex17-grid">'
+    +pEX17Field('PASAPORTE',profile.passport_number||'','f1_1',!!profile.passport_number)
+    +pEX17Field('NIE',profile.nie_number||'(Pending)','f1_2',!!profile.nie_number)
+    +pEX17Field('APELLIDOS',user.last||'','f1_3',!!user.last)
+    +pEX17Field('NOMBRE',user.first||'','f1_4',!!user.first)
+    +pEX17Field('FECHA NACIMIENTO',profile.birth_date||'','f1_5',!!profile.birth_date)
+    +pEX17Field('NACIONALIDAD',(profile.nationality||'').toUpperCase(),'f1_6',!!profile.nationality)
+    +pEX17Field('SEXO',profile.sex||'','f1_7',!!profile.sex)
+    +pEX17Field('ESTADO CIVIL',profile.marital_status||'','f1_8',!!profile.marital_status)
+    +pEX17Field('NOMBRE DEL PADRE',profile.father_name||'','f1_9',!!profile.father_name)
+    +pEX17Field('NOMBRE DE LA MADRE',profile.mother_name||'','f1_10',!!profile.mother_name)
+    +'</div></div>';
+
+  /* Section 2: Domicilio en España */
+  html+='<div class="ex17-section">'
+    +'<div class="ex17-section-title">Sección 2 — Domicilio en España</div>'
+    +'<div class="ex17-grid">'
+    +pEX17Field('DIRECCIÓN',profile.address||'','f2_1',!!profile.address)
+    +pEX17Field('LOCALIDAD',profile.city||'','f2_2',!!profile.city)
+    +pEX17Field('PROVINCIA',profile.province||'','f2_3',!!profile.province)
+    +pEX17Field('CÓDIGO POSTAL',profile.postal_code||'','f2_4',!!profile.postal_code)
+    +pEX17Field('TELÉFONO',user.phone||'','f2_5',!!user.phone)
+    +pEX17Field('EMAIL',user.email||'','f2_6',!!user.email)
+    +'</div></div>';
+
+  /* Section 4: Datos Relativos a la Solicitud */
+  html+='<div class="ex17-section">'
+    +'<div class="ex17-section-title">Sección 4 — Datos Relativos a la Solicitud</div>'
+    +'<div class="ex17-checkboxes">'
+    +'<label class="ex17-check'+(isInitial?' checked':'')+'"><span class="ex17-check-box">'+(isInitial?'☑':'☐')+'</span> TARJETA INICIAL (Primera concesión)</label>'
+    +'<label class="ex17-check'+(!isInitial?' checked':'')+'"><span class="ex17-check-box">'+(!isInitial?'☑':'☐')+'</span> RENOVACIÓN</label>'
+    +'</div>'
+    +'<div class="ex17-checkboxes" style="margin-top:8px;">'
+    +'<label class="ex17-check checked"><span class="ex17-check-box">☑</span> Residencia con autorización de trabajo por cuenta ajena/propia</label>'
+    +'</div></div>';
+
+  /* Completeness check */
+  var fields=[profile.passport_number,user.last,user.first,profile.birth_date,profile.nationality,profile.address,profile.city,profile.province,profile.postal_code,user.email];
+  var filled=fields.filter(function(f){return f&&f.toString().trim()!=='';}).length;
+  var total=fields.length;
+  var pct=Math.round(filled/total*100);
+
+  html+='<div class="ex17-completeness">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+    +'<span style="font-size:12px;font-weight:700;">Form Completeness</span>'
+    +'<span style="font-size:12px;font-weight:800;color:'+(pct===100?'#16a34a':'#d97706')+';">'+pct+'% ('+filled+'/'+total+')</span></div>'
+    +'<div class="fin-health-bar"><div class="fin-health-fill '+(pct===100?'sufficient':'close')+'" style="width:'+pct+'%;"></div></div>';
+  if(pct<100){
+    html+='<div style="font-size:11px;color:#d97706;margin-top:4px;">⚠ Missing fields — update client profile to auto-fill remaining.</div>';
+  }
+  html+='</div>';
+
+  html+='</div>';
+  return html;
+}
+
+function pEX17Field(label,value,fieldId,isFilled){
+  return '<div class="ex17-field">'
+    +'<div class="ex17-field-label">'+label+' <span style="color:var(--text3);font-size:9px;">['+fieldId+']</span></div>'
+    +'<div class="ex17-field-value'+(isFilled?'':' empty')+'">'+escHtml(value||'—')+'</div>'
+    +'</div>';
+}
+
+function pPrintEX17(appId){
+  var app=pGetApps().find(function(a){return a.id===appId;});if(!app)return;
+  var user=pGetUsers().find(function(u){return u.id===app.userId;})||{first:'Unknown',last:''};
+  var profile=pGetProfile(app.userId)||{};
+  var isInitial=profile.is_initial_application!==false;
+
+  var printHtml='<!DOCTYPE html><html><head><title>EX-17 — '+escHtml(user.first+' '+user.last)+'</title>'
+    +'<style>'
+    +'body{font-family:Arial,sans-serif;font-size:12px;margin:20px;color:#000;}'
+    +'h1{font-size:16px;text-align:center;margin-bottom:4px;}'
+    +'h2{font-size:11px;text-align:center;color:#666;margin-bottom:20px;}'
+    +'.section{margin-bottom:16px;border:1px solid #ccc;padding:12px;}'
+    +'.section-title{font-size:13px;font-weight:bold;border-bottom:1px solid #ccc;padding-bottom:4px;margin-bottom:8px;}'
+    +'.field-row{display:flex;gap:12px;margin-bottom:6px;}'
+    +'.field{flex:1;}'
+    +'.field-label{font-size:9px;text-transform:uppercase;color:#666;}'
+    +'.field-value{border-bottom:1px solid #000;padding:2px 0;min-height:16px;font-weight:bold;}'
+    +'.checkbox{margin:4px 0;font-size:11px;}'
+    +'.copy-note{text-align:center;font-size:10px;color:#999;margin-top:20px;page-break-after:always;}'
+    +'@media print{.no-print{display:none;}}'
+    +'</style></head><body>';
+
+  /* Generate 2 copies */
+  for(var copy=1;copy<=2;copy++){
+    printHtml+='<h1>SOLICITUD DE TARJETA DE IDENTIDAD DE EXTRANJERO (EX-17)</h1>'
+      +'<h2>Modelo oficial — Copia '+(copy===1?'para la Administración':'para el interesado')+'</h2>';
+
+    printHtml+='<div class="section"><div class="section-title">1. DATOS DEL EXTRANJERO</div>'
+      +'<div class="field-row"><div class="field"><div class="field-label">Nº PASAPORTE</div><div class="field-value">'+escHtml(profile.passport_number||'')+'</div></div>'
+      +'<div class="field"><div class="field-label">N.I.E.</div><div class="field-value">'+escHtml(profile.nie_number||'')+'</div></div></div>'
+      +'<div class="field-row"><div class="field"><div class="field-label">APELLIDOS</div><div class="field-value">'+escHtml(user.last||'')+'</div></div>'
+      +'<div class="field"><div class="field-label">NOMBRE</div><div class="field-value">'+escHtml(user.first||'')+'</div></div></div>'
+      +'<div class="field-row"><div class="field"><div class="field-label">FECHA NACIMIENTO</div><div class="field-value">'+escHtml(profile.birth_date||'')+'</div></div>'
+      +'<div class="field"><div class="field-label">NACIONALIDAD</div><div class="field-value">'+escHtml((profile.nationality||'').toUpperCase())+'</div></div>'
+      +'<div class="field"><div class="field-label">SEXO</div><div class="field-value">'+escHtml(profile.sex||'')+'</div></div></div>'
+      +'<div class="field-row"><div class="field"><div class="field-label">ESTADO CIVIL</div><div class="field-value">'+escHtml(profile.marital_status||'')+'</div></div>'
+      +'<div class="field"><div class="field-label">NOMBRE DEL PADRE</div><div class="field-value">'+escHtml(profile.father_name||'')+'</div></div>'
+      +'<div class="field"><div class="field-label">NOMBRE DE LA MADRE</div><div class="field-value">'+escHtml(profile.mother_name||'')+'</div></div></div>'
+      +'</div>';
+
+    printHtml+='<div class="section"><div class="section-title">2. DOMICILIO EN ESPAÑA</div>'
+      +'<div class="field-row"><div class="field" style="flex:2;"><div class="field-label">DIRECCIÓN</div><div class="field-value">'+escHtml(profile.address||'')+'</div></div>'
+      +'<div class="field"><div class="field-label">LOCALIDAD</div><div class="field-value">'+escHtml(profile.city||'')+'</div></div></div>'
+      +'<div class="field-row"><div class="field"><div class="field-label">PROVINCIA</div><div class="field-value">'+escHtml(profile.province||'')+'</div></div>'
+      +'<div class="field"><div class="field-label">C.P.</div><div class="field-value">'+escHtml(profile.postal_code||'')+'</div></div>'
+      +'<div class="field"><div class="field-label">TELÉFONO</div><div class="field-value">'+escHtml(user.phone||'')+'</div></div></div>'
+      +'</div>';
+
+    printHtml+='<div class="section"><div class="section-title">4. DATOS RELATIVOS A LA SOLICITUD</div>'
+      +'<div class="checkbox">['+(isInitial?'X':' ')+'] TARJETA DE IDENTIDAD DE EXTRANJERO QUE DOCUMENTA LA PRIMERA CONCESIÓN</div>'
+      +'<div class="checkbox">['+(!isInitial?'X':' ')+'] RENOVACIÓN DE TARJETA DE IDENTIDAD DE EXTRANJERO</div>'
+      +'<div class="checkbox" style="margin-top:8px;">[X] Residencia con autorización de trabajo por cuenta ajena/propia</div>'
+      +'</div>';
+
+    printHtml+='<div style="margin-top:30px;display:flex;justify-content:space-between;">'
+      +'<div style="border-top:1px solid #000;width:200px;text-align:center;padding-top:4px;font-size:10px;">Firma del solicitante</div>'
+      +'<div style="text-align:center;font-size:10px;">Fecha: ____/____/________</div>'
+      +'</div>';
+
+    if(copy===1) printHtml+='<div class="copy-note">— Copia 1 de 2 (Administración) — Cortar aquí ✂ —</div>';
+  }
+
+  printHtml+='<div class="copy-note" style="page-break-after:auto;">— Copia 2 de 2 (Interesado) —</div>';
+  printHtml+='</body></html>';
+
+  var printWindow=window.open('','_blank','width=800,height=1000');
+  if(printWindow){
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
+    setTimeout(function(){printWindow.print();},500);
+  }
+  showToast('✓ EX-17 generated with 2 copies for '+user.first+' '+user.last);
+}
+
 /* ── SEED ── */
 function pSeedData(){
   if(localStorage.getItem('ns_pu_seeded')) return;
@@ -1041,20 +1898,52 @@ function pSeedData(){
   ];
   /* Profiles table (mirrors SQL profiles) */
   var profiles={
-    'u_c1':{user_id:'u_c1',full_name:'John Carter',nationality:'gb',current_residency:'United Kingdom',monthly_income:4200,has_degree:true,years_experience:6,passport_expiry:'2027-08-15'},
-    'u_c2':{user_id:'u_c2',full_name:'Maria Santos',nationality:'br',current_residency:'Brazil',monthly_income:3100,has_degree:false,years_experience:4,passport_expiry:'2028-03-22'}
+    'u_c1':{user_id:'u_c1',full_name:'John Carter',nationality:'gb',current_residency:'United Kingdom',monthly_income:4200,has_degree:true,years_experience:6,passport_expiry:'2027-08-15',
+      passport_number:'GB1234567',nie_number:'Y1234567X',birth_date:'1990-05-14',sex:'M',marital_status:'Single',
+      father_name:'Robert Carter',mother_name:'Elizabeth Carter',
+      address:'Calle Gran Vía 45, 3A',city:'Madrid',province:'Madrid',postal_code:'28013',
+      is_initial_application:true,preferred_province:'Madrid'},
+    'u_c2':{user_id:'u_c2',full_name:'Maria Santos',nationality:'br',current_residency:'Brazil',monthly_income:3100,has_degree:false,years_experience:4,passport_expiry:'2028-03-22',
+      passport_number:'BR9876543',nie_number:'',birth_date:'1988-11-22',sex:'F',marital_status:'Married',
+      father_name:'Carlos Santos',mother_name:'Ana Santos',
+      address:'Avda Diagonal 200, 5B',city:'Barcelona',province:'Barcelona',postal_code:'08018',
+      is_initial_application:true,preferred_province:'Barcelona'}
   };
   /* Documents table (normalised — mirrors SQL documents) */
   var documents=[
-    {id:'doc1',application_id:'app1',name:'Passport',file_url:null,status:'uploaded',expiry_date:'2026-08-15',internal_notes:'Biometric page clear.'},
-    {id:'doc2',application_id:'app1',name:'Proof of Income',file_url:null,status:'uploaded',expiry_date:null,internal_notes:'3 months bank statements received.'},
-    {id:'doc3',application_id:'app1',name:'Criminal Record Certificate',file_url:null,status:'missing',expiry_date:'2026-04-20',internal_notes:'Needs apostille.'},
-    {id:'doc4',application_id:'app1',name:'Health Insurance',file_url:null,status:'missing',expiry_date:null,internal_notes:''},
-    {id:'doc5',application_id:'app1',name:'Degree',file_url:null,status:'missing',expiry_date:null,internal_notes:''},
-    {id:'doc6',application_id:'app2',name:'Passport',file_url:null,status:'missing',expiry_date:null,internal_notes:''}
+    {id:'doc1',application_id:'app1',name:'Passport',file_url:null,status:'uploaded',expiry_date:'2026-08-15',internal_notes:'Biometric page clear.',ocr_confidence:92,is_apostilled:false,is_translated:false,rejection_reason:null},
+    {id:'doc2',application_id:'app1',name:'Proof of Income',file_url:null,status:'uploaded',expiry_date:null,internal_notes:'3 months bank statements received.',ocr_confidence:85,is_apostilled:false,is_translated:false,rejection_reason:null},
+    {id:'doc3',application_id:'app1',name:'Criminal Record Certificate',file_url:null,status:'missing',expiry_date:'2026-04-20',internal_notes:'Needs apostille.',ocr_confidence:0,is_apostilled:false,is_translated:false,rejection_reason:null},
+    {id:'doc4',application_id:'app1',name:'Health Insurance',file_url:null,status:'missing',expiry_date:null,internal_notes:'',ocr_confidence:0,is_apostilled:false,is_translated:false,rejection_reason:null},
+    {id:'doc5',application_id:'app1',name:'Degree',file_url:null,status:'missing',expiry_date:null,internal_notes:'',ocr_confidence:0,is_apostilled:false,is_translated:false,rejection_reason:null},
+    {id:'doc6',application_id:'app2',name:'Passport',file_url:null,status:'missing',expiry_date:null,internal_notes:'',ocr_confidence:0,is_apostilled:false,is_translated:false,rejection_reason:null}
+  ];
+  /* Appointments table */
+  var appointments=[
+    {id:'appt1',application_id:'app1',type:'digital_cert',datetime:'2026-04-15T10:00:00',location:'Madrid Police HQ',status:'scheduled',created:'2024-03-10T00:00:00Z'},
+    {id:'appt2',application_id:'app1',type:'submission',datetime:'2026-05-01T09:30:00',location:'Spanish Embassy, London',status:'scheduled',created:'2024-03-10T00:00:00Z'}
+  ];
+  /* Province metrics (crowdsourced wait-time data) */
+  var provinceMetrics=[
+    {province:'Madrid',avg_wait_days:72,last_slot_found:'2026-04-01T14:30:00Z',difficulty:'Critical',notes:'Regularisation surge — extremely limited slots. Consider Guadalajara or Toledo.'},
+    {province:'Barcelona',avg_wait_days:58,last_slot_found:'2026-04-03T09:15:00Z',difficulty:'Critical',notes:'High demand. Girona has better availability (1hr by train).'},
+    {province:'Valencia',avg_wait_days:34,last_slot_found:'2026-04-05T11:00:00Z',difficulty:'Moderate',notes:'Improving but still congested for TIE renewals.'},
+    {province:'Sevilla',avg_wait_days:21,last_slot_found:'2026-04-06T16:45:00Z',difficulty:'Moderate',notes:'Good availability for initial applications.'},
+    {province:'Málaga',avg_wait_days:42,last_slot_found:'2026-04-02T10:00:00Z',difficulty:'Moderate',notes:'Tourist season creating backlog.'},
+    {province:'Guadalajara',avg_wait_days:8,last_slot_found:'2026-04-07T08:00:00Z',difficulty:'Easy',notes:'Fastest in central Spain. Only 45min from Madrid by AVE.'},
+    {province:'Girona',avg_wait_days:12,last_slot_found:'2026-04-06T13:20:00Z',difficulty:'Easy',notes:'Alternative to Barcelona. 38min by AVE.'},
+    {province:'Bilbao',avg_wait_days:18,last_slot_found:'2026-04-04T15:00:00Z',difficulty:'Easy',notes:'Low demand, efficient processing.'},
+    {province:'Zaragoza',avg_wait_days:15,last_slot_found:'2026-04-05T09:30:00Z',difficulty:'Easy',notes:'Good mid-point option.'},
+    {province:'Granada',avg_wait_days:28,last_slot_found:'2026-04-03T12:00:00Z',difficulty:'Moderate',notes:'University city — seasonal fluctuations.'},
+    {province:'Alicante',avg_wait_days:38,last_slot_found:'2026-04-01T10:00:00Z',difficulty:'Moderate',notes:'Large expat community causing demand.'},
+    {province:'Murcia',avg_wait_days:14,last_slot_found:'2026-04-06T08:45:00Z',difficulty:'Easy',notes:'Under-utilised. Good alternative to Alicante.'},
+    {province:'Palma de Mallorca',avg_wait_days:45,last_slot_found:'2026-03-28T11:30:00Z',difficulty:'Critical',notes:'Island logistics — limited slots, hard to reroute.'},
+    {province:'Las Palmas',avg_wait_days:30,last_slot_found:'2026-04-02T14:00:00Z',difficulty:'Moderate',notes:'Canary Islands — improving.'},
+    {province:'A Coruña',avg_wait_days:10,last_slot_found:'2026-04-07T09:00:00Z',difficulty:'Easy',notes:'Very fast processing in Galicia.'}
   ];
   pSaveUsers(users);pSaveApps(apps);pSaveMsgs(msgs);pSavePays(pays);pSavePromos(promos);pSaveTemplates(tpls);
-  pSaveProfiles(profiles);pSaveDocuments(documents);
+  pSaveProfiles(profiles);pSaveDocuments(documents);pSaveAppointments(appointments);pSaveProvinceMetrics(provinceMetrics);
+  pSaveSystemStatus('High Congestion');
   localStorage.setItem('ns_pu_seeded','1');
 }
 
@@ -1122,10 +2011,21 @@ function pMigrateNewFields(){
     apps.forEach(function(a){
       (a.requiredDocs||[]).forEach(function(docKey){
         var docStatus=(a.docs||{})[docKey]||'missing';
-        docs.push({id:'doc_mig_'+a.id+'_'+docKey,application_id:a.id,name:docKey.replace(/_/g,' '),file_url:null,status:docStatus,expiry_date:(a.docExpiries||{})[docKey]||null,internal_notes:''});
+        docs.push({id:'doc_mig_'+a.id+'_'+docKey,application_id:a.id,name:docKey.replace(/_/g,' '),file_url:null,status:docStatus,expiry_date:(a.docExpiries||{})[docKey]||null,internal_notes:'',ocr_confidence:0,is_apostilled:false,is_translated:false,rejection_reason:null});
       });
     });
     if(docs.length>0)pSaveDocuments(docs);
+  } else {
+    /* Migrate existing docs to add new fields */
+    var dc=false;
+    docs=docs.map(function(d){
+      if(d.ocr_confidence===undefined){d.ocr_confidence=0;dc=true;}
+      if(d.is_apostilled===undefined){d.is_apostilled=false;dc=true;}
+      if(d.is_translated===undefined){d.is_translated=false;dc=true;}
+      if(d.rejection_reason===undefined){d.rejection_reason=null;dc=true;}
+      return d;
+    });
+    if(dc)pSaveDocuments(docs);
   }
 }
 function renderPortalBg(){
@@ -1269,11 +2169,13 @@ function pNav(role,panel,el){
     else if(panel==='financials')pRenderAdFinancials();
     else if(panel==='support')pRenderAdSupport();
     else if(panel==='compliance')pRenderAdCompliance();
+    else if(panel==='provinces')pRenderAdProvinces();
   } else if(role==='cm'){
     if(panel==='worklist')pRenderCMWorklist();
     else if(panel==='applications')pRenderCMApps();
     else if(panel==='support')pRenderCMSupport();
     else if(panel==='settings')pLoadCMSettings();
+    else if(panel==='provinces')pRenderCMProvinces();
   } else {
     var LOCKED=['status','documents','support','finance'];
     if(LOCKED.indexOf(panel)!==-1&&!pHasPaidApp()){
@@ -2245,6 +3147,8 @@ function pCompleteCheckout(){
 /* ══ ADMIN RENDERS ══ */
 function pRenderAdmin(){pRenderAdAnalytics();}
 function pRenderAdAnalytics(){
+  /* System status banner at top */
+  pRenderSystemStatusBanner('ad-analytics-status',true);
   var apps=pGetApps();var pays=pGetPays();var users=pGetUsers();
   var customers=users.filter(function(u){return u.role==='customer';});
   var paidPays=pays.filter(function(p){return p.status==='paid';});
@@ -2566,12 +3470,44 @@ function pRenderAdCompliance(){
 }
 function pDeleteTemplate(id){if(!confirm('Delete this template?'))return;pSaveTemplates(pGetTemplates().filter(function(t){return t.id!==id;}));pRenderAdCompliance();showToast('Template deleted');}
 
+/* ══ ADMIN PROVINCES PANEL ══ */
+function pRenderAdProvinces(){
+  pRenderSystemStatusBanner('ad-system-status',true);
+  pRenderProvinceHeatmap('ad-province-heatmap',true);
+}
+
+/* ══ CM PROVINCES PANEL ══ */
+function pRenderCMProvinces(){
+  pRenderSystemStatusBanner('cm-system-status',false);
+  pRenderProvinceHeatmap('cm-province-heatmap',false);
+}
+
 /* ══ CASE MANAGER RENDERS ══ */
 function pRenderCM(){pRenderCMWorklist();}
 function pGetMyCMApps(){
   return pGetApps().filter(function(a){return a.cmId===pUser.id;});
 }
 function pRenderCMWorklist(){
+  /* System status banner (Efficiency Risk warning) */
+  var sysStatus=pGetSystemStatus();
+  var isCritical=sysStatus.indexOf('Critical')!==-1||sysStatus.indexOf('High')!==-1;
+  if(isCritical){
+    setHTML('cm-worklist-status','<div class="system-status-banner status-critical">'
+      +'<div class="system-status-icon">🔴</div>'
+      +'<div class="system-status-body">'
+      +'<div class="system-status-title">⚠ Efficiency Risk — '+escHtml(sysStatus)+'</div>'
+      +'<div class="system-status-detail">All cases may experience extended processing times. Proactively manage client expectations and consider alternative provinces.</div>'
+      +'</div></div>');
+  } else if(sysStatus!=='Normal'){
+    setHTML('cm-worklist-status','<div class="system-status-banner status-moderate">'
+      +'<div class="system-status-icon">🟡</div>'
+      +'<div class="system-status-body">'
+      +'<div class="system-status-title">System Status: '+escHtml(sysStatus)+'</div>'
+      +'<div class="system-status-detail">Some provinces experiencing delays. Check Province Tracker for details.</div>'
+      +'</div></div>');
+  } else {
+    setHTML('cm-worklist-status','');
+  }
   var myApps=pGetMyCMApps();var users=pGetUsers();var allApps=pGetApps();
   var msgs=pGetMsgs().filter(function(m){return !m.read&&m.toId===pUser.id;});
   var clients=users.filter(function(u){return u.cmId===pUser.id;});
@@ -2622,14 +3558,15 @@ function pRenderCMWorklist(){
   }
   setHTML('cm-expiry-alerts',expHtml);
 
-  /* Client table with urgency & doc progress */
+  /* Client table with tri-state bars, priority scores & urgency */
   setHTML('cm-clients-tbody',clients.map(function(u){
     var app=myApps.find(function(a){return a.userId===u.id;});
+    var priScore=app?calculatePriorityScore(app):0;
     return '<tr><td style="font-weight:600;">'+escHtml(u.first+' '+u.last)+'</td>'
       +'<td>'+(app?escHtml(P_PKG_NAMES[app.pkg]||app.pkg):'—')+'</td>'
       +'<td>'+(app?'<span class="p-badge bd-prog">'+P_STAGES[app.stage]+'</span>':'—')+'</td>'
-      +'<td>'+(app?pDocProgressBar(app):'—')+'</td>'
-      +'<td style="font-size:12px;color:var(--text3);">'+(app?fmtDate(app.updated):'—')+'</td>'
+      +'<td>'+(app?pTriStateBar(app):'—')+'</td>'
+      +'<td>'+(app?pPriorityBadge(priScore):'—')+'</td>'
       +'<td>'+(app?pUrgencyFlag(app.updated):'—')+'</td>'
       +'<td><div class="p-tbl-actions">'
       +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="pOpenThread(\''+u.id+'\',\'cm\');pNav(\'cm\',\'support\',null)">Message</button>'
@@ -2639,14 +3576,17 @@ function pRenderCMWorklist(){
 }
 function pRenderCMApps(){
   var apps=pGetMyCMApps();var users=pGetUsers();
+  /* Sort by priority score descending */
+  apps.sort(function(a,b){return calculatePriorityScore(b)-calculatePriorityScore(a);});
   setHTML('cm-apps-tbody',apps.map(function(a){
     var u=users.find(function(u){return u.id===a.userId;})||{first:'Unknown',last:''};
+    var priScore=calculatePriorityScore(a);
     return '<tr><td style="font-weight:600;">'+escHtml(u.first+' '+u.last)+'</td>'
       +'<td>'+escHtml(P_PKG_NAMES[a.pkg]||a.pkg)+'</td>'
       +'<td><span class="p-badge '+(a.stage===5?'bd-done':'bd-prog')+'">'+P_STAGES[a.stage]+'</span></td>'
-      +'<td>'+pDocProgressBar(a)+'</td>'
+      +'<td>'+pTriStateBar(a)+'</td>'
+      +'<td>'+pPriorityBadge(priScore)+'</td>'
       +'<td>'+pUrgencyFlag(a.updated)+'</td>'
-      +'<td style="font-size:12px;color:var(--text3);">'+fmtDate(a.updated)+'</td>'
       +'<td><button class="p-btn p-btn-primary p-btn-sm" onclick="pCMManageApp(\''+a.id+'\')">Manage</button></td></tr>';
   }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px;">No applications.</td></tr>');
 }
@@ -2708,15 +3648,29 @@ function pRenderCMManage(){
     +'<div><span class="p-badge '+(app.stage===5?'bd-done':'bd-prog')+'" style="font-size:13px;padding:5px 14px;">'+P_STAGES[app.stage]+'</span></div>'
     +'</div>';
 
+  /* Priority score & financial health in header */
+  var priScore=calculatePriorityScore(app);
+  var profile=pGetProfile(app.userId);
+  html+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">'
+    +pPriorityBadge(priScore)
+    +'</div>';
+  html+=pRenderFinancialHealth(app,profile);
+
   // Tabs
   html+='<div class="cm-manage-tabs">'
     +'<button class="cm-manage-tab'+(cmManageTab==='kanban'?' active':'')+'" onclick="pCMManageTabSwitch(\'kanban\')">Overview</button>'
     +'<button class="cm-manage-tab'+(cmManageTab==='documents'?' active':'')+'" onclick="pCMManageTabSwitch(\'documents\')">Documents</button>'
+    +'<button class="cm-manage-tab'+(cmManageTab==='reviewer'?' active':'')+'" onclick="pCMManageTabSwitch(\'reviewer\')">Reviewer</button>'
+    +'<button class="cm-manage-tab'+(cmManageTab==='appointments'?' active':'')+'" onclick="pCMManageTabSwitch(\'appointments\')">Appointments</button>'
+    +'<button class="cm-manage-tab'+(cmManageTab==='ex17'?' active':'')+'" onclick="pCMManageTabSwitch(\'ex17\')">EX-17</button>'
     +'<button class="cm-manage-tab'+(cmManageTab==='timeline'?' active':'')+'" onclick="pCMManageTabSwitch(\'timeline\')">Timeline</button>'
     +'</div>';
 
   if(cmManageTab==='kanban') html+=pCMRenderKanban(app,u);
   else if(cmManageTab==='documents') html+=pCMRenderDocs(app);
+  else if(cmManageTab==='reviewer') html+=pCMRenderReviewer(app);
+  else if(cmManageTab==='appointments') html+=pCMRenderAppointments(app);
+  else if(cmManageTab==='ex17') html+=pCMRenderEX17(app);
   else if(cmManageTab==='timeline') html+=pCMRenderTimeline(app,u);
 
   el.innerHTML=html;
