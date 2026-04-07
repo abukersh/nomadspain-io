@@ -161,6 +161,8 @@ function checkEligibility() {
   var inc = document.getElementById('income').value;
   var work = document.getElementById('work').value;
   var crim = document.getElementById('criminal').value;
+  var famEl = document.getElementById('familyMembers');
+  var famCount = famEl ? parseInt(famEl.value) || 0 : 0;
   var emailG = document.getElementById('emailCollectGroup');
   var box = document.getElementById('resultBox');
   var title = document.getElementById('resultTitle');
@@ -179,9 +181,22 @@ function checkEligibility() {
   document.getElementById('checkerEmailBtn').textContent = 'Get my code \u2192';
   document.getElementById('checkerEmailBtn').disabled = false;
   var isEuEea = nat === 'eu_eea';
-  var incomeLow = inc === 'below2000';
   var hasCriminal = crim === 'yes';
   var workForSpanish = work === 'spanish_employer';
+
+  /* SMI-based income threshold calculation */
+  var requiredIncome = calcIncomeThreshold(famCount);
+  var incomeLow = inc === 'below2000' || (inc === '2000_2849' && requiredIncome > 2849);
+
+  /* Show income breakdown */
+  var incomeBreakdown = '\u20AC' + requiredIncome.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + '/month required';
+  if(famCount > 0) {
+    incomeBreakdown += ' (SMI 200% = \u20AC' + SMI_200.toFixed(2);
+    incomeBreakdown += ' + 1st dep \u20AC' + SMI_75.toFixed(2);
+    if(famCount > 1) incomeBreakdown += ' + ' + (famCount-1) + ' dep(s) \u00D7 \u20AC' + SMI_25.toFixed(2);
+    incomeBreakdown += ')';
+  }
+
   if (isEuEea) {
     box.classList.add('ineligible');
     title.textContent = '\u274C Not Eligible \u2014 EU/EEA Nationals';
@@ -201,7 +216,7 @@ function checkEligibility() {
   if (incomeLow) {
     box.classList.add('ineligible');
     title.textContent = '\u274C Currently Below Income Threshold';
-    text.textContent = 'The Spanish Digital Nomad Visa requires a minimum of \u20AC2,849/month. Your current income is below this threshold. However, we can help you plan for eligibility.';
+    text.textContent = 'The Spanish Digital Nomad Visa requires ' + incomeBreakdown + '. Your current income is below this threshold. However, we can help you plan for eligibility.';
     label.textContent = 'Leave your email and we\u2019ll send you a free income growth roadmap.';
     _checkerResult = 'low_income';
     capture.style.display = 'block'; return;
@@ -216,12 +231,12 @@ function checkEligibility() {
   }
   box.classList.add('eligible');
   title.textContent = '\u2705 You Qualify for the Spain Digital Nomad Visa!';
-  text.textContent = 'Based on your answers, you meet the key requirements. Enter your email below to claim your exclusive 5% discount on the Full Visa package.';
+  text.textContent = 'Based on your answers, you meet the key requirements. ' + incomeBreakdown + '. Enter your email below to claim your exclusive 5% discount on the Full Visa package.';
   label.textContent = '\uD83C\uDF89 Enter your email to unlock your exclusive discount code:';
   _checkerResult = 'eligible';
   capture.style.display = 'block';
   fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({nationality:nat,income:inc,work_type:work,criminal:crim,result:'eligible',email:null})}).catch(function(){});
+    body:JSON.stringify({nationality:nat,income:inc,work_type:work,criminal:crim,family_members:famCount,required_income:requiredIncome,result:'eligible',email:null})}).catch(function(){});
 }
 function claimCheckerDiscount() {
   var emailInput = document.getElementById('checkerEmailInput');
@@ -234,6 +249,9 @@ function claimCheckerDiscount() {
   var inc  = (document.getElementById('income')||{}).value || '';
   var work = (document.getElementById('work')||{}).value || '';
   var crim = (document.getElementById('criminal')||{}).value || '';
+  var famEl = document.getElementById('familyMembers');
+  var famCount = famEl ? parseInt(famEl.value) || 0 : 0;
+  var requiredIncome = calcIncomeThreshold(famCount);
   var resultLabels = {
     eligible: '\u2705 Eligible',
     eu_eea: '\u274C EU/EEA \u2014 Not eligible',
@@ -246,15 +264,30 @@ function claimCheckerDiscount() {
   if (inc)  msgParts.push('Income: ' + inc);
   if (work) msgParts.push('Work type: ' + work);
   if (crim) msgParts.push('Criminal record: ' + crim);
+  if (famCount > 0) msgParts.push('Family members: ' + famCount);
+  msgParts.push('Required income: \u20AC' + requiredIncome.toFixed(2));
   /* save to ns_leads localStorage */
   try {
-    var leads = JSON.parse(localStorage.getItem('ns_leads') || '[]');
-    leads.unshift({ id: Date.now(), first: '', last: '', email: email, nationality: nat, message: msgParts.join(' | '), date: new Date().toISOString(), status: 'new', source: 'checker' });
-    localStorage.setItem('ns_leads', JSON.stringify(leads));
+    var leads = pGetLeads();
+    leads.unshift({ id: Date.now(), first: '', last: '', email: email, nationality: nat, message: msgParts.join(' | '), date: new Date().toISOString(), status: 'new', source: 'checker', family_members: famCount, required_income: requiredIncome, checker_result: _checkerResult });
+    pSaveLeads(leads);
+  } catch(e) {}
+  /* Save lead email to users table with role='user', status='lead' for CM follow-up */
+  try {
+    var users = pGetUsers();
+    var existingUser = users.find(function(u){return u.email.toLowerCase()===email.toLowerCase();});
+    if(!existingUser){
+      users.push({
+        id:'u_lead_'+Date.now(),email:email.toLowerCase(),pass:'',role:'customer',first:'',last:'',phone:'',
+        cmId:null,created:new Date().toISOString(),lead_status:'lead',checker_result:_checkerResult,
+        nationality:nat,family_members:famCount
+      });
+      pSaveUsers(users);
+    }
   } catch(e) {}
   /* also post to backend */
   fetch('/api/leads', { method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ email: email, nationality: nat, income: inc, work_type: work, criminal: crim, result: _checkerResult }) }).catch(function(){});
+    body: JSON.stringify({ email: email, nationality: nat, income: inc, work_type: work, criminal: crim, family_members: famCount, required_income: requiredIncome, result: _checkerResult }) }).catch(function(){});
   document.getElementById('checkerEmailCapture').style.display = 'none';
   if (_checkerResult === 'eligible') {
     document.getElementById('discountBox').style.display = 'block';
@@ -710,6 +743,18 @@ function pHasPaidApp(){
   return pays.length>0;
 }
 function pSavePricing2(p){localStorage.setItem('ns_pricing',JSON.stringify(p));}
+/* Profiles table */
+function pGetProfiles(){return JSON.parse(localStorage.getItem('ns_profiles')||'{}');}
+function pSaveProfiles(p){localStorage.setItem('ns_profiles',JSON.stringify(p));}
+function pGetProfile(userId){var p=pGetProfiles();return p[userId]||null;}
+function pSaveProfile(userId,data){var p=pGetProfiles();p[userId]=data;pSaveProfiles(p);}
+/* Documents table (normalised — separate from app.docs legacy) */
+function pGetDocuments(){return JSON.parse(localStorage.getItem('ns_documents')||'[]');}
+function pSaveDocuments(d){localStorage.setItem('ns_documents',JSON.stringify(d));}
+function pGetAppDocuments(appId){return pGetDocuments().filter(function(d){return d.application_id===appId;});}
+/* Leads table */
+function pGetLeads(){return JSON.parse(localStorage.getItem('ns_leads')||'[]');}
+function pSaveLeads(l){localStorage.setItem('ns_leads',JSON.stringify(l));}
 
 var PROFILE_CHECKLISTS={
   main:[
@@ -800,25 +845,75 @@ var P_PKG_NAMES={consultation:'360\u00b0 Strategy Session',solo:'The Nomad Solo'
 var P_PKG_PRICES={consultation:50,solo:2500,family:2500};
 
 /* ══ ENUMS & RBAC ══ */
+/* ══ ENUMS (Mirrors SQL ENUM types) ══ */
+var USER_ROLE={ADMIN:'admin',MANAGER:'case_manager',USER:'customer'};
+var APP_STATUS_ENUM={LEAD:'lead',PAYMENT_PENDING:'payment_pending',DOCUMENT_PREP:'document_prep',SUBMITTED:'submitted',APPROVED:'approved',REJECTED:'rejected'};
+/* Legacy compat */
 var APP_STATUS={REGISTERED:'registered',PAID:'paid',APP_STARTED:'app_started',SUBMITTED:'submitted'};
+var DOC_STATUS_ENUM={MISSING:'missing',UPLOADED:'uploaded',APOSTILLED:'apostilled',TRANSLATED:'translated',VERIFIED:'verified'};
 var REFERRAL_SOURCES=['organic','referral','social','ads','partner'];
 var CM_MAX_CAPACITY=20;
 var DOC_EXPIRY_WARN_DAYS=15;
 var URGENCY_DAYS=5;
 
-/* RBAC helpers */
-function isAdmin(){return pUser&&pUser.role==='admin';}
-function isManager(){return pUser&&pUser.role==='case_manager';}
-function isCustomer(){return pUser&&pUser.role==='customer';}
+/* ══ SMI (Salario Mínimo Interprofesional) 2026 ══ */
+var SMI_100=1424.50;
+var SMI_200=SMI_100*2; /* €2,849 — main applicant threshold */
+var SMI_75=SMI_100*0.75; /* €1,068.38 — first dependent */
+var SMI_25=SMI_100*0.25; /* €356.13 — each additional dependent */
 
-/* Derive APP_STATUS from app data */
+function calcIncomeThreshold(familyCount){
+  var threshold=SMI_200;
+  if(familyCount>0) threshold+=SMI_75; /* first dependent */
+  if(familyCount>1) threshold+=SMI_25*(familyCount-1); /* each additional */
+  return Math.round(threshold*100)/100;
+}
+
+/* ══ RBAC (Row Level Security in JS) ══ */
+function isAdmin(){return pUser&&pUser.role===USER_ROLE.ADMIN;}
+function isManager(){return pUser&&pUser.role===USER_ROLE.MANAGER;}
+function isCustomer(){return pUser&&pUser.role===USER_ROLE.USER;}
+
+/* RLS: Filter data based on role — like Postgres RLS policies */
+function rlsFilterApps(apps){
+  if(!pUser) return [];
+  if(isAdmin()) return apps; /* Admin: SELECT * FROM applications */
+  if(isManager()) return apps.filter(function(a){return a.cmId===pUser.id;}); /* CM: WHERE assigned_manager_id = current_user */
+  return apps.filter(function(a){return a.userId===pUser.id;}); /* User: WHERE user_id = current_user */
+}
+function rlsFilterDocs(docs,appId){
+  /* Simulates RLS on documents table */
+  if(!pUser) return [];
+  var apps=rlsFilterApps(pGetApps());
+  var appIds=apps.map(function(a){return a.id;});
+  return docs.filter(function(d){return appIds.indexOf(d.appId||appId)!==-1;});
+}
+function rlsFilterPays(pays){
+  if(!pUser) return [];
+  if(isAdmin()) return pays;
+  if(isManager()) return []; /* CM/User: No access to global financials */
+  return pays.filter(function(p){return p.userId===pUser.id;});
+}
+function rlsFilterUsers(users){
+  if(!pUser) return [];
+  if(isAdmin()) return users;
+  if(isManager()){
+    /* CM sees own profile + assigned customers */
+    return users.filter(function(u){return u.id===pUser.id||u.cmId===pUser.id;});
+  }
+  return users.filter(function(u){return u.id===pUser.id;}); /* User sees only self */
+}
+
+/* Derive APP_STATUS from app data — uses SQL enum values */
 function getAppStatus(app){
   if(!app)return null;
+  if(app.app_status) return app.app_status; /* Use stored value if available */
   var pays=pGetPays();var hasPaid=pays.some(function(p){return p.appId===app.id&&p.status==='paid';});
-  if(app.stage>=3)return APP_STATUS.SUBMITTED;
-  if(app.stage>=1)return APP_STATUS.APP_STARTED;
-  if(hasPaid)return APP_STATUS.PAID;
-  return APP_STATUS.REGISTERED;
+  if(app.stage>=5)return APP_STATUS_ENUM.APPROVED;
+  if(app.stage>=3)return APP_STATUS_ENUM.SUBMITTED;
+  if(app.stage>=1)return APP_STATUS_ENUM.DOCUMENT_PREP;
+  if(hasPaid)return APP_STATUS_ENUM.PAYMENT_PENDING;
+  return APP_STATUS_ENUM.LEAD;
 }
 
 /* Urgency flag renderer */
@@ -896,20 +991,24 @@ function pSeedData(){
     {id:'u_c2',email:'maria@example.com',pass:'demo1234',role:'customer',first:'Maria',last:'Santos',phone:'+1 555 000 1234',cmId:'u_cm1',created:'2024-02-15T00:00:00Z'}
   ];
   var apps=[
-    {id:'app1',userId:'u_c1',pkg:'solo',stage:2,status:'in_progress',cmId:'u_cm1',created:'2024-02-02T00:00:00Z',updated:'2024-03-10T00:00:00Z',
+    {id:'app1',userId:'u_c1',pkg:'solo',stage:2,status:'in_progress',app_status:'document_prep',cmId:'u_cm1',created:'2024-02-02T00:00:00Z',updated:'2024-03-10T00:00:00Z',
+     family_members_count:0,total_required_income:2849,
      docs:{passport:'uploaded',income:'uploaded',criminal:'pending',degree:'missing',insurance:'missing',other:'missing'},
      requiredDocs:['passport','income','criminal','degree','insurance','other'],
      docExpiries:{passport:'2026-08-15T00:00:00Z',criminal:'2026-04-20T00:00:00Z'},
      notes:'Priority client. Passport apostille pending.',
      stageDates:{0:'2024-02-02T10:30:00Z',1:'2024-02-20T14:15:00Z',2:'2024-03-10T00:00:00Z'},
-     statusHistory:[{status:'registered',at:'2024-02-02T10:30:00Z'},{status:'paid',at:'2024-02-05T00:00:00Z'},{status:'app_started',at:'2024-02-20T14:15:00Z'}]},
-    {id:'app2',userId:'u_c2',pkg:'consultation',stage:0,status:'new',cmId:'u_cm1',created:'2024-02-16T00:00:00Z',updated:'2024-02-16T00:00:00Z',
+     statusHistory:[{status:'lead',at:'2024-02-02T10:30:00Z'},{status:'payment_pending',at:'2024-02-03T00:00:00Z'},{status:'document_prep',at:'2024-02-20T14:15:00Z'}],
+     last_activity:'2024-03-10T00:00:00Z'},
+    {id:'app2',userId:'u_c2',pkg:'family',stage:0,status:'new',app_status:'lead',cmId:'u_cm1',created:'2024-02-16T00:00:00Z',updated:'2024-02-16T00:00:00Z',
+     family_members_count:2,total_required_income:3561.63,
      docs:{passport:'missing',income:'missing',criminal:'missing',degree:'missing',insurance:'missing',other:'missing'},
      requiredDocs:['passport','income','criminal','degree','insurance','other'],
      docExpiries:{},
-     notes:'Initial consultation booked.',
+     notes:'Initial consultation booked. Family of 3.',
      stageDates:{0:'2024-02-16T09:00:00Z'},
-     statusHistory:[{status:'registered',at:'2024-02-16T09:00:00Z'}]}
+     statusHistory:[{status:'lead',at:'2024-02-16T09:00:00Z'}],
+     last_activity:'2024-02-16T00:00:00Z'}
   ];
   var msgs=[
     {id:'m1',fromId:'u_c1',toId:'u_cm1',appId:'app1',body:'Hi Sarah, I\'ve uploaded my passport. Can you confirm you received it?',ts:'2024-03-10T09:00:00Z',read:true},
@@ -940,7 +1039,22 @@ function pSeedData(){
       {name:'Criminal Record Certificate',required:true,desc:'Apostilled, within 3 months'}
     ]}
   ];
+  /* Profiles table (mirrors SQL profiles) */
+  var profiles={
+    'u_c1':{user_id:'u_c1',full_name:'John Carter',nationality:'gb',current_residency:'United Kingdom',monthly_income:4200,has_degree:true,years_experience:6,passport_expiry:'2027-08-15'},
+    'u_c2':{user_id:'u_c2',full_name:'Maria Santos',nationality:'br',current_residency:'Brazil',monthly_income:3100,has_degree:false,years_experience:4,passport_expiry:'2028-03-22'}
+  };
+  /* Documents table (normalised — mirrors SQL documents) */
+  var documents=[
+    {id:'doc1',application_id:'app1',name:'Passport',file_url:null,status:'uploaded',expiry_date:'2026-08-15',internal_notes:'Biometric page clear.'},
+    {id:'doc2',application_id:'app1',name:'Proof of Income',file_url:null,status:'uploaded',expiry_date:null,internal_notes:'3 months bank statements received.'},
+    {id:'doc3',application_id:'app1',name:'Criminal Record Certificate',file_url:null,status:'missing',expiry_date:'2026-04-20',internal_notes:'Needs apostille.'},
+    {id:'doc4',application_id:'app1',name:'Health Insurance',file_url:null,status:'missing',expiry_date:null,internal_notes:''},
+    {id:'doc5',application_id:'app1',name:'Degree',file_url:null,status:'missing',expiry_date:null,internal_notes:''},
+    {id:'doc6',application_id:'app2',name:'Passport',file_url:null,status:'missing',expiry_date:null,internal_notes:''}
+  ];
   pSaveUsers(users);pSaveApps(apps);pSaveMsgs(msgs);pSavePays(pays);pSavePromos(promos);pSaveTemplates(tpls);
+  pSaveProfiles(profiles);pSaveDocuments(documents);
   localStorage.setItem('ns_pu_seeded','1');
 }
 
@@ -964,12 +1078,23 @@ function pMigrateNewFields(){
   apps=apps.map(function(a){
     if(!a.requiredDocs){a.requiredDocs=['passport','income','criminal','degree','insurance','other'];changed=true;}
     if(!a.docExpiries){a.docExpiries={};changed=true;}
+    if(!a.last_activity){a.last_activity=a.updated||a.created;changed=true;}
+    if(a.family_members_count===undefined){a.family_members_count=a.deps||0;changed=true;}
+    if(!a.total_required_income){a.total_required_income=calcIncomeThreshold(a.family_members_count||0);changed=true;}
+    if(!a.app_status){
+      /* Derive app_status from stage */
+      a.app_status=a.stage>=5?APP_STATUS_ENUM.APPROVED:a.stage>=3?APP_STATUS_ENUM.SUBMITTED:a.stage>=1?APP_STATUS_ENUM.DOCUMENT_PREP:APP_STATUS_ENUM.LEAD;
+      changed=true;
+    }
     if(!a.statusHistory){
-      a.statusHistory=[{status:APP_STATUS.REGISTERED,at:a.created}];
+      a.statusHistory=[{status:APP_STATUS_ENUM.LEAD,at:a.created}];
       var pays=pGetPays();
-      if(pays.some(function(p){return p.appId===a.id&&p.status==='paid';}))a.statusHistory.push({status:APP_STATUS.PAID,at:a.created});
-      if(a.stage>=1)a.statusHistory.push({status:APP_STATUS.APP_STARTED,at:a.stageDates&&a.stageDates[1]?a.stageDates[1]:a.updated});
-      if(a.stage>=3)a.statusHistory.push({status:APP_STATUS.SUBMITTED,at:a.stageDates&&a.stageDates[3]?a.stageDates[3]:a.updated});
+      if(pays.some(function(p){return p.appId===a.id&&p.status==='paid';})){
+        a.statusHistory.push({status:APP_STATUS_ENUM.PAYMENT_PENDING,at:a.created});
+        a.statusHistory.push({status:APP_STATUS_ENUM.DOCUMENT_PREP,at:a.stageDates&&a.stageDates[1]?a.stageDates[1]:a.updated});
+      }
+      if(a.stage>=3)a.statusHistory.push({status:APP_STATUS_ENUM.SUBMITTED,at:a.stageDates&&a.stageDates[3]?a.stageDates[3]:a.updated});
+      if(a.stage>=5)a.statusHistory.push({status:APP_STATUS_ENUM.APPROVED,at:a.stageDates&&a.stageDates[5]?a.stageDates[5]:a.updated});
       changed=true;
     }
     return a;
@@ -980,6 +1105,7 @@ function pMigrateNewFields(){
   pays=pays.map(function(p){
     if(!p.referral_source){p.referral_source='organic';pc=true;}
     if(p.coupon_code===undefined){p.coupon_code='';p.coupon_discount=0;pc=true;}
+    if(!p.stripe_session_id){p.stripe_session_id='';pc=true;}
     return p;
   });
   if(pc)pSavePays(pays);
@@ -990,6 +1116,17 @@ function pMigrateNewFields(){
     return u;
   });
   if(uc)pSaveUsers(users);
+  /* Ensure normalised documents exist */
+  var docs=pGetDocuments();
+  if(docs.length===0){
+    apps.forEach(function(a){
+      (a.requiredDocs||[]).forEach(function(docKey){
+        var docStatus=(a.docs||{})[docKey]||'missing';
+        docs.push({id:'doc_mig_'+a.id+'_'+docKey,application_id:a.id,name:docKey.replace(/_/g,' '),file_url:null,status:docStatus,expiry_date:(a.docExpiries||{})[docKey]||null,internal_notes:''});
+      });
+    });
+    if(docs.length>0)pSaveDocuments(docs);
+  }
 }
 function renderPortalBg(){
   pSeedData();pMigrateStageDates();pMigrateNewFields();
@@ -1061,9 +1198,27 @@ function pDoSignup(){
   if(pass.length<8){showToast('Password must be at least 8 characters');return;}
   if(!/^[^@]+@[^@]+\.[^@]+$/.test(email)){showToast('Please enter a valid email');return;}
   var users=pGetUsers();
+  /* Check if this email exists as a lead — upgrade instead of blocking */
+  var existingLead=users.find(function(u){return u.email.toLowerCase()===email&&u.lead_status==='lead';});
+  if(existingLead){
+    /* Upgrade lead to full user */
+    users=users.map(function(u){
+      if(u.id===existingLead.id){u.first=first;u.last=last;u.pass=pass;u.lead_status=null;}
+      return u;
+    });
+    pSaveUsers(users);
+    var upgraded=users.find(function(u){return u.id===existingLead.id;});
+    pUser=upgraded;localStorage.setItem('ns_portal_session',JSON.stringify(upgraded));
+    /* Create profile */
+    pSaveProfile(upgraded.id,{user_id:upgraded.id,full_name:first+' '+last,nationality:upgraded.nationality||'',current_residency:'',monthly_income:0,has_degree:false,years_experience:0,passport_expiry:null});
+    pShowPreloader(function(){pShowDashboard();showToast('\u2713 Account created! Welcome, '+first+'!');});
+    return;
+  }
   if(users.find(function(u){return u.email.toLowerCase()===email;})){showToast('Email already registered');return;}
   var nu={id:'u'+Date.now(),email:email,pass:pass,role:'customer',first:first,last:last,phone:'',cmId:null,created:new Date().toISOString()};
   users.push(nu);pSaveUsers(users);
+  /* Create empty profile — mirrors SQL profiles table */
+  pSaveProfile(nu.id,{user_id:nu.id,full_name:first+' '+last,nationality:'',current_residency:'',monthly_income:0,has_degree:false,years_experience:0,passport_expiry:null});
   pUser=nu;localStorage.setItem('ns_portal_session',JSON.stringify(nu));
   pShowPreloader(function(){pShowDashboard();showToast('\u2713 Account created! Welcome, '+first+'!');});
 }
@@ -2012,20 +2167,76 @@ function pCompleteCheckout(){
   var basePrice=pSelectedPkg==='family'?(pricing.solo||2500):(pricing[pSelectedPkg]||2500);
   var depAddon=pSelectedPkg==='family'?(pricing.dep||500)*coDepCount:0;
   var price=Math.max(0,basePrice+depAddon-pPromoDiscount);
-  /* Create application */
+  var appTs=new Date().toISOString();
+  var famCount=pSelectedPkg==='family'?coDepCount:0;
+  var requiredIncome=calcIncomeThreshold(famCount);
+  /* Determine referral source from user or fallback */
+  var refSource=pUser.referral_source||'organic';
+  var promoCode='';
+  if(pPromoDiscount>0){
+    var promos=pGetPromos();var usedPromo=promos.find(function(p){return p.active;});
+    promoCode=usedPromo?usedPromo.code:'';
+  }
+  /* Create application — mirrors SQL applications table */
   var apps=pGetApps();
   var existing=apps.find(function(a){return a.userId===pUser.id;});
   if(!existing){
-    var cm=pGetUsers().find(function(u){return u.role==='case_manager';});
-    var appTs=new Date().toISOString();var newApp={id:'app'+Date.now(),userId:pUser.id,pkg:pSelectedPkg,stage:0,status:'new',cmId:cm?cm.id:null,created:appTs,updated:appTs,docs:{passport:'missing',income:'missing',criminal:'missing',degree:'missing',insurance:'missing',other:'missing'},notes:'',deps:coDepCount,stageDates:{0:appTs}};
+    /* Auto-assign CM with lowest load (load balancing) */
+    var cms=pGetUsers().filter(function(u){return u.role==='case_manager';});
+    var bestCM=null;var bestLoad=Infinity;
+    cms.forEach(function(cm){
+      var load=apps.filter(function(a){return a.cmId===cm.id&&a.stage<5;}).length;
+      if(load<bestLoad){bestLoad=load;bestCM=cm;}
+    });
+    var newApp={
+      id:'app'+Date.now(),userId:pUser.id,pkg:pSelectedPkg,stage:0,
+      status:'new',app_status:APP_STATUS_ENUM.PAYMENT_PENDING,
+      cmId:bestCM?bestCM.id:null,created:appTs,updated:appTs,last_activity:appTs,
+      family_members_count:famCount,total_required_income:requiredIncome,
+      docs:{passport:'missing',income:'missing',criminal:'missing',degree:'missing',insurance:'missing',other:'missing'},
+      requiredDocs:['passport','income','criminal','degree','insurance','other'],
+      docExpiries:{},notes:'',deps:coDepCount,
+      stageDates:{0:appTs},
+      statusHistory:[{status:APP_STATUS_ENUM.LEAD,at:appTs},{status:APP_STATUS_ENUM.PAYMENT_PENDING,at:appTs}]
+    };
     apps.push(newApp);pSaveApps(apps);
+    /* Seed normalised document entries */
+    var docs=pGetDocuments();
+    newApp.requiredDocs.forEach(function(docKey){
+      docs.push({id:'doc'+Date.now()+'_'+docKey,application_id:newApp.id,name:docKey.replace(/_/g,' '),file_url:null,status:DOC_STATUS_ENUM.MISSING,expiry_date:null,internal_notes:''});
+    });
+    pSaveDocuments(docs);
     /* Update user cmId */
-    if(cm){var users=pGetUsers();users=users.map(function(u){if(u.id===pUser.id){u.cmId=cm.id;}return u;});pSaveUsers(users);pUser.cmId=cm.id;localStorage.setItem('ns_portal_session',JSON.stringify(pUser));}
-  } else {existing.pkg=pSelectedPkg;existing.deps=coDepCount;existing.updated=new Date().toISOString();pSaveApps(apps);}
-  /* Record payment */
+    if(bestCM){var users=pGetUsers();users=users.map(function(u){if(u.id===pUser.id){u.cmId=bestCM.id;}return u;});pSaveUsers(users);pUser.cmId=bestCM.id;localStorage.setItem('ns_portal_session',JSON.stringify(pUser));}
+  } else {
+    existing.pkg=pSelectedPkg;existing.deps=coDepCount;existing.updated=appTs;existing.last_activity=appTs;
+    existing.family_members_count=famCount;existing.total_required_income=requiredIncome;
+    existing.app_status=APP_STATUS_ENUM.PAYMENT_PENDING;
+    if(!existing.statusHistory)existing.statusHistory=[];
+    existing.statusHistory.push({status:APP_STATUS_ENUM.PAYMENT_PENDING,at:appTs});
+    pSaveApps(apps);
+  }
+  /* Record payment — mirrors SQL payments table */
   var pays=pGetPays();
-  pays.push({id:'pay'+Date.now(),userId:pUser.id,appId:(apps.find(function(a){return a.userId===pUser.id;})||{}).id,amount:price,type:'payment',status:'paid',date:new Date().toISOString(),desc:P_PKG_NAMES[pSelectedPkg]});
+  var appForPay=apps.find(function(a){return a.userId===pUser.id;});
+  pays.push({
+    id:'pay'+Date.now(),userId:pUser.id,appId:appForPay?appForPay.id:'',
+    amount:price,type:'payment',status:'paid',date:appTs,desc:P_PKG_NAMES[pSelectedPkg],
+    referral_source:refSource,coupon_code:promoCode,coupon_discount:pPromoDiscount,
+    stripe_session_id:'sim_'+Date.now()
+  });
   pSavePays(pays);
+  /* Update app_status to document_prep after payment */
+  if(appForPay){
+    apps=pGetApps();apps=apps.map(function(a){
+      if(a.id===appForPay.id){
+        a.app_status=APP_STATUS_ENUM.DOCUMENT_PREP;a.updated=appTs;a.last_activity=appTs;
+        if(!a.statusHistory)a.statusHistory=[];
+        a.statusHistory.push({status:APP_STATUS_ENUM.DOCUMENT_PREP,at:appTs});
+      }
+      return a;
+    });pSaveApps(apps);
+  }
   document.getElementById('cu-checkout').style.display='none';
   showToast('\u2713 Payment successful! Your application has been created.');
   pNav('cu','overview',null);
@@ -2044,11 +2255,11 @@ function pRenderAdAnalytics(){
   setText('ad-stat-apps',apps.length);setText('ad-stat-approved',approved);setText('ad-stat-users',customers.length);
   setText('ad-stat-rate',approvalRate+'% rate');
 
-  /* ═══ Conversion Funnel ═══ */
-  var funnelMap={};Object.values(APP_STATUS).forEach(function(s){funnelMap[s]=0;});
+  /* ═══ Conversion Funnel (mirrors SQL app_status ENUM) ═══ */
+  var funnelMap={};Object.values(APP_STATUS_ENUM).forEach(function(s){funnelMap[s]=0;});
   apps.forEach(function(app){var st=getAppStatus(app);if(st)funnelMap[st]++;});
-  var funnelOrder=[APP_STATUS.REGISTERED,APP_STATUS.PAID,APP_STATUS.APP_STARTED,APP_STATUS.SUBMITTED];
-  var funnelLabels={registered:'Registered',paid:'Paid',app_started:'App Started',submitted:'Submitted'};
+  var funnelOrder=[APP_STATUS_ENUM.LEAD,APP_STATUS_ENUM.PAYMENT_PENDING,APP_STATUS_ENUM.DOCUMENT_PREP,APP_STATUS_ENUM.SUBMITTED,APP_STATUS_ENUM.APPROVED];
+  var funnelLabels={lead:'Lead',payment_pending:'Payment',document_prep:'Doc Prep',submitted:'Submitted',approved:'Approved',rejected:'Rejected'};
   var funnelTotal=customers.length||1;
   var funnelHtml='<div class="an-funnel">';
   funnelOrder.forEach(function(status,i){
@@ -2691,9 +2902,10 @@ function pCMMoveStage(appId,dir){
         a.activityLog.push({ts:now,icon:'🔄',type:'stage',text:'Stage changed: '+P_STAGES[a.stage]+' \u2192 '+P_STAGES[newStage],detail:null});
         if(!a.stageDates)a.stageDates={};
         a.stageDates[newStage]=now;
-        /* Update statusHistory */
+        /* Update statusHistory — mirrors SQL app_status enum */
         if(!a.statusHistory)a.statusHistory=[];
-        var newStatus=newStage>=3?APP_STATUS.SUBMITTED:newStage>=1?APP_STATUS.APP_STARTED:APP_STATUS.REGISTERED;
+        var newStatus=newStage>=5?APP_STATUS_ENUM.APPROVED:newStage>=3?APP_STATUS_ENUM.SUBMITTED:newStage>=1?APP_STATUS_ENUM.DOCUMENT_PREP:APP_STATUS_ENUM.LEAD;
+        a.app_status=newStatus;a.last_activity=now;
         a.statusHistory.push({status:newStatus,at:now});
         a.stage=newStage;a.updated=now;
       }
@@ -2809,6 +3021,7 @@ function pOpenModal(type,id){
     body.innerHTML='<div class="p-field-row"><div class="p-field"><label>First Name</label><input type="text" id="pm-first" value="'+(cm?escHtml(cm.first):'')+'" placeholder="First name"></div><div class="p-field"><label>Last Name</label><input type="text" id="pm-last" value="'+(cm?escHtml(cm.last):'')+'" placeholder="Last name"></div></div>'
       +'<div class="p-field"><label>Email</label><input type="email" id="pm-email" value="'+(cm?escHtml(cm.email):'')+'" placeholder="email@nomadspain.io"></div>'
       +'<div class="p-field"><label>Password</label><input type="password" id="pm-pass" placeholder="'+(cm?'Leave blank to keep':'Min. 8 chars')+'"></div>'
+      +'<div class="p-field"><label>Max Capacity (cases)</label><input type="number" id="pm-max-cap" value="'+(cm&&cm.maxCapacity?cm.maxCapacity:CM_MAX_CAPACITY)+'" min="1" max="50"></div>'
       +'<button class="p-btn p-btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="pSaveCM(\''+( cm?cm.id:'')+'\')">Save</button>';
   } else if(type==='editApp'){
     var app=pGetApps().find(function(a){return a.id===id;});
@@ -2838,10 +3051,22 @@ function pOpenModal(type,id){
         });
       });
     }
-    body.innerHTML='<div class="p-field"><label>Stage</label><select id="pm-stage">'
+    /* App status info */
+    var appStatusLabel=(app.app_status||'lead').replace(/_/g,' ');
+    var famCount=app.family_members_count||0;
+    var reqIncome=app.total_required_income||calcIncomeThreshold(famCount);
+    body.innerHTML='<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
+      +'<div style="flex:1;background:var(--bg2);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Status</div><div style="font-size:13px;font-weight:700;color:#9b2c2c;text-transform:capitalize;">'+appStatusLabel+'</div></div>'
+      +'<div style="flex:1;background:var(--bg2);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Family</div><div style="font-size:13px;font-weight:700;">'+famCount+' dep(s)</div></div>'
+      +'<div style="flex:1;background:var(--bg2);border-radius:8px;padding:10px;text-align:center;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Min Income</div><div style="font-size:13px;font-weight:700;">\u20AC'+reqIncome.toFixed(2)+'</div></div>'
+      +'</div>'
+      +'<div class="p-field"><label>Stage</label><select id="pm-stage">'
       +P_STAGES.map(function(s,i){return '<option value="'+i+'"'+(app.stage===i?' selected':'')+'>'+s+'</option>';}).join('')+'</select></div>'
       +'<div class="p-field"><label>Assign Case Manager</label><select id="pm-cm"><option value="">— Unassigned —</option>'
-      +pGetUsers().filter(function(x){return x.role==='case_manager';}).map(function(cm){return '<option value="'+cm.id+'"'+(app.cmId===cm.id?' selected':'')+'>'+escHtml(cm.first+' '+cm.last)+'</option>';}).join('')+'</select></div>'
+      +pGetUsers().filter(function(x){return x.role==='case_manager';}).map(function(cm){
+        var load=pGetApps().filter(function(a){return a.cmId===cm.id&&a.stage<5;}).length;
+        return '<option value="'+cm.id+'"'+(app.cmId===cm.id?' selected':'')+'>'+escHtml(cm.first+' '+cm.last)+' ('+load+' active)</option>';
+      }).join('')+'</select></div>'
       +(app.docsSubmitted?'<div class="p-field"><label>Document Review</label><div style="background:var(--bg2);border-radius:10px;padding:8px 12px;">'+docReviewHtml+'</div></div>':'')
       +'<div class="p-field"><label>Internal Notes</label><textarea id="pm-notes" rows="3">'+escHtml(app.notes||'')+'</textarea></div>'
       +'<button class="p-btn p-btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="pSaveApp(\''+app.id+'\')">Save Changes</button>';
@@ -2861,13 +3086,30 @@ function pOpenModal(type,id){
     title.textContent='New Application';
     body.innerHTML='<div class="p-field"><label>Customer</label><select id="pm-user-id"><option value="">Select customer</option>'
       +pGetUsers().filter(function(u){return u.role==='customer';}).map(function(u){return '<option value="'+u.id+'">'+escHtml(u.first+' '+u.last)+' ('+escHtml(u.email)+')</option>';}).join('')+'</select></div>'
-      +'<div class="p-field"><label>Package</label><select id="pm-pkg"><option value="consultation">360° Strategy Session — €30</option><option value="solo">Nomad Solo — €2,500</option><option value="family">Family — €3,000</option></select></div>'
-      +'<div class="p-field"><label>Case Manager</label><select id="pm-cm"><option value="">— Unassigned —</option>'
-      +pGetUsers().filter(function(x){return x.role==='case_manager';}).map(function(cm){return '<option value="'+cm.id+'">'+escHtml(cm.first+' '+cm.last)+'</option>';}).join('')+'</select></div>'
+      +'<div class="p-field"><label>Package</label><select id="pm-pkg"><option value="consultation">360\u00b0 Strategy Session \u2014 \u20AC30</option><option value="solo">Nomad Solo \u2014 \u20AC2,500</option><option value="family">Family \u2014 \u20AC3,000</option></select></div>'
+      +'<div class="p-field"><label>Family Members (dependents)</label><input type="number" id="pm-family" value="0" min="0" max="10" onchange="pUpdateIncomeCalc()"><div id="pm-income-calc" style="font-size:12px;color:var(--text3);margin-top:4px;">Required income: \u20AC'+SMI_200.toFixed(2)+'/month</div></div>'
+      +'<div class="p-field"><label>Case Manager</label><select id="pm-cm"><option value="">— Auto-assign (lowest load) —</option>'
+      +pGetUsers().filter(function(x){return x.role==='case_manager';}).map(function(cm){
+        var load=pGetApps().filter(function(a){return a.cmId===cm.id&&a.stage<5;}).length;
+        return '<option value="'+cm.id+'">'+escHtml(cm.first+' '+cm.last)+' ('+load+' active)</option>';
+      }).join('')+'</select></div>'
       +'<button class="p-btn p-btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="pSaveNewApp()">Create Application</button>';
   }
 }
 function pCloseModal(){document.getElementById('pModalOverlay').classList.remove('open');}
+function pUpdateIncomeCalc(){
+  var famEl=document.getElementById('pm-family');var calcEl=document.getElementById('pm-income-calc');
+  if(!famEl||!calcEl)return;
+  var fam=parseInt(famEl.value)||0;
+  var required=calcIncomeThreshold(fam);
+  var breakdown='Required income: \u20AC'+required.toFixed(2)+'/month';
+  if(fam>0){
+    breakdown+=' (Base \u20AC'+SMI_200.toFixed(2)+' + 1st dep \u20AC'+SMI_75.toFixed(2);
+    if(fam>1) breakdown+=' + '+(fam-1)+'\u00D7\u20AC'+SMI_25.toFixed(2);
+    breakdown+=')';
+  }
+  calcEl.textContent=breakdown;
+}
 function pSaveUser(id){
   var first=(document.getElementById('pm-first').value||'').trim();
   var last=(document.getElementById('pm-last').value||'').trim();
@@ -2885,10 +3127,11 @@ function pSaveCM(id){
   var last=(document.getElementById('pm-last').value||'').trim();
   var email=(document.getElementById('pm-email').value||'').trim().toLowerCase();
   var pass=(document.getElementById('pm-pass').value||'');
+  var maxCap=parseInt((document.getElementById('pm-max-cap')||{}).value)||CM_MAX_CAPACITY;
   if(!first||!last||!email){showToast('Fill in required fields');return;}
   var users=pGetUsers();
-  if(id){users=users.map(function(u){if(u.id===id){u.first=first;u.last=last;u.email=email;if(pass&&pass.length>=8)u.pass=pass;}return u;});}
-  else{if(users.find(function(u){return u.email===email;})){showToast('Email already exists');return;}users.push({id:'u'+Date.now(),email:email,pass:pass||'changeme',role:'case_manager',first:first,last:last,phone:'',created:new Date().toISOString()});}
+  if(id){users=users.map(function(u){if(u.id===id){u.first=first;u.last=last;u.email=email;u.maxCapacity=maxCap;if(pass&&pass.length>=8)u.pass=pass;}return u;});}
+  else{if(users.find(function(u){return u.email===email;})){showToast('Email already exists');return;}users.push({id:'u'+Date.now(),email:email,pass:pass||'changeme',role:'case_manager',first:first,last:last,phone:'',created:new Date().toISOString(),maxCapacity:maxCap});}
   pSaveUsers(users);pCloseModal();pRenderAdCMs();showToast('\u2713 Case manager saved');
 }
 function pSaveApp(id){
@@ -2899,13 +3142,16 @@ function pSaveApp(id){
   var apps=pGetApps();apps=apps.map(function(a){
     if(a.id===id){
       var prevStage=a.stage;
-      a.stage=stage;a.cmId=cmId||a.cmId;a.notes=notes;a.updated=now;
+      a.stage=stage;a.cmId=cmId||a.cmId;a.notes=notes;a.updated=now;a.last_activity=now;
       if(!a.stageDates) a.stageDates={};
       if(stage!==prevStage){
-        // record timestamp for the newly completed stage (the one just passed)
         a.stageDates[stage]=now;
-        // also fill any skipped stages with the same timestamp
         for(var si=prevStage;si<stage;si++){if(!a.stageDates[si]) a.stageDates[si]=now;}
+        /* Update app_status based on stage */
+        if(!a.statusHistory)a.statusHistory=[];
+        var newAppStatus=stage>=5?APP_STATUS_ENUM.APPROVED:stage>=3?APP_STATUS_ENUM.SUBMITTED:stage>=1?APP_STATUS_ENUM.DOCUMENT_PREP:APP_STATUS_ENUM.LEAD;
+        a.app_status=newAppStatus;
+        a.statusHistory.push({status:newAppStatus,at:now});
       }
     }
     return a;
@@ -2932,10 +3178,31 @@ function pSaveNewApp(){
   var userId=((document.getElementById('pm-user-id')||{}).value)||'';
   var pkg=((document.getElementById('pm-pkg')||{}).value)||'solo';
   var cmId=((document.getElementById('pm-cm')||{}).value)||null;
+  var famCountEl=document.getElementById('pm-family');
+  var famCount=famCountEl?parseInt(famCountEl.value)||0:0;
   if(!userId){showToast('Select a customer');return;}
-  var apps=pGetApps();
-  var newTs=new Date().toISOString();apps.push({id:'app'+Date.now(),userId:userId,pkg:pkg,stage:0,status:'new',cmId:cmId,created:newTs,updated:newTs,docs:{passport:'missing',income:'missing',criminal:'missing',degree:'missing',insurance:'missing',other:'missing'},notes:'',stageDates:{0:newTs}});
-  pSaveApps(apps);pCloseModal();pRenderAdApps();showToast('\u2713 Application created');
+  var apps=pGetApps();var newTs=new Date().toISOString();
+  var requiredIncome=calcIncomeThreshold(famCount);
+  var newApp={
+    id:'app'+Date.now(),userId:userId,pkg:pkg,stage:0,status:'new',
+    app_status:APP_STATUS_ENUM.LEAD,cmId:cmId,
+    created:newTs,updated:newTs,last_activity:newTs,
+    family_members_count:famCount,total_required_income:requiredIncome,
+    docs:{passport:'missing',income:'missing',criminal:'missing',degree:'missing',insurance:'missing',other:'missing'},
+    requiredDocs:['passport','income','criminal','degree','insurance','other'],
+    docExpiries:{},notes:'',stageDates:{0:newTs},
+    statusHistory:[{status:APP_STATUS_ENUM.LEAD,at:newTs}]
+  };
+  apps.push(newApp);pSaveApps(apps);
+  /* Seed normalised docs */
+  var docs=pGetDocuments();
+  newApp.requiredDocs.forEach(function(docKey){
+    docs.push({id:'doc'+Date.now()+'_'+docKey,application_id:newApp.id,name:docKey.replace(/_/g,' '),file_url:null,status:DOC_STATUS_ENUM.MISSING,expiry_date:null,internal_notes:''});
+  });
+  pSaveDocuments(docs);
+  /* Update user cmId if assigned */
+  if(cmId){var users=pGetUsers();users=users.map(function(u){if(u.id===userId){u.cmId=cmId;}return u;});pSaveUsers(users);}
+  pCloseModal();pRenderAdApps();showToast('\u2713 Application created');
 }
 function pSavePromo(){
   var code=((document.getElementById('pm-code')||{}).value||'').trim().toUpperCase();

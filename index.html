@@ -1380,6 +1380,16 @@ body.portal-active nav{display:none!important;}
           <option value="yes">Yes, I have a criminal record</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Family Members (dependents moving with you)</label>
+        <select id="familyMembers">
+          <option value="0">Just me (no dependents)</option>
+          <option value="1">1 dependent (spouse/child)</option>
+          <option value="2">2 dependents</option>
+          <option value="3">3 dependents</option>
+          <option value="4">4+ dependents</option>
+        </select>
+      </div>
       <div class="form-group" id="emailCollectGroup" style="display:none;"></div>
       <button class="submit-btn" onclick="checkEligibility()">Check my eligibility →</button>
       <div id="resultBox" class="result-box">
