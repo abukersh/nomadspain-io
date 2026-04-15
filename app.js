@@ -23,6 +23,14 @@ function goHome(id) {
 function toggleMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
 function closeMenu() { document.getElementById('mobileMenu').classList.remove('open'); }
 
+/* PROCESS STEP TOGGLE */
+function toggleProcessStep(el) {
+  var wasActive = el.classList.contains('active');
+  var steps = el.parentElement.querySelectorAll('.p-step');
+  steps.forEach(function(s) { s.classList.remove('active'); });
+  if (!wasActive) el.classList.add('active');
+}
+
 /* FADE UPS */
 function initFadeUps() {
   var els = document.querySelectorAll('#home-page .fade-up');
@@ -156,146 +164,237 @@ function changeDep(delta) {
 
 /* ELIGIBILITY CHECKER */
 var _checkerResult = 'unknown';
-function checkEligibility() {
-  var nat = document.getElementById('nationality').value;
-  var inc = document.getElementById('income').value;
-  var work = document.getElementById('work').value;
-  var crim = document.getElementById('criminal').value;
-  var famEl = document.getElementById('familyMembers');
-  var famCount = famEl ? parseInt(famEl.value) || 0 : 0;
-  var emailG = document.getElementById('emailCollectGroup');
-  var box = document.getElementById('resultBox');
-  var title = document.getElementById('resultTitle');
-  var text = document.getElementById('resultText');
-  var discount = document.getElementById('discountBox');
-  var capture = document.getElementById('checkerEmailCapture');
-  var label = document.getElementById('checkerEmailLabel');
-  var emailInput = document.getElementById('checkerEmailInput');
-  if (!nat || !inc || !work || !crim) { showToast('Please answer all questions'); return; }
-  box.style.display = 'block';
-  discount.style.display = 'none';
-  capture.style.display = 'none';
-  if(emailG) emailG.style.display = 'none';
-  box.className = 'result-box';
-  if(emailInput) emailInput.value = '';
-  document.getElementById('checkerEmailBtn').textContent = 'Get my code \u2192';
-  document.getElementById('checkerEmailBtn').disabled = false;
-  var isEuEea = nat === 'eu_eea';
-  var hasCriminal = crim === 'yes';
-  var workForSpanish = work === 'spanish_employer';
-
-  /* SMI-based income threshold calculation */
-  var requiredIncome = calcIncomeThreshold(famCount);
-  var incomeLow = inc === 'below2000' || (inc === '2000_2849' && requiredIncome > 2849);
-
-  /* Show income breakdown */
-  var incomeBreakdown = '\u20AC' + requiredIncome.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + '/month required';
-  if(famCount > 0) {
-    incomeBreakdown += ' (SMI 200% = \u20AC' + SMI_200.toFixed(2);
-    incomeBreakdown += ' + 1st dep \u20AC' + SMI_75.toFixed(2);
-    if(famCount > 1) incomeBreakdown += ' + ' + (famCount-1) + ' dep(s) \u00D7 \u20AC' + SMI_25.toFixed(2);
-    incomeBreakdown += ')';
+/* ══════════════════════════════════════════
+   MULTI-STEP ELIGIBILITY QUIZ
+══════════════════════════════════════════ */
+var _quizStep=1;
+var _checkerResult='';
+function quizShowStep(step){
+  _quizStep=step;
+  for(var i=1;i<=4;i++){
+    var el=document.getElementById('quizStep'+i);if(el)el.classList.remove('active');
   }
-
-  if (isEuEea) {
-    box.classList.add('ineligible');
-    title.textContent = '\u274C Not Eligible \u2014 EU/EEA Nationals';
-    text.textContent = 'The Spain Digital Nomad Visa is only available to non-EU/EEA nationals. As an EU/EEA citizen you do not require a visa to live and work in Spain \u2014 you can register directly as an EU resident.';
-    label.textContent = 'Leave your email and we\u2019ll send you a free EU residency registration guide.';
-    _checkerResult = 'eu_eea';
-    capture.style.display = 'block'; return;
-  }
-  if (hasCriminal) {
-    box.classList.add('assist');
-    title.textContent = '\u26A0\uFE0F Criminal Record \u2014 We Can Still Help';
-    text.textContent = 'A criminal record creates challenges but is not automatically disqualifying. Our team specialises in securing the right documents and evidence to support your case.';
-    label.textContent = 'Leave your email and we\u2019ll reach out with a personalised plan.';
-    _checkerResult = 'criminal';
-    capture.style.display = 'block'; return;
-  }
-  if (incomeLow) {
-    box.classList.add('ineligible');
-    title.textContent = '\u274C Currently Below Income Threshold';
-    text.textContent = 'The Spanish Digital Nomad Visa requires ' + incomeBreakdown + '. Your current income is below this threshold. However, we can help you plan for eligibility.';
-    label.textContent = 'Leave your email and we\u2019ll send you a free income growth roadmap.';
-    _checkerResult = 'low_income';
-    capture.style.display = 'block'; return;
-  }
-  if (workForSpanish) {
-    box.classList.add('ineligible');
-    title.textContent = '\u26A0\uFE0F Spanish Employer \u2014 Different Visa Required';
-    text.textContent = 'The Digital Nomad Visa requires income from non-Spanish companies. If working for a Spanish employer you need a standard work permit. We can guide you through the correct process.';
-    label.textContent = 'Enter your email and we\u2019ll send you the correct permit options for your situation.';
-    _checkerResult = 'spanish_employer';
-    capture.style.display = 'block'; return;
-  }
-  box.classList.add('eligible');
-  title.textContent = '\u2705 You Qualify for the Spain Digital Nomad Visa!';
-  text.textContent = 'Based on your answers, you meet the key requirements. ' + incomeBreakdown + '. Enter your email below to claim your exclusive 5% discount on the Full Visa package.';
-  label.textContent = '\uD83C\uDF89 Enter your email to unlock your exclusive discount code:';
-  _checkerResult = 'eligible';
-  capture.style.display = 'block';
-  fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({nationality:nat,income:inc,work_type:work,criminal:crim,family_members:famCount,required_income:requiredIncome,result:'eligible',email:null})}).catch(function(){});
+  document.getElementById('quizResultEligible')&&document.getElementById('quizResultEligible').classList.remove('active');
+  document.getElementById('quizResultPlanB')&&document.getElementById('quizResultPlanB').classList.remove('active');
+  var target=document.getElementById('quizStep'+step);if(target)target.classList.add('active');
+  /* Progress bar */
+  var fill=document.getElementById('quizProgressFill');if(fill)fill.style.width=(step*25)+'%';
+  var label=document.getElementById('quizStepLabel');if(label)label.textContent='Step '+step+' of 4';
+  /* Live income calc on step 3 */
+  if(step===3) quizUpdateIncomeCalc();
 }
-function claimCheckerDiscount() {
-  var emailInput = document.getElementById('checkerEmailInput');
-  var btn = document.getElementById('checkerEmailBtn');
-  var email = (emailInput ? emailInput.value : '').trim();
-  if (!email || !email.includes('@')) { showToast('Please enter a valid email address.'); return; }
-  btn.disabled = true; btn.textContent = 'Saving\u2026';
-  /* grab checker form values for richer lead data */
-  var nat  = (document.getElementById('nationality')||{}).value || '';
-  var inc  = (document.getElementById('income')||{}).value || '';
-  var work = (document.getElementById('work')||{}).value || '';
-  var crim = (document.getElementById('criminal')||{}).value || '';
-  var famEl = document.getElementById('familyMembers');
-  var famCount = famEl ? parseInt(famEl.value) || 0 : 0;
-  var requiredIncome = calcIncomeThreshold(famCount);
-  var resultLabels = {
-    eligible: '\u2705 Eligible',
-    eu_eea: '\u274C EU/EEA \u2014 Not eligible',
-    criminal: '\u26A0\uFE0F Criminal record',
-    low_income: '\u274C Below income threshold',
-    spanish_employer: '\u26A0\uFE0F Spanish employer'
-  };
-  var msgParts = ['[Eligibility Checker]', 'Result: ' + (resultLabels[_checkerResult] || _checkerResult)];
-  if (nat)  msgParts.push('Nationality: ' + nat);
-  if (inc)  msgParts.push('Income: ' + inc);
-  if (work) msgParts.push('Work type: ' + work);
-  if (crim) msgParts.push('Criminal record: ' + crim);
-  if (famCount > 0) msgParts.push('Family members: ' + famCount);
-  msgParts.push('Required income: \u20AC' + requiredIncome.toFixed(2));
-  /* save to ns_leads localStorage */
-  try {
-    var leads = pGetLeads();
-    leads.unshift({ id: Date.now(), first: '', last: '', email: email, nationality: nat, message: msgParts.join(' | '), date: new Date().toISOString(), status: 'new', source: 'checker', family_members: famCount, required_income: requiredIncome, checker_result: _checkerResult });
+function quizNext(fromStep){
+  if(fromStep===1){
+    var nat=(document.getElementById('nationality')||{}).value;
+    var qual=(document.getElementById('quizQualification')||{}).value;
+    if(!nat||!qual){showToast('Please answer all questions in this step');return;}
+    quizShowStep(2);
+  } else if(fromStep===2){
+    var work=(document.getElementById('work')||{}).value;
+    var crim=(document.getElementById('criminal')||{}).value;
+    if(!work||!crim){showToast('Please answer all questions in this step');return;}
+    quizShowStep(3);
+  } else if(fromStep===3){
+    var inc=(document.getElementById('income')||{}).value;
+    if(!inc){showToast('Please select your income range');return;}
+    quizShowStep(4);
+  }
+}
+function quizBack(fromStep){quizShowStep(fromStep-1);}
+
+/* Live income calculator for step 3 */
+function quizUpdateIncomeCalc(){
+  var famEl=document.getElementById('familyMembers');
+  var famCount=famEl?parseInt(famEl.value)||0:0;
+  var required=calcIncomeThreshold(famCount);
+  var calc=document.getElementById('quizIncomeCalc');
+  if(!calc)return;
+  var html='<strong>Your income requirement (SMI 2026):</strong><br>';
+  html+='Main applicant: \u20AC'+SMI_200.toFixed(2)+' (200% SMI)';
+  if(famCount>=1) html+='<br>1st dependent: +\u20AC'+SMI_75.toFixed(2)+' (75% SMI)';
+  if(famCount>1) html+='<br>'+(famCount-1)+' additional dep(s): +\u20AC'+(SMI_25*(famCount-1)).toFixed(2)+' (25% SMI each)';
+  html+='<br><strong style="color:var(--brand);font-size:15px;">Total required: \u20AC'+required.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'/month</strong>';
+  calc.innerHTML=html;
+  calc.style.display='block';
+}
+/* Attach live update to family selector */
+document.addEventListener('DOMContentLoaded',function(){
+  var famSel=document.getElementById('familyMembers');
+  if(famSel) famSel.addEventListener('change',function(){if(_quizStep===3)quizUpdateIncomeCalc();});
+});
+
+function quizSubmit(){
+  var name=(document.getElementById('quizName')||{}).value||'';
+  var email=(document.getElementById('quizEmail')||{}).value||'';
+  if(!email||email.indexOf('@')===-1){showToast('Please enter a valid email address');return;}
+  /* Gather all answers */
+  var nat=(document.getElementById('nationality')||{}).value||'';
+  var qual=(document.getElementById('quizQualification')||{}).value||'';
+  var work=(document.getElementById('work')||{}).value||'';
+  var crim=(document.getElementById('criminal')||{}).value||'';
+  var inc=(document.getElementById('income')||{}).value||'';
+  var famEl=document.getElementById('familyMembers');
+  var famCount=famEl?parseInt(famEl.value)||0:0;
+  var requiredIncome=calcIncomeThreshold(famCount);
+
+  /* Score calculation */
+  var score=0;var issues=[];var maxScore=100;
+  /* Nationality */
+  if(nat==='eu_eea'){
+    issues.push({type:'info',icon:'\uD83C\uDDEA\uD83C\uDDFA',text:'As an EU/EEA national you don\'t need a Digital Nomad Visa — you have freedom of movement. We can help with EU resident registration instead.'});
+  } else {
+    score+=25;
+  }
+  /* Qualification */
+  if(qual==='degree_and_exp'){score+=25;}
+  else if(qual==='degree_only'){score+=20;issues.push({type:'warning',icon:'\uD83C\uDF93',text:'You have a degree but less than 3 years experience. Your degree alone qualifies you, but experience strengthens your case.'});}
+  else if(qual==='exp_only'){score+=20;issues.push({type:'warning',icon:'\uD83D\uDCBC',text:'You have 3+ years experience but no degree. Your experience qualifies you under the alternative path.'});}
+  else{score+=0;issues.push({type:'blocker',icon:'\u274C',text:'The visa requires either a university degree OR 3+ years relevant professional experience. You currently meet neither requirement.'});}
+  /* Work type */
+  if(work==='employed'||work==='freelance'||work==='mixed'){score+=25;}
+  else if(work==='spanish_employer'){score+=0;issues.push({type:'blocker',icon:'\u274C',text:'The Digital Nomad Visa requires income from non-Spanish companies. Working for a Spanish employer requires a standard work permit.'});}
+  /* Income */
+  var incomeOk=false;
+  if(inc==='above6000'||inc==='4000_6000'){incomeOk=true;score+=25;}
+  else if(inc==='2849_4000'){
+    if(requiredIncome<=4000){incomeOk=true;score+=25;}
+    else{score+=15;issues.push({type:'warning',icon:'\uD83D\uDCB0',text:'Your income range may be tight for '+famCount+' dependent(s). Required: \u20AC'+requiredIncome.toFixed(2)+'/month.'});}
+  }
+  else if(inc==='2000_2849'){
+    if(requiredIncome<=2849){score+=20;issues.push({type:'warning',icon:'\uD83D\uDCB0',text:'Your income meets the minimum threshold (\u20AC'+requiredIncome.toFixed(2)+') but leaves little margin. Higher income strengthens your application.'});}
+    else{score+=5;issues.push({type:'blocker',icon:'\u274C',text:'Your income (\u20AC2,000-2,849) is below the required \u20AC'+requiredIncome.toFixed(2)+'/month for your family size.'});}
+  }
+  else if(inc==='below2000'){score+=0;issues.push({type:'blocker',icon:'\u274C',text:'Your income is below the minimum \u20AC'+requiredIncome.toFixed(2)+'/month. This is the primary blocker for your application.'});}
+  /* Criminal record */
+  if(crim==='yes'){score=Math.max(0,score-15);issues.push({type:'warning',icon:'\u26A0\uFE0F',text:'A criminal record creates challenges but is not automatically disqualifying. We specialise in preparing supporting documentation.'});}
+  /* Clamp score */
+  var pct=Math.min(100,Math.max(0,score));
+  var hasBlockers=issues.some(function(i){return i.type==='blocker';});
+  _checkerResult=(!hasBlockers&&pct>=60)?'eligible':'ineligible';
+
+  /* Save lead */
+  var nameParts=name.trim().split(' ');
+  var firstName=nameParts[0]||'';
+  var lastName=nameParts.slice(1).join(' ')||'';
+  var resultLabels={eligible:'\u2705 Eligible ('+pct+'%)',ineligible:'\u274C Ineligible ('+pct+'%)'};
+  var msgParts=['[Eligibility Quiz]','Score: '+pct+'%','Result: '+(resultLabels[_checkerResult]||_checkerResult)];
+  if(nat)msgParts.push('Nationality: '+nat);
+  if(qual)msgParts.push('Qualification: '+qual);
+  if(work)msgParts.push('Work: '+work);
+  if(inc)msgParts.push('Income: '+inc);
+  if(crim==='yes')msgParts.push('Criminal record: yes');
+  if(famCount>0)msgParts.push('Dependents: '+famCount);
+  msgParts.push('Required: \u20AC'+requiredIncome.toFixed(2));
+  try{
+    var leads=pGetLeads();
+    leads.unshift({id:Date.now(),first:firstName,last:lastName,email:email,nationality:nat,message:msgParts.join(' | '),date:new Date().toISOString(),status:'new',source:'quiz',family_members:famCount,required_income:requiredIncome,checker_result:_checkerResult,score:pct,qualification:qual,work_type:work,criminal:crim,income_range:inc});
     pSaveLeads(leads);
-  } catch(e) {}
-  /* Save lead email to users table with role='user', status='lead' for CM follow-up */
-  try {
-    var users = pGetUsers();
-    var existingUser = users.find(function(u){return u.email.toLowerCase()===email.toLowerCase();});
-    if(!existingUser){
-      users.push({
-        id:'u_lead_'+Date.now(),email:email.toLowerCase(),pass:'',role:'customer',first:'',last:'',phone:'',
-        cmId:null,created:new Date().toISOString(),lead_status:'lead',checker_result:_checkerResult,
-        nationality:nat,family_members:famCount
-      });
+  }catch(e){}
+  /* Save/update user record as lead */
+  try{
+    var users=pGetUsers();
+    var existing=users.find(function(u){return u.email.toLowerCase()===email.toLowerCase();});
+    if(!existing){
+      var newUser={id:'u_lead_'+Date.now(),email:email.toLowerCase(),pass:'',role:'customer',first:firstName,last:lastName,phone:'',cmId:null,created:new Date().toISOString(),lead_status:'lead',checker_result:_checkerResult,checker_score:pct,nationality:nat,family_members:famCount,qualification:qual,work_type:work,income_range:inc};
+      users.push(newUser);
+      pSaveUsers(users);
+      /* Create lead application */
+      var apps=pGetApps();
+      apps.push({id:'app_lead_'+Date.now(),userId:newUser.id,pkg:'solo',stage:0,created:new Date().toISOString(),updated:new Date().toISOString(),docs:{},notes:'',profiles:[],deps:famCount,requiredDocs:quizMapRequiredDocs(qual,work),app_status:APP_STATUS_ENUM.LEAD,statusHistory:[{status:APP_STATUS_ENUM.LEAD,at:new Date().toISOString()}],checker_score:pct,checker_issues:issues,nationality:nat,qualification:qual,work_type:work,income_range:inc});
+      pSaveApps(apps);
+    } else {
+      existing.checker_result=_checkerResult;existing.checker_score=pct;existing.nationality=nat;existing.qualification=qual;
       pSaveUsers(users);
     }
-  } catch(e) {}
-  /* also post to backend */
-  fetch('/api/leads', { method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ email: email, nationality: nat, income: inc, work_type: work, criminal: crim, family_members: famCount, required_income: requiredIncome, result: _checkerResult }) }).catch(function(){});
-  document.getElementById('checkerEmailCapture').style.display = 'none';
-  if (_checkerResult === 'eligible') {
-    document.getElementById('discountBox').style.display = 'block';
+  }catch(e){}
+  /* Notify admins about new lead */
+  try{
+    var allUsers=pGetUsers();
+    allUsers.forEach(function(u){
+      if(u.role==='admin'){
+        pCreateNotification(u.id,'system','\uD83C\uDFAF New Quiz Lead: '+firstName,'Score: '+pct+'% | '+email+' | '+(nat||'Unknown nationality'),null);
+      }
+    });
+  }catch(e){}
+  /* Post to backend */
+  fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,name:name,nationality:nat,qualification:qual,income:inc,work_type:work,criminal:crim,family_members:famCount,required_income:requiredIncome,result:_checkerResult,score:pct})}).catch(function(){});
+
+  /* Show results */
+  quizShowResults(pct,hasBlockers,issues,requiredIncome,famCount,nat==='eu_eea');
+}
+
+function quizShowResults(pct,hasBlockers,issues,requiredIncome,famCount,isEu){
+  /* Hide all steps */
+  for(var i=1;i<=4;i++){var el=document.getElementById('quizStep'+i);if(el)el.classList.remove('active');}
+  var fill=document.getElementById('quizProgressFill');if(fill)fill.style.width='100%';
+  var label=document.getElementById('quizStepLabel');if(label)label.textContent='Results';
+
+  if(!hasBlockers&&pct>=60){
+    /* ELIGIBLE — show gauge */
+    var resultEl=document.getElementById('quizResultEligible');resultEl.classList.add('active');
+    /* Animate gauge */
+    var arc=document.getElementById('quizGaugeArc');
+    var pctEl=document.getElementById('quizGaugePct');
+    var circumference=327;
+    setTimeout(function(){
+      arc.setAttribute('stroke-dasharray',Math.round(circumference*pct/100)+' '+circumference);
+      pctEl.textContent=pct+'%';
+    },100);
+    var titleEl=document.getElementById('quizResultTitle');
+    titleEl.textContent=pct>=90?'\uD83C\uDF89 Excellent Match — You Qualify!':pct>=75?'\u2705 Strong Match — You Qualify!':'\u2705 You Qualify with Some Considerations';
+    var descEl=document.getElementById('quizResultDesc');
+    descEl.textContent='Based on your answers, you meet the key requirements for Spain\'s Digital Nomad Visa (2026). Your profile scores '+pct+'% — '+(pct>=90?'an excellent match':'a solid foundation')+'.';
+    /* Income breakdown */
+    var bd=document.getElementById('quizIncomeBreakdown');
+    var bdHtml='<strong>Income requirement breakdown:</strong><br>Main applicant: \u20AC'+SMI_200.toFixed(2)+' (200% SMI 2026)';
+    if(famCount>=1)bdHtml+='<br>1st dependent: +\u20AC'+SMI_75.toFixed(2);
+    if(famCount>1)bdHtml+='<br>'+(famCount-1)+' additional: +\u20AC'+(SMI_25*(famCount-1)).toFixed(2);
+    bdHtml+='<br><strong>Total: \u20AC'+requiredIncome.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'/month</strong>';
+    if(issues.length){
+      bdHtml+='<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);"><strong>Notes:</strong></div>';
+      issues.forEach(function(iss){bdHtml+='<div style="margin-top:6px;font-size:12px;">'+iss.icon+' '+escHtml(iss.text)+'</div>';});
+    }
+    bd.innerHTML=bdHtml;
   } else {
-    var thanksEl = document.getElementById('checkerThanks');
-    if (thanksEl) { thanksEl.style.display = 'block'; }
+    /* PLAN B — ineligible */
+    var planb=document.getElementById('quizResultPlanB');planb.classList.add('active');
+    var desc=document.getElementById('planbDesc');
+    if(isEu){
+      desc.textContent='As an EU/EEA national, you already have the right to live and work in Spain without a visa. We can help you with EU resident registration, NIE application, and tax optimisation under the Beckham Law.';
+    } else {
+      desc.textContent='Your profile scored '+pct+'% — there are some gaps to address, but every situation has a path forward. Here\'s what we found:';
+    }
+    var issuesEl=document.getElementById('planbIssues');
+    var issHtml='';
+    issues.forEach(function(iss){
+      issHtml+='<div class="planb-issue '+iss.type+'"><span class="planb-issue-icon">'+iss.icon+'</span><span>'+escHtml(iss.text)+'</span></div>';
+    });
+    issuesEl.innerHTML=issHtml;
   }
-  showToast('Got it! Check your inbox shortly \uD83D\uDCEC');
+}
+
+/* Map quiz answers to pre-customized required docs */
+function quizMapRequiredDocs(qual,work){
+  var docs=['passport','income','criminal','insurance'];
+  if(qual==='degree_and_exp'||qual==='degree_only') docs.push('degree');
+  if(qual==='exp_only'||qual==='degree_and_exp') docs.push('experience_letters');
+  if(work==='freelance'||work==='mixed') docs.push('freelance_contracts','tax_returns');
+  if(work==='employed'||work==='mixed') docs.push('employment_contract','employer_letter');
+  docs.push('other');
+  return docs;
+}
+
+/* Reset quiz to step 1 */
+function quizReset(){
+  _quizStep=1;
+  document.getElementById('quizResultEligible')&&document.getElementById('quizResultEligible').classList.remove('active');
+  document.getElementById('quizResultPlanB')&&document.getElementById('quizResultPlanB').classList.remove('active');
+  quizShowStep(1);
+  /* Clear form */
+  ['nationality','quizQualification','work','criminal','income','quizName','quizEmail'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  var famEl=document.getElementById('familyMembers');if(famEl)famEl.value='0';
 }
 
 /* CONTACT FORM */
@@ -433,10 +532,69 @@ function renderKbtGrid() {
   }).join('')+'<div class="kbt-cta" style="grid-column:1/-1;"><p>See all <span>guides</span> in the Knowledge Hub</p><button onclick="showPage(\'knowledge\')" class="btn btn-primary">Explore all \u2192</button></div>';
 }
 
-function handleSearch(q){currentQuery=q.toLowerCase();renderKbGrid();}
+function handleSearch(q){
+  currentQuery=q.toLowerCase();renderKbGrid();
+  kbUpdateDropdown(q);
+  var send=document.getElementById('kbSearchSend');
+  if(send) send.style.opacity=q.length>0?'1':'0';
+}
 function filterKb(tag,el){activeFilter=tag;document.querySelectorAll('.filter-pill').forEach(function(p){p.classList.remove('active');});if(el)el.classList.add('active');renderKbGrid();}
 function clearSearch(){currentQuery='';var s=document.getElementById('kbSearch');if(s)s.value='';}
 function resetFilter(){activeFilter='all';document.querySelectorAll('.filter-pill').forEach(function(p,i){p.classList.toggle('active',i===0);});}
+
+/* KB ACTION SEARCH BAR */
+var KB_CAT_ICONS={'visa':'\uD83D\uDCCB','tax':'\uD83D\uDCB0','lifestyle':'\u2708\uFE0F','legal':'\u2696\uFE0F','housing':'\uD83C\uDFE0','community':'\uD83E\uDD1D'};
+var kbDDOpen=false;
+function kbSearchFocus(){
+  kbUpdateDropdown(document.getElementById('kbSearch').value);
+  kbOpenDropdown();
+}
+function kbOpenDropdown(){
+  var dd=document.getElementById('kbSearchDropdown');
+  if(dd){dd.classList.add('open');kbDDOpen=true;}
+}
+function kbCloseDropdown(){
+  var dd=document.getElementById('kbSearchDropdown');
+  if(dd){dd.classList.remove('open');kbDDOpen=false;}
+}
+function kbUpdateDropdown(q){
+  var list=document.getElementById('kbSearchDDList');if(!list)return;
+  var articles=getArticles();
+  var query=(q||'').toLowerCase().trim();
+  var filtered=articles.filter(function(a){
+    if(!query) return true;
+    return (a.title||'').toLowerCase().indexOf(query)!==-1
+      ||(a.summary||'').toLowerCase().indexOf(query)!==-1
+      ||(a.category||'').toLowerCase().indexOf(query)!==-1;
+  }).slice(0,6);
+  if(!filtered.length){
+    list.innerHTML='<li style="padding:16px;text-align:center;color:var(--text3);font-size:13px;">No results found</li>';
+    return;
+  }
+  list.innerHTML=filtered.map(function(a){
+    var cat=a.category||'visa';
+    var icon=KB_CAT_ICONS[cat]||'\uD83D\uDCC4';
+    var tagLabel=TAG_LABELS[cat]||cat;
+    return '<li class="search-dd-item" onmousedown="kbDDSelect(\''+a.id+'\')">'
+      +'<div class="search-dd-left">'
+      +'<div class="search-dd-icon '+cat+'">'+icon+'</div>'
+      +'<div style="min-width:0;"><div class="search-dd-title">'+escHtml(a.title)+'</div>'
+      +'<div class="search-dd-meta">'+(a.readTime||'5 min')+' read</div></div></div>'
+      +'<span class="search-dd-tag">'+escHtml(tagLabel)+'</span></li>';
+  }).join('');
+}
+function kbDDSelect(id){
+  kbCloseDropdown();
+  openKbReader(id);
+}
+/* Close dropdown on outside click */
+document.addEventListener('click',function(e){
+  var wrap=document.getElementById('kbSearchWrap');
+  if(wrap&&!wrap.contains(e.target))kbCloseDropdown();
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&kbDDOpen)kbCloseDropdown();
+});
 
 /* FAQ */
 var activeFaqCat='all';
@@ -574,7 +732,7 @@ function seedDefaultArticles() {
       summary: 'Complete 2026 guide covering income thresholds, professional criteria, and the Beckham Law flat 24% tax rate for remote workers.',
       category: 'visa', date: '2026-03-17', readTime: '5 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1024,h=555,fit=crop/AzGM9DRxOGCo1GRM/360_f_1370358097_u9gd9c7ucwiesjmgiztdkzjdjmrbekvu-m6L2LqXzV7Iwz0NV.jpg',
-      body: ''
+      body: '## What is the Digital Nomad Visa?\n\nSpain\'s Digital Nomad Visa (Visado para teletrabajo de car\u00e1cter internacional) was introduced under the Startup Act (Ley de Startups) in December 2022. It allows remote workers employed by or contracting with non-Spanish companies to live and work legally in Spain.\n\n## 2026 Income Requirements\n\nThe minimum income threshold is tied to the SMI (Salario M\u00ednimo Interprofesional). For 2026 the thresholds are:\n\n- **Main applicant:** 200% of SMI \u2014 approximately \u20AC2,849/month (\u20AC34,188/year)\n- **Spouse or partner:** +75% of SMI \u2014 approximately \u20AC1,069/month\n- **Each dependent child:** +25% of SMI \u2014 approximately \u20AC356/month\n\nAt least 80% of your income must come from non-Spanish sources.\n\n## Who Can Apply?\n\nYou are eligible if you meet **all** of the following:\n\n- You work remotely for a company registered outside Spain, or you are a freelancer with primarily non-Spanish clients\n- You hold a university degree **or** have 3+ years of professional experience in your field\n- You have had a professional relationship with your employer or clients for at least 3 months\n- You have no criminal record in Spain or your country of residence for the last 5 years\n- You have private health insurance with full coverage in Spain\n\n## The Beckham Law Advantage\n\nDigital nomad visa holders can opt into Spain\'s Special Tax Regime for Impatriates (the "Beckham Law"), which offers:\n\n- **Flat 24% income tax** on Spanish-sourced income up to \u20AC600,000\n- Foreign income is generally exempt\n- No wealth tax on foreign assets\n- No obligation to file Modelo 720 (overseas asset declaration)\n- Available for up to **6 years**\n\nYou must apply within 6 months of registering as a tax resident.\n\n## How to Apply\n\n- **From abroad:** Apply at your nearest Spanish consulate. Processing takes 4\u20136 weeks on average.\n- **From within Spain:** If you entered on a Schengen visa, you can apply at the UGE (Unidad de Grandes Empresas) immigration office. Processing is approximately 20 working days.\n\nThe visa is initially granted for **1 year** (from abroad) or **3 years** (from within Spain), and can be renewed for up to **5 years** total.\n\n## What NomadSpain.io Offers\n\nOur team handles your entire application from eligibility check to TIE card collection. We assign a dedicated case manager, coordinate document translation and apostille, and track your application at every stage.'
     },
     {
       id: 'living-dream-nomad',
@@ -582,7 +740,7 @@ function seedDefaultArticles() {
       summary: 'Why Spain tops the list for remote professionals \u2014 high-speed internet, affordable living, and a clear visa pathway for 2026.',
       category: 'lifestyle', date: '2026-03-17', readTime: '6 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1024,h=565,fit=crop/AzGM9DRxOGCo1GRM/gemini_generated_image_1b7wp51b7wp51b7w-Mq4WiF8zJxe73OLS.png',
-      body: ''
+      body: '## Why Spain?\n\nSpain consistently ranks in the top 3 destinations for digital nomads worldwide. The combination of climate, infrastructure, culture, and affordability makes it hard to beat.\n\n## Internet & Connectivity\n\nSpain has excellent fibre-optic coverage. Major cities offer speeds of 300\u2013600 Mbps for around \u20AC30\u201340/month. Coworking spaces are widely available in Barcelona, Madrid, Valencia, M\u00e1laga, and beyond, typically costing \u20AC150\u2013250/month for a dedicated desk.\n\n## Cost of Living\n\nMonthly budgets vary by city:\n\n- **Barcelona:** \u20AC1,600\u20132,200 (including rent)\n- **Madrid:** \u20AC1,400\u20132,000\n- **Valencia:** \u20AC1,000\u20131,600\n- **Sevilla:** \u20AC900\u20131,400\n- **M\u00e1laga:** \u20AC1,100\u20131,700\n\nGroceries, dining out, and public transport are significantly cheaper than in Northern Europe or the US.\n\n## Healthcare\n\nDigital nomad visa holders must have private health insurance. Providers like Sanitas, Mapfre, and Adeslas offer comprehensive plans from \u20AC60\u2013120/month. Spain\'s public healthcare system is also world-class if you later switch to a work permit.\n\n## Culture & Lifestyle\n\nFrom flamenco in Sevilla to Gaud\u00ed in Barcelona, Spain offers extraordinary cultural depth. The country has 300+ days of sunshine per year in the south, a famously relaxed pace of life, and some of the best food in Europe.\n\n## Community\n\nSpain has thriving digital nomad communities. Meetups, co-living spaces, and Facebook/Telegram groups make it easy to connect with fellow remote workers. Cities like Valencia and M\u00e1laga have become international hubs specifically for nomads.\n\n## Getting Started\n\nThe Digital Nomad Visa provides a clear legal pathway. Check your eligibility with our free quiz and let NomadSpain.io handle the rest.'
     },
     {
       id: 'dnv-requirements',
@@ -590,7 +748,7 @@ function seedDefaultArticles() {
       summary: 'Full eligibility breakdown: professional credentials, income proofs (\u20AC31,752/yr minimum), criminal record checks, and Social Security compliance.',
       category: 'visa', date: '2025-05-01', readTime: '7 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1440,h=756,fit=crop,f=jpeg/AzGM9DRxOGCo1GRM/priscilla-du-preez-xkkcui44im0-unsplash-AoP4lqzpjLHp7Q9K.jpg',
-      body: ''
+      body: '## Overview\n\nThe Spanish Digital Nomad Visa has specific eligibility criteria. This article breaks down every requirement so you can prepare your application with confidence.\n\n## Professional Requirements\n\nYou must demonstrate **one** of the following:\n\n- A university degree or postgraduate qualification from a recognised institution\n- A minimum of 3 years of verifiable professional experience in your field\n\nYour work must be performed remotely for companies or clients based outside Spain. At least 80% of revenue must come from non-Spanish sources.\n\n## Income Requirements\n\nThe minimum annual income is 200% of the SMI:\n\n- **Single applicant:** \u20AC34,188/year (\u20AC2,849/month)\n- **With spouse:** add 75% of SMI (\u20AC12,834/year)\n- **Per child:** add 25% of SMI (\u20AC4,278/year)\n\nYou\'ll need 6 months of bank statements showing consistent income above these thresholds.\n\n## Employment Relationship\n\nYou must prove a professional relationship of at least **3 months** with your current employer or clients. Acceptable evidence includes employment contracts, client agreements, or invoices.\n\n## Criminal Record\n\nA clean criminal record certificate is required from:\n\n- Your country of nationality\n- Any country where you\'ve lived in the last 5 years\n\nCertificates must be apostilled and translated into Spanish by a sworn translator.\n\n## Health Insurance\n\nPrivate health insurance is mandatory. It must:\n\n- Cover you in Spain with full coverage (no co-pays for hospitalisation)\n- Be issued by a company authorised to operate in Spain\n- Have no exclusion period for pre-existing conditions\n\n## Social Security\n\nIf you are employed, your company must either:\n\n- Maintain your Social Security coverage from your home country (via bilateral agreement)\n- Register you with Spanish Social Security\n\nFreelancers may need to register as aut\u00f3nomo in Spain after 6\u201312 months.\n\n## Documents Checklist\n\n- Valid passport (1+ year remaining)\n- Completed visa application form\n- Passport photos\n- Criminal record certificate (apostilled + translated)\n- Proof of income (bank statements, contracts)\n- Health insurance policy\n- Proof of accommodation in Spain\n- University degree or CV with 3+ years experience\n- Tasa 790-038 fee receipt'
     },
     {
       id: 'self-employed-spain-2025',
@@ -598,7 +756,7 @@ function seedDefaultArticles() {
       summary: 'How to register as an aut\u00f3nomo: tax authority and Social Security enrolment, monthly fees, and ongoing compliance obligations.',
       category: 'tax', date: '2025-04-01', readTime: '8 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1440,h=756,fit=crop,f=jpeg/AzGM9DRxOGCo1GRM/bigstock-self-employed-sign-with-a-beau-82320527-1024x633-mePgP1k7eLUg6xba.jpg',
-      body: ''
+      body: '## What is an Aut\u00f3nomo?\n\nIn Spain, self-employed workers are called *aut\u00f3nomos*. This is the legal status required if you freelance, run a business, or invoice clients from Spain.\n\n## Registration Steps\n\n### Step 1: Get Your NIE\n\nThe N\u00famero de Identidad de Extranjero is your foreign identification number. You\'ll need this before any other registration.\n\n### Step 2: Register with Hacienda (AEAT)\n\nFile Form 036 or 037 with the Spanish tax authority to register for tax obligations. You\'ll choose your IAE (economic activity) code and VAT regime.\n\n### Step 3: Register with Social Security\n\nEnrol in the RETA (R\u00e9gimen Especial de Trabajadores Aut\u00f3nomos) system. This gives you access to the public healthcare system and pension contributions.\n\n## Monthly Costs\n\nSince 2023, Spain uses an income-based contribution system:\n\n- **Earnings under \u20AC670/month:** \u20AC230/month\n- **\u20AC670\u2013\u20AC1,300/month:** \u20AC260\u2013290/month\n- **\u20AC1,300\u2013\u20AC2,300/month:** \u20AC290\u2013350/month\n- **Above \u20AC2,300/month:** \u20AC350\u2013530/month\n\nNew aut\u00f3nomos get a reduced flat rate of **\u20AC80/month for the first 12 months** (tarifa plana).\n\n## Tax Obligations\n\n- **Quarterly VAT returns** (Form 303) \u2014 standard rate is 21%\n- **Quarterly income tax prepayments** (Form 130) \u2014 20% of net profit\n- **Annual income tax return** (Renta) \u2014 filed May\u2013June\n- **Annual summary** of operations (Form 390)\n\n## The Beckham Law Alternative\n\nIf you arrived on a Digital Nomad Visa, you may be eligible for the Beckham Law flat 24% tax rate instead. This is often more advantageous than the standard aut\u00f3nomo tax regime. Consult a tax advisor to determine the best option for your situation.'
     },
     {
       id: 'immigration-law-2025',
@@ -606,7 +764,7 @@ function seedDefaultArticles() {
       summary: 'Major 2025 reforms: simplified residence permit procedures, expanded family reunification, and new arraigo and temporary worker pathways.',
       category: 'legal', date: '2025-08-01', readTime: '5 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1024,h=434,fit=crop/AzGM9DRxOGCo1GRM/closeup-shot-realistic-waving-flag-spain-mP434w8L9au2w5Lq.jpg',
-      body: ''
+      body: '## Overview of 2025 Reforms\n\nSpain introduced significant changes to its immigration framework in 2025, aimed at streamlining procedures and attracting international talent.\n\n## Simplified Residence Permits\n\nThe government reduced processing times for several permit categories. Digital Nomad Visa applications from within Spain now target a 20-working-day turnaround, down from the previous 30\u201345 days.\n\n## Expanded Family Reunification\n\nFamily reunification rules were relaxed for holders of the Digital Nomad Visa and other work permits:\n\n- Spouses and children can now be included in the initial application\n- Dependent parents may qualify under expanded criteria\n- Processing runs concurrently with the main applicant\n\n## New Arraigo Pathways\n\nThe *arraigo* (rootedness) system received updates:\n\n- **Arraigo social:** Reduced from 3 years to 2 years of continuous residence\n- **Arraigo laboral:** Simplified evidence requirements\n- **Arraigo formativo:** New pathway for those completing professional training in Spain\n\n## Temporary Worker Permits\n\nNew seasonal and short-term worker permits were introduced for sectors with labour shortages, including tech, agriculture, and hospitality.\n\n## Impact on Digital Nomads\n\nFor DNV holders, the most relevant changes are faster processing, easier family inclusion, and clearer pathways from temporary to permanent residency. The reforms reinforce Spain\'s commitment to attracting international remote workers.\n\n## What This Means for You\n\nIf you\'re planning to apply in 2026, these reforms work in your favour. Processing is faster, family applications are simpler, and the long-term residency pathway is clearer than ever.'
     },
     {
       id: 'non-lucrative-visa',
@@ -614,7 +772,7 @@ function seedDefaultArticles() {
       summary: 'Everything you need to know about residency without working rights: \u20AC28,800/yr income proof, private health insurance, and consulate application steps.',
       category: 'visa', date: '2025-02-01', readTime: '7 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1920,h=1282,fit=crop/AzGM9DRxOGCo1GRM/towfiqu-barbhuiya-joqwsi9u_xm-unsplash-m7VDL52GDqSQLEOz.jpg',
-      body: ''
+      body: '## What is the Non-Lucrative Visa?\n\nThe Non-Lucrative Visa (Visado de residencia no lucrativa) allows you to live in Spain without working. It is designed for retirees, investors, and individuals with sufficient passive income or savings.\n\n## Key Restriction\n\n**You cannot work in Spain** on this visa \u2014 neither as an employee nor as self-employed. If you need to work remotely, the Digital Nomad Visa is the correct option.\n\n## Income Requirements\n\n- **Main applicant:** \u20AC28,800/year (400% of IPREM)\n- **Each additional family member:** +\u20AC7,200/year\n\nIncome can come from savings, investments, pensions, rental income, or any passive source.\n\n## Required Documents\n\n- Valid passport\n- Criminal record certificate (apostilled and translated)\n- Medical certificate confirming no serious health conditions\n- Private health insurance with full coverage in Spain\n- Proof of financial means (bank statements, investment portfolio, pension statements)\n- Proof of accommodation in Spain\n\n## Application Process\n\n- Apply at the Spanish consulate in your country of residence\n- Processing time: 1\u20133 months\n- Initial visa: 1 year\n- Renewable annually for up to 5 years\n- After 5 years: apply for permanent residency\n\n## Non-Lucrative vs Digital Nomad Visa\n\n- **Non-Lucrative:** No work allowed. Best for retirees or those with passive income.\n- **Digital Nomad:** Remote work for non-Spanish companies allowed. Best for active professionals.\n\nIf you\'re unsure which visa is right for you, take our free eligibility quiz or book a consultation.'
     },
     {
       id: 'dnv-nationality',
@@ -622,7 +780,7 @@ function seedDefaultArticles() {
       summary: 'Yes \u2014 time on the DNV accrues 1:1 toward Spanish citizenship. Standard path is 10 years; Ibero-American nationals qualify in just 2.',
       category: 'visa', date: '2026-02-01', readTime: '5 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1024,h=535,fit=crop/AzGM9DRxOGCo1GRM/gemini_generated_image_1xm4un1xm4un1xm4-IVDElHWBAO411tjd.png',
-      body: ''
+      body: '## The Short Answer\n\nYes. Time spent in Spain on a Digital Nomad Visa counts 1:1 toward the residency requirement for Spanish nationality.\n\n## Standard Path to Citizenship\n\nFor most nationalities, the path to Spanish citizenship requires **10 years of continuous legal residence**. The DNV counts toward this from day one.\n\n## Fast-Track Nationalities\n\nCitizens of Ibero-American countries, the Philippines, Equatorial Guinea, Portugal, Andorra, and Sephardic Jews qualify for citizenship after just **2 years** of legal residence. This includes nationals of:\n\n- Mexico, Colombia, Argentina, Brazil, Chile, Peru, Ecuador, Venezuela\n- All other Latin American countries\n- Philippines and Equatorial Guinea\n\n## How It Works\n\n- **Year 1\u20133:** Digital Nomad Visa (initial + renewal)\n- **Year 3\u20135:** Renew for a further 2 years, or switch to a standard work/residence permit\n- **Year 5:** Apply for permanent residency (tarjeta de residencia de larga duraci\u00f3n)\n- **Year 10:** Apply for Spanish nationality (or Year 2 for fast-track countries)\n\n## Requirements for Nationality\n\n- Continuous legal residence for the required period\n- Good civic conduct (no criminal record)\n- Sufficient integration (basic Spanish language, knowledge of Spanish culture)\n- CCSE and DELE A2 exams\n\n## Important Notes\n\n- You must not leave Spain for more than 6 months in any given year\n- Short trips abroad are fine, but extended absences can reset the clock\n- Dual nationality is permitted for Ibero-American nationals; others may need to renounce their original citizenship'
     },
     {
       id: 'visa-processing-times-2025',
@@ -630,7 +788,7 @@ function seedDefaultArticles() {
       summary: 'Tourist visas: 15\u201330 days. Work permits: 5\u20136 weeks. How Spain\u2019s May 2025 reforms affect timelines and how to avoid common delays.',
       category: 'visa', date: '2025-03-01', readTime: '5 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1920,h=1282,fit=crop/AzGM9DRxOGCo1GRM/spanish-work-visa-application-with-flag-and-passport-scaled-AQEeE8wNjXTgnaqB.jpg',
-      body: ''
+      body: '## Current Processing Times\n\nProcessing times vary by visa type and where you apply:\n\n- **Tourist / Schengen visa:** 15\u201330 calendar days\n- **Digital Nomad Visa (from consulate):** 4\u20136 weeks\n- **Digital Nomad Visa (from within Spain):** 20 working days\n- **Non-Lucrative Visa:** 1\u20133 months\n- **Work Permit (cuenta ajena):** 5\u20136 weeks\n- **TIE Card appointment:** 2\u20134 weeks after approval\n\n## Common Causes of Delays\n\n- **Incomplete documentation:** Missing apostilles or translations are the most common reason\n- **Incorrect forms:** Using outdated form versions or missing signatures\n- **Consulate backlogs:** Some consulates have longer queues than others\n- **Criminal record processing:** Some countries take 4\u20138 weeks to issue certificates\n- **Health insurance issues:** Policies that don\'t meet Spanish requirements\n\n## How to Speed Up Your Application\n\n- Start gathering documents at least 8 weeks before your target application date\n- Get criminal record certificates first (they expire in 3\u20136 months)\n- Use a sworn translator approved by the Spanish Ministry of Foreign Affairs\n- Book your consulate appointment as early as possible\n- Double-check all forms against the consulate\'s current checklist\n\n## After Approval\n\nOnce your visa is approved, you typically have 30\u201390 days to enter Spain. After arrival, you\'ll need to register with the local police (empadronamiento) and book a TIE card appointment within 30 days.'
     },
     {
       id: 'schengen-area',
@@ -638,7 +796,7 @@ function seedDefaultArticles() {
       summary: '27 European countries, zero internal border controls. A practical explainer for nomads planning multi-country stays across the EU.',
       category: 'lifestyle', date: '2025-01-01', readTime: '4 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1920,h=1559,fit=crop/AzGM9DRxOGCo1GRM/screenshot-2025-09-03-at-12.50.39a-pm-mv0P0Lv0WxHB8r82.png',
-      body: ''
+      body: '## What is the Schengen Area?\n\nThe Schengen Area is a zone of 27 European countries that have abolished internal border controls. Once inside, you can travel freely between member states without passport checks.\n\n## Member Countries\n\nThe 27 Schengen countries are: Austria, Belgium, Croatia, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Italy, Latvia, Liechtenstein, Lithuania, Luxembourg, Malta, Netherlands, Norway, Poland, Portugal, Slovakia, Slovenia, Spain, Sweden, and Switzerland.\n\n## The 90/180 Rule\n\nNon-EU citizens without a residence permit can stay in the Schengen Area for a maximum of **90 days within any 180-day rolling period**. This applies to tourist and business visits.\n\n## How the DNV Changes This\n\nOnce you hold a Spanish Digital Nomad Visa (or any Spanish residence permit), the 90/180 rule no longer applies to Spain. You can live in Spain indefinitely as long as your permit is valid.\n\nHowever, for travel to *other* Schengen countries, you are still limited to 90 days in any 180-day period outside Spain.\n\n## Why This Matters for Nomads\n\nWith a Spanish residence permit, you can:\n\n- Live full-time in Spain\n- Travel freely within the Schengen Area for short trips (up to 90 days per 180 days in other countries)\n- Use Spain as your base for exploring all of Europe\n\n## Planning Multi-Country Stays\n\nIf you want to spend extended time in another Schengen country (e.g., Portugal or France), you would need a separate residence permit for that country. The Spanish DNV only grants residency rights in Spain.'
     },
     {
       id: 'tech-tools-relocation',
@@ -646,7 +804,7 @@ function seedDefaultArticles() {
       summary: 'NIE, TIE, neobanks, local apps \u2014 everything the modern remote worker needs to hit the ground running when moving to Spain.',
       category: 'lifestyle', date: '2026-03-17', readTime: '6 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1440,h=756,fit=crop,f=jpeg/AzGM9DRxOGCo1GRM/gemini_generated_image_v091lhv091lhv091-nAOTaC8JeU7SGNOc.png',
-      body: ''
+      body: '## Before You Arrive\n\n- **NIE number:** Apply at the Spanish consulate or upon arrival. You need this for everything.\n- **Health insurance:** Arrange before departure. Sanitas, Mapfre, or Adeslas are popular options.\n- **Accommodation:** Book temporary housing for the first month via Idealista, Fotocasa, or Spotahome.\n- **SIM card:** Order a Spanish SIM online (Vodafone, Orange, or Movistar) for pickup upon arrival.\n\n## First Week in Spain\n\n- **Empadronamiento:** Register at your local town hall (Ayuntamiento). You\'ll need your passport and proof of address.\n- **Bank account:** Open with a neobank (N26, Revolut, Wise) immediately. Spanish banks (BBVA, CaixaBank, Sabadell) require a NIE.\n- **TIE appointment:** Book your cita previa for the Tarjeta de Identidad de Extranjero.\n- **Phone plan:** Get a contract plan once you have a Spanish bank account.\n\n## Essential Apps\n\n- **Idealista:** Apartment hunting\n- **Wallapop:** Buy/sell second-hand items\n- **Glovo / Just Eat:** Food delivery\n- **Citymapper / Google Maps:** Public transport\n- **Cl@ve / Cl@ve PIN:** Digital identity for government services\n- **Sede Electr\u00f3nica:** Online access to immigration services\n\n## Coworking Spaces\n\nMost cities have excellent options:\n\n- Barcelona: OneCoWork, MOB, Aticco\n- Madrid: Impact Hub, WeWork, Utopicus\n- Valencia: Wayco, The Pool, Lanzadera\n- M\u00e1laga: La Farola, The Living Room\n\n## Ongoing Admin\n\n- Renew your TIE before it expires (start 60 days early)\n- File quarterly taxes if registered as aut\u00f3nomo\n- Keep your empadronamiento updated if you change address'
     },
     {
       id: 'portable-power-nomad',
@@ -654,7 +812,7 @@ function seedDefaultArticles() {
       summary: 'Best power banks, portable stations, and solar panels for van life and co-working across Spain. Keep your mobile office running anywhere.',
       category: 'lifestyle', date: '2026-02-01', readTime: '5 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1024,h=538,fit=crop/AzGM9DRxOGCo1GRM/gemini_generated_image_y93c4by93c4by93c-wLHRoQgvpxrJzN8Q.png',
-      body: ''
+      body: '## Why Power Matters\n\nSpain\'s digital nomad lifestyle often takes you beyond the office or coworking space. Whether you\'re working from a beach caf\u00e9 in Tarifa, a mountain village in Asturias, or a campervan parked along the Costa Brava, reliable power keeps your laptop running.\n\n## Power Banks\n\nFor day-to-day mobile work:\n\n- **20,000mAh USB-C PD bank:** Charges a laptop once or a phone 4\u20135 times. Brands like Anker and Ugreen offer compact options under \u20AC40.\n- **65W+ output:** Essential for laptop charging. Lower wattage banks will only charge phones and tablets.\n\n## Portable Power Stations\n\nFor van life or extended off-grid work:\n\n- **300\u2013500Wh stations:** Run a laptop for 4\u20138 hours. Good for weekend trips. EcoFlow River and Jackery Explorer are popular.\n- **1,000Wh+ stations:** Power a full mobile office including monitor, router, and laptop. EcoFlow Delta or Bluetti AC200 are top choices.\n\n## Solar Panels\n\nSpain gets 2,500\u20133,000 hours of sunshine per year, making solar an excellent option:\n\n- **100W portable panel:** Pairs with a 500Wh station for sustainable daily charging\n- **200W panel:** Full laptop power on sunny days\n- Look for foldable panels for easy transport\n\n## Connectivity on the Go\n\n- **4G/5G mobile router:** Huawei or Netgear with a Spanish data SIM gives you internet anywhere with cell coverage\n- **Starlink RV:** Available in Spain for \u20AC50/month, perfect for truly remote locations\n\n## Practical Tips\n\n- Spanish plugs use Type F (Schuko). Bring a universal adapter.\n- Caf\u00e9s in Spain generally welcome laptop workers \u2014 order a caf\u00e9 con leche and you\'re set.\n- Libraries (bibliotecas) offer free WiFi and power in every major city.'
     },
     {
       id: 'get-residency-nomadspain',
@@ -662,10 +820,30 @@ function seedDefaultArticles() {
       summary: 'Our five-step concierge process: expert consultation, dedicated case manager, document prep, final review, and full application support.',
       category: 'visa', date: '2026-02-15', readTime: '4 min',
       image: 'https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=1024,h=568,fit=crop/AzGM9DRxOGCo1GRM/gemini_generated_image_7vj7fj7vj7fj7vj7-HxdJHGZEmnZ5ai4j.png',
-      body: ''
+      body: '## Our Process\n\nNomadSpain.io provides end-to-end support for your Spanish residency application. Here\'s how we work:\n\n### Step 1: Free Eligibility Check\n\nTake our 2-minute quiz to see if you qualify for the Digital Nomad Visa. We assess your nationality, income, qualifications, and employment status.\n\n### Step 2: Expert Consultation\n\nBook a 30-minute call with one of our immigration specialists. We\'ll review your specific situation, answer your questions, and outline your personalised roadmap.\n\n### Step 3: Document Preparation\n\nYour dedicated case manager guides you through every document:\n\n- Criminal record certificate and apostille coordination\n- Sworn translation arrangements\n- Employment verification letters\n- Income documentation compilation\n- Health insurance selection\n\n### Step 4: Application Submission\n\nWe compile your complete dossier, perform a final compliance review, and either submit on your behalf or prepare you for your consulate appointment.\n\n### Step 5: Post-Approval Support\n\nAfter your visa is approved, we assist with:\n\n- TIE card appointment booking\n- Empadronamiento registration guidance\n- NIE number support\n- Bank account opening tips\n- Beckham Law tax regime application\n\n## Why Choose NomadSpain.io?\n\n- **98% approval rate** across 500+ applications\n- **Dedicated case manager** for every client\n- **Real-time tracking** via your personal dashboard\n- **Average processing: 4\u20136 weeks** from submission to approval\n\nReady to start? Take our free eligibility quiz or book a consultation today.'
     }
   ];
   saveArticles(defaults);
+}
+/* Backfill empty article bodies for existing users */
+function migrateArticleBodies(){
+  var articles=getArticles(); if(!articles.length) return;
+  var needsSave=false;
+  var fresh=[]; seedDefaultArticles.bodyCache=null;
+  /* Build a fresh copy to pull bodies from */
+  var origLen=articles.length;
+  var tmpKey='__ns_art_tmp';
+  var origData=localStorage.getItem('ns_articles');
+  localStorage.removeItem('ns_articles');
+  seedDefaultArticles();
+  var freshArts=getArticles();
+  localStorage.setItem('ns_articles',origData||'[]');
+  var bodyMap={};
+  freshArts.forEach(function(a){if(a.body)bodyMap[a.id]=a.body;});
+  articles.forEach(function(a){
+    if(!a.body && bodyMap[a.id]){a.body=bodyMap[a.id];needsSave=true;}
+  });
+  if(needsSave) saveArticles(articles);
 }
 
 function openResource(key){
@@ -742,6 +920,9 @@ function pHasPaidApp(){
   var pays=pGetPays().filter(function(p){return p.userId===pUser.id&&p.status==='paid';});
   return pays.length>0;
 }
+/* Change requests table */
+function pGetChangeRequests(){return JSON.parse(localStorage.getItem('ns_change_requests')||'[]');}
+function pSaveChangeRequests(c){localStorage.setItem('ns_change_requests',JSON.stringify(c));}
 function pSavePricing2(p){localStorage.setItem('ns_pricing',JSON.stringify(p));}
 /* Profiles table */
 function pGetProfiles(){return JSON.parse(localStorage.getItem('ns_profiles')||'{}');}
@@ -762,9 +943,250 @@ function pGetAppAppointments(appId){return pGetAppointments().filter(function(a)
 /* Province metrics table */
 function pGetProvinceMetrics(){return JSON.parse(localStorage.getItem('ns_province_metrics')||'[]');}
 function pSaveProvinceMetrics(m){localStorage.setItem('ns_province_metrics',JSON.stringify(m));}
+/* Partner leads */
+function getPartnerLeads(){return JSON.parse(localStorage.getItem('ns_partner_leads')||'[]');}
+function savePartnerLeads(l){localStorage.setItem('ns_partner_leads',JSON.stringify(l));}
+function submitCoopForm(){
+  var name=document.getElementById('coopName').value.trim();
+  var company=document.getElementById('coopCompany').value.trim();
+  var type=document.getElementById('coopType').value;
+  var website=document.getElementById('coopWebsite').value.trim();
+  var message=document.getElementById('coopMessage').value.trim();
+  var checks=document.querySelectorAll('.coop-checks input[type=checkbox]:checked');
+  var interests=[];checks.forEach(function(c){interests.push(c.value);});
+  if(!name){showToast('Please enter your name.');return;}
+  if(!company){showToast('Please enter your company name.');return;}
+  if(!type){showToast('Please select your entity type.');return;}
+  if(!interests.length){showToast('Please select at least one collaboration interest.');return;}
+  var leads=getPartnerLeads();
+  leads.push({id:'pl_'+Date.now(),name:name,company:company,type:type,interests:interests,website:website,message:message,date:new Date().toISOString(),status:'new'});
+  savePartnerLeads(leads);
+  document.getElementById('coopFormContent').style.display='none';
+  document.getElementById('coopFormSuccess').style.display='block';
+  showToast('\u2713 Partnership inquiry submitted!');
+}
+/* Job applications */
+function getJobApps(){return JSON.parse(localStorage.getItem('ns_job_applications')||'[]');}
+function saveJobApps(a){localStorage.setItem('ns_job_applications',JSON.stringify(a));}
+var WW_CURRENT_JOB='';
+var WW_APOSTILLE='';
+function openJobModal(jobTitle){
+  WW_CURRENT_JOB=jobTitle;
+  WW_APOSTILLE='';
+  document.getElementById('wwModalTitle').textContent='Apply for '+jobTitle;
+  document.getElementById('wwModalContent').style.display='block';
+  document.getElementById('wwModalSuccess').style.display='none';
+  ['wwName','wwEmail','wwLinkedin','wwLocation'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  var f=document.getElementById('wwResume');if(f)f.value='';
+  document.getElementById('wwFileLabel').innerHTML='<span>Choose a PDF file...</span><span>\u{1F4CE}</span>';
+  document.getElementById('wwFileLabel').classList.remove('has-file');
+  document.querySelectorAll('#wwApostille .ww-radio').forEach(function(r){r.classList.remove('selected');});
+  var btn=document.getElementById('wwSubmitBtn');btn.disabled=false;btn.textContent='Submit Application \u2192';
+  document.getElementById('wwModalOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeJobModal(){
+  document.getElementById('wwModalOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+function wwSelectRadio(el){
+  document.querySelectorAll('#wwApostille .ww-radio').forEach(function(r){r.classList.remove('selected');});
+  el.classList.add('selected');
+  WW_APOSTILLE=el.getAttribute('data-val');
+}
+function wwFileChange(input){
+  var label=document.getElementById('wwFileLabel');
+  if(input.files&&input.files[0]){
+    var f=input.files[0];
+    if(f.type!=='application/pdf'){showToast('Please upload a PDF file.');input.value='';return;}
+    label.innerHTML='<span>'+f.name+'</span><span>\u2713</span>';
+    label.classList.add('has-file');
+  }else{
+    label.innerHTML='<span>Choose a PDF file...</span><span>\u{1F4CE}</span>';
+    label.classList.remove('has-file');
+  }
+}
+function submitJobApplication(){
+  var name=document.getElementById('wwName').value.trim();
+  var email=document.getElementById('wwEmail').value.trim();
+  var linkedin=document.getElementById('wwLinkedin').value.trim();
+  var location=document.getElementById('wwLocation').value.trim();
+  var resume=document.getElementById('wwResume').files[0];
+  if(!name){showToast('Please enter your full name.');return;}
+  if(!email||email.indexOf('@')<0){showToast('Please enter a valid email.');return;}
+  if(!linkedin){showToast('Please share your LinkedIn profile.');return;}
+  var btn=document.getElementById('wwSubmitBtn');
+  btn.disabled=true;btn.textContent='Submitting...';
+  setTimeout(function(){
+    var apps=getJobApps();
+    apps.push({
+      id:'ja_'+Date.now(),
+      job:WW_CURRENT_JOB,
+      name:name,email:email,linkedin:linkedin,
+      location:location,
+      apostille:WW_APOSTILLE||'unanswered',
+      resume:resume?resume.name:'',
+      date:new Date().toISOString(),
+      status:'new'
+    });
+    saveJobApps(apps);
+    document.getElementById('wwModalContent').style.display='none';
+    document.getElementById('wwModalSuccess').style.display='block';
+    showToast('\u2713 Application submitted!');
+  },650);
+}
+function resetCoopForm(){
+  document.getElementById('coopFormContent').style.display='block';
+  document.getElementById('coopFormSuccess').style.display='none';
+  ['coopName','coopCompany','coopWebsite','coopMessage'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('coopType').selectedIndex=0;
+  document.querySelectorAll('.coop-checks input[type=checkbox]').forEach(function(c){c.checked=false;});
+}
 /* System status */
 function pGetSystemStatus(){return localStorage.getItem('ns_system_status')||'Normal';}
 function pSaveSystemStatus(s){localStorage.setItem('ns_system_status',s);}
+
+/* ══════════════════════════════════════════
+   NOTIFICATION SYSTEM
+══════════════════════════════════════════ */
+function pGetNotifications(){return JSON.parse(localStorage.getItem('ns_notifications')||'[]');}
+function pSaveNotifications(n){localStorage.setItem('ns_notifications',JSON.stringify(n));}
+function pGetUserNotifications(userId){
+  return pGetNotifications().filter(function(n){return n.userId===userId;}).sort(function(a,b){return new Date(b.ts)-new Date(a.ts);});
+}
+function pGetUnreadCount(userId){
+  return pGetNotifications().filter(function(n){return n.userId===userId&&!n.read;}).length;
+}
+/**
+ * Create a notification
+ * @param {string} userId - recipient
+ * @param {string} type - doc_rejected, doc_approved, doc_resubmitted, stage_change, appointment, system, message
+ * @param {string} title - short title
+ * @param {string} body - detail text
+ * @param {string} [appId] - related application id
+ */
+function pCreateNotification(userId,type,title,body,appId){
+  var notifs=pGetNotifications();
+  notifs.push({
+    id:'notif_'+Date.now()+'_'+Math.random().toString(36).substr(2,4),
+    userId:userId,
+    type:type,
+    title:title,
+    body:body,
+    appId:appId||null,
+    ts:new Date().toISOString(),
+    read:false
+  });
+  pSaveNotifications(notifs);
+  pUpdateNotifBadge();
+}
+function pMarkNotifRead(notifId){
+  var notifs=pGetNotifications();
+  notifs=notifs.map(function(n){if(n.id===notifId){n.read=true;}return n;});
+  pSaveNotifications(notifs);
+  pUpdateNotifBadge();
+}
+function pMarkAllNotifsRead(){
+  if(!pUser) return;
+  var notifs=pGetNotifications();
+  notifs=notifs.map(function(n){if(n.userId===pUser.id){n.read=true;}return n;});
+  pSaveNotifications(notifs);
+  pUpdateNotifBadge();
+  pRenderNotifDropdown();
+}
+function pUpdateNotifBadge(){
+  if(!pUser) return;
+  var count=pGetUnreadCount(pUser.id);
+  ['cu','cm','ad'].forEach(function(prefix){
+    var badge=document.getElementById(prefix+'-notif-count');
+    if(badge){
+      badge.textContent=count>99?'99+':count;
+      badge.style.display=count>0?'flex':'none';
+    }
+  });
+}
+var pNotifDropdownOpen=false;
+function pToggleNotifDropdown(){
+  pNotifDropdownOpen=!pNotifDropdownOpen;
+  pRenderNotifDropdown();
+}
+function pRenderNotifDropdown(){
+  var dd=document.getElementById('notif-dropdown');
+  if(!dd){
+    dd=document.createElement('div');dd.id='notif-dropdown';dd.className='notif-dropdown';
+    document.body.appendChild(dd);
+  }
+  if(!pNotifDropdownOpen){dd.classList.remove('open');return;}
+  dd.classList.add('open');
+
+  /* Position near the bell */
+  var bell=document.querySelector('.notif-bell-btn');
+  if(bell){
+    var rect=bell.getBoundingClientRect();
+    dd.style.top=(rect.bottom+6)+'px';
+    dd.style.right=(window.innerWidth-rect.right)+'px';
+  }
+
+  var notifs=pGetUserNotifications(pUser.id).slice(0,20);
+  var unread=notifs.filter(function(n){return !n.read;}).length;
+  var html='<div class="notif-dd-header">'
+    +'<span class="notif-dd-title">Notifications</span>'
+    +(unread>0?'<button class="notif-mark-all" onclick="pMarkAllNotifsRead()">Mark all read</button>':'')
+    +'</div>';
+  if(!notifs.length){
+    html+='<div class="notif-dd-empty">No notifications yet.</div>';
+  } else {
+    html+='<div class="notif-dd-list">';
+    notifs.forEach(function(n){
+      var icon=n.type==='doc_rejected'?'❌':n.type==='doc_approved'?'✅':n.type==='doc_resubmitted'?'📤':n.type==='stage_change'?'🔄':n.type==='appointment'?'📅':n.type==='system'?'📢':'🔔';
+      var ago=pTimeAgo(n.ts);
+      html+='<div class="notif-dd-item'+(n.read?'':' unread')+'" onclick="pMarkNotifRead(\''+n.id+'\');pNotifNavigate(\''+n.id+'\')">'
+        +'<div class="notif-dd-icon">'+icon+'</div>'
+        +'<div class="notif-dd-body">'
+        +'<div class="notif-dd-item-title">'+escHtml(n.title)+'</div>'
+        +'<div class="notif-dd-item-text">'+escHtml(n.body)+'</div>'
+        +'<div class="notif-dd-item-time">'+ago+'</div>'
+        +'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+  }
+  dd.innerHTML=html;
+}
+function pNotifNavigate(notifId){
+  var n=pGetNotifications().find(function(x){return x.id===notifId;});
+  if(!n) return;
+  pNotifDropdownOpen=false;pRenderNotifDropdown();
+  /* Navigate based on role and type */
+  if(pUser.role==='customer'){
+    if(n.type==='doc_rejected'||n.type==='doc_approved') pNav('customer','documents',null);
+    else if(n.type==='stage_change') pNav('customer','status',null);
+    else if(n.type==='appointment') pNav('customer','overview',null);
+    else pNav('customer','overview',null);
+  } else if(pUser.role==='case_manager'&&n.appId){
+    cmManageAppId=n.appId;
+    if(n.type==='doc_resubmitted') cmManageTab='documents';
+    pCMManageApp(n.appId);
+  } else if(pUser.role==='admin'){
+    if(n.type==='stage_change') pNav('admin','applications',null);
+    else pNav('admin','analytics',null);
+  }
+}
+function pTimeAgo(ts){
+  var diff=Math.floor((new Date()-new Date(ts))/1000);
+  if(diff<60) return 'Just now';
+  if(diff<3600) return Math.floor(diff/60)+'m ago';
+  if(diff<86400) return Math.floor(diff/3600)+'h ago';
+  if(diff<604800) return Math.floor(diff/86400)+'d ago';
+  return fmtDate(ts);
+}
+
+/* Close dropdown when clicking outside */
+document.addEventListener('click',function(e){
+  if(pNotifDropdownOpen&&!e.target.closest('.notif-bell-btn')&&!e.target.closest('.notif-dropdown')){
+    pNotifDropdownOpen=false;pRenderNotifDropdown();
+  }
+});
 
 var PROFILE_CHECKLISTS={
   main:[
@@ -857,10 +1279,11 @@ var P_PKG_PRICES={consultation:50,solo:2500,family:2500};
 /* ══ ENUMS & RBAC ══ */
 /* ══ ENUMS (Mirrors SQL ENUM types) ══ */
 var USER_ROLE={ADMIN:'admin',MANAGER:'case_manager',USER:'customer'};
-var APP_STATUS_ENUM={LEAD:'lead',PAYMENT_PENDING:'payment_pending',DOCUMENT_PREP:'document_prep',SUBMITTED:'submitted',APPROVED:'approved',REJECTED:'rejected'};
+var APP_STATUS_ENUM={LEAD:'lead',PAYMENT_PENDING:'payment_pending',DOCUMENT_PREP:'document_prep',READY_FOR_REVIEW:'ready_for_review',SUBMITTED:'submitted',RFE_RECEIVED:'rfe_received',APPROVED:'approved',REJECTED:'rejected'};
 /* Legacy compat */
 var APP_STATUS={REGISTERED:'registered',PAID:'paid',APP_STARTED:'app_started',SUBMITTED:'submitted'};
-var DOC_STATUS_ENUM={MISSING:'missing',UPLOADED:'uploaded',APOSTILLED:'apostilled',TRANSLATED:'translated',VERIFIED:'verified'};
+var DOC_STATUS_ENUM={MISSING:'missing',UPLOADED:'uploaded',APOSTILLED:'apostilled',TRANSLATED:'translated',VERIFIED:'verified',REJECTED:'rejected',TRANSLATION_REQUIRED:'translation_required'};
+var SCHENGEN_MAX_DAYS=90;
 var REFERRAL_SOURCES=['organic','referral','social','ads','partner'];
 var CM_MAX_CAPACITY=20;
 var DOC_EXPIRY_WARN_DAYS=15;
@@ -1306,14 +1729,20 @@ function pCMReviewAction(appId,docId,newStatus,rejReason){
   });
   pSaveApps(apps);
 
-  /* Notify client */
-  if(newStatus==='rejected'&&rejReason){
-    var msgs=pGetMsgs();
-    var app=apps.find(function(a){return a.id===appId;});
-    if(app){
-      var doc=docs.find(function(dd){return dd.id===docId;});
-      msgs.push({id:'msg'+Date.now(),fromId:pUser.id,toId:app.userId,body:'❌ Document Rejected: '+(doc?doc.name:'document')+' — Reason: '+rejReason+'. Please re-upload.',ts:now,read:false});
-      pSaveMsgs(msgs);
+  /* Notify client via message + notification */
+  var rvApp=apps.find(function(a){return a.id===appId;});
+  if(rvApp){
+    var rvDoc=docs.find(function(dd){return dd.id===docId;});
+    var rvDocName=rvDoc?rvDoc.name:'document';
+    if(newStatus==='rejected'){
+      if(rejReason){
+        var msgs=pGetMsgs();
+        msgs.push({id:'msg'+Date.now(),fromId:pUser.id,toId:rvApp.userId,body:'❌ Document Rejected: '+rvDocName+' — Reason: '+rejReason+'. Please re-upload.',ts:now,read:false});
+        pSaveMsgs(msgs);
+      }
+      pCreateNotification(rvApp.userId,'doc_rejected','\u274C Document Rejected',rvDocName+(rejReason?' — '+rejReason:'')+'. Please re-upload.',appId);
+    } else if(newStatus==='verified'){
+      pCreateNotification(rvApp.userId,'doc_approved','\u2705 Document Approved',rvDocName+' has been verified.',appId);
     }
   }
 
@@ -1412,6 +1841,10 @@ function pCMRenderAppointments(app){
     }
     html+='</div></div>';
   });
+
+  /* Cita-Ready Pack below appointments */
+  html+=pRenderCitaReadyPack(app,false);
+
   return html;
 }
 
@@ -1438,6 +1871,8 @@ function pCMSaveAppt(appId){
       if(!a.activityLog)a.activityLog=[];
       a.activityLog.push({ts:now,icon:'📅',type:'action',text:'Appointment scheduled: '+APPT_TYPE_LABELS[type]+' on '+date});
       a.updated=now;a.last_activity=now;
+      /* Notify user about new appointment */
+      pCreateNotification(a.userId,'appointment','\uD83D\uDCC5 Appointment Scheduled',APPT_TYPE_LABELS[type]+' on '+date+(location?' at '+location:''),appId);
     }
     return a;
   });
@@ -1455,6 +1890,206 @@ function pCMApptStatus(apptId,newStatus){
   pSaveAppointments(appts);
   pRenderCMManage();
   showToast('✓ Appointment '+newStatus);
+}
+
+/* ══════════════════════════════════════════
+   90-DAY SCHENGEN CLOCK
+══════════════════════════════════════════ */
+
+function pCalcSchengenDays(entryDate){
+  if(!entryDate) return null;
+  var entry=new Date(entryDate);
+  var now=new Date();
+  var elapsed=Math.floor((now-entry)/(1000*60*60*24));
+  var remaining=SCHENGEN_MAX_DAYS-elapsed;
+  return {elapsed:Math.max(0,elapsed),remaining:remaining,total:SCHENGEN_MAX_DAYS,expired:remaining<=0,urgent:remaining>0&&remaining<=14};
+}
+
+function pRenderSchengenClock(app){
+  if(!app||!app.entry_date) return '<div class="schengen-clock empty"><div class="schengen-icon">🛬</div><div class="schengen-body"><div class="schengen-title">No Entry Date Set</div><div class="schengen-sub">Set an entry date to start the 90-day Schengen tracker.</div></div></div>';
+  var sc=pCalcSchengenDays(app.entry_date);
+  var pct=Math.min(100,Math.round(sc.elapsed/sc.total*100));
+  var cls=sc.expired?'expired':sc.urgent?'urgent':'ok';
+  return '<div class="schengen-clock '+cls+'">'
+    +'<div class="schengen-ring">'
+    +'<svg viewBox="0 0 80 80" width="80" height="80"><circle cx="40" cy="40" r="36" fill="none" stroke="#e5e5e5" stroke-width="6"/>'
+    +'<circle cx="40" cy="40" r="36" fill="none" stroke="'+(sc.expired?'#dc2626':sc.urgent?'#d97706':'#16a34a')+'" stroke-width="6" stroke-dasharray="'+(Math.round(226*pct/100))+' 226" stroke-linecap="round" transform="rotate(-90 40 40)"/>'
+    +'<text x="40" y="36" text-anchor="middle" fill="'+(sc.expired?'#dc2626':sc.urgent?'#d97706':'#065f46')+'" font-size="18" font-weight="800">'+(sc.expired?'0':sc.remaining)+'</text>'
+    +'<text x="40" y="50" text-anchor="middle" fill="#999" font-size="8" font-weight="600">DAYS LEFT</text>'
+    +'</svg></div>'
+    +'<div class="schengen-body">'
+    +'<div class="schengen-title">'+(sc.expired?'⚠ Schengen Period Expired':sc.urgent?'⚠ Urgent — '+sc.remaining+' Days Remaining':'Schengen Clock Active')+'</div>'
+    +'<div class="schengen-sub">Entry: '+app.entry_date+' · Day '+sc.elapsed+' of '+sc.total+'</div>'
+    +(sc.expired?'<div class="schengen-alert">Client must have valid residence permit or exit Schengen area immediately.</div>':'')
+    +(sc.urgent&&!sc.expired?'<div class="schengen-alert warn">Less than 2 weeks remaining. Prioritise TIE appointment or residence card.</div>':'')
+    +'</div></div>';
+}
+
+/* Editable entry date (CM) */
+function pCMSetEntryDate(appId){
+  var val=(document.getElementById('cm-entry-date-input')||{}).value;
+  if(!val){showToast('Please select a date');return;}
+  var apps=pGetApps();var now=new Date().toISOString();
+  apps=apps.map(function(a){
+    if(a.id===appId){
+      a.entry_date=val;a.updated=now;a.last_activity=now;
+      if(!a.activityLog)a.activityLog=[];
+      a.activityLog.push({ts:now,icon:'🛬',type:'action',text:'Schengen entry date set: '+val});
+    }
+    return a;
+  });
+  pSaveApps(apps);pRenderCMManage();
+  showToast('✓ Entry date set to '+val);
+}
+
+/* ══════════════════════════════════════════
+   CITA-READY PACK (Auto-Checklist)
+══════════════════════════════════════════ */
+
+/* 790-012 Tax Form — Tasa 012 instructions */
+var TASA_012_INSTRUCTIONS=[
+  {step:1,text:'Download Modelo 790 Código 012 from sede.administracionespublicas.gob.es'},
+  {step:2,text:'Fill in your NIE number and personal data (same as EX-17 Section 1)'},
+  {step:3,text:'Select "TARJETA DE IDENTIDAD DE EXTRANJERO" under Tasas'},
+  {step:4,text:'Amount: €16.08 (2026 rate for initial TIE)'},
+  {step:5,text:'Pay online via bank transfer or at any Spanish bank with the printed form'},
+  {step:6,text:'Keep BOTH the bank receipt AND the stamped 790 form — bring originals to your appointment'}
+];
+
+function pGetCitaReadyPack(app){
+  var appts=pGetAppAppointments(app.id);
+  var bookedAppts=appts.filter(function(a){return a.status==='scheduled';});
+  if(!bookedAppts.length) return null;
+
+  var user=(pGetUsers()).find(function(u){return u.id===app.userId;})||{first:'Unknown',last:''};
+  var profile=pGetProfile(app.userId)||{};
+  var items=[];
+
+  bookedAppts.forEach(function(apt){
+    var pack={appointment:apt,checklist:[]};
+
+    /* Common items for all appointment types */
+    pack.checklist.push({icon:'🪪',text:'Original passport + 2 copies of bio page',done:false});
+    pack.checklist.push({icon:'📄',text:'NIE assignment letter (Certificado de Asignación de NIE)',done:false});
+
+    if(apt.type==='digital_cert'){
+      pack.checklist.push({icon:'💻',text:'Request Digital Certificate at certificadoelectronico.rrss.gob.es',done:false});
+      pack.checklist.push({icon:'📧',text:'Confirmation email with appointment code',done:false});
+      pack.checklist.push({icon:'🏢',text:'Visit: '+escHtml(apt.location||'Office location TBD'),done:false});
+    }
+
+    if(apt.type==='fingerprints'||apt.type==='submission'){
+      pack.checklist.push({icon:'📋',text:'EX-17 form (×2 signed originals) — pre-filled from profile',done:false,action:'ex17',appId:app.id});
+      pack.checklist.push({icon:'💰',text:'Tasa 790-012 — paid and stamped (€16.08)',done:false,action:'tasa012'});
+      pack.checklist.push({icon:'📷',text:'Recent passport-size photo (white background, 32×26mm)',done:false});
+      pack.checklist.push({icon:'🏥',text:'Health insurance certificate (original)',done:false});
+      if(apt.type==='fingerprints'){
+        pack.checklist.push({icon:'🖐️',text:'Clean, dry hands for fingerprint capture',done:false});
+        pack.checklist.push({icon:'⏰',text:'Arrive 15 min early — queue at Extranjería',done:false});
+      }
+      if(apt.type==='submission'){
+        pack.checklist.push({icon:'📂',text:'Full document dossier (originals + copies)',done:false});
+        pack.checklist.push({icon:'💼',text:'Proof of remote work / employment contract',done:false});
+        pack.checklist.push({icon:'🏦',text:'Bank statements (last 3–6 months)',done:false});
+      }
+    }
+
+    items.push(pack);
+  });
+
+  return items;
+}
+
+function pRenderCitaReadyPack(app,forUser){
+  var packs=pGetCitaReadyPack(app);
+  if(!packs||!packs.length) return '';
+
+  var html='<div class="cita-ready-wrap">';
+  html+='<div class="cita-ready-header"><span class="cita-ready-icon">📦</span><div><div class="cita-ready-title">Cita-Ready Pack</div><div class="cita-ready-sub">Your appointment checklist — everything you need to bring.</div></div></div>';
+
+  packs.forEach(function(pack){
+    var apt=pack.appointment;
+    var dt=new Date(apt.datetime);
+    var daysUntil=Math.floor((dt-new Date())/(1000*60*60*24));
+    var typeLabel=APPT_TYPE_LABELS[apt.type]||apt.type;
+    var isUrgent=daysUntil>=0&&daysUntil<=3;
+
+    html+='<div class="cita-pack-card'+(isUrgent?' urgent':'')+'">'
+      +'<div class="cita-pack-head">'
+      +'<div><strong>'+escHtml(typeLabel)+'</strong><div style="font-size:12px;color:var(--text3);">'+fmtDate(apt.datetime)+(apt.location?' · '+escHtml(apt.location):'')+'</div></div>'
+      +(daysUntil>=0?'<span class="cita-pack-countdown'+(isUrgent?' urgent':'')+'">'+daysUntil+'d</span>':'<span class="cita-pack-countdown expired">Past</span>')
+      +'</div>'
+      +'<div class="cita-pack-items">';
+
+    pack.checklist.forEach(function(item,idx){
+      var actionBtn='';
+      if(item.action==='ex17'&&!forUser){
+        actionBtn=' <button class="p-btn p-btn-ghost p-btn-sm" style="font-size:10px;padding:2px 6px;" onclick="pPrintEX17(\''+item.appId+'\')">Print EX-17</button>';
+      }
+      if(item.action==='tasa012'){
+        actionBtn=' <button class="p-btn p-btn-ghost p-btn-sm" style="font-size:10px;padding:2px 6px;" onclick="pShowTasa012()">View Instructions</button>';
+      }
+      html+='<div class="cita-pack-item">'
+        +'<span class="cita-item-icon">'+item.icon+'</span>'
+        +'<span class="cita-item-text">'+item.text+'</span>'
+        +actionBtn
+        +'</div>';
+    });
+
+    html+='</div></div>';
+  });
+  html+='</div>';
+  return html;
+}
+
+function pShowTasa012(){
+  var overlay=document.getElementById('pModalOverlay');var body=document.getElementById('pModalBody');var title=document.getElementById('pModalTitle');
+  if(!overlay||!body||!title)return;
+  overlay.classList.add('open');
+  title.textContent='Tasa 790-012 — Tax Form Instructions';
+  var h='<div style="font-size:13px;line-height:1.8;">';
+  TASA_012_INSTRUCTIONS.forEach(function(s){
+    h+='<div style="display:flex;gap:10px;margin-bottom:8px;"><span style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">'+s.step+'</span><span>'+escHtml(s.text)+'</span></div>';
+  });
+  h+='<div style="margin-top:14px;padding:10px;background:#fef3c7;border-radius:8px;font-size:12px;color:#92400e;font-weight:600;">⚠ Important: The 790-012 must be paid BEFORE your appointment. Unpaid forms will result in being turned away.</div>';
+  h+='</div>';
+  body.innerHTML=h;
+}
+
+/* ══════════════════════════════════════════
+   USER DOCUMENT VAULT ENHANCEMENTS
+══════════════════════════════════════════ */
+
+/* Document categories for grouped vault UI */
+var DOC_VAULT_CATEGORIES=[
+  {id:'personal',label:'Personal & Identity',icon:'🪪',docKeys:['passport','passport_scans','nie_number','photos']},
+  {id:'professional',label:'Professional',icon:'💼',docKeys:['diploma','remote_work_proof','company_age','contracts_invoices','employer_letter']},
+  {id:'financial',label:'Financial',icon:'💰',docKeys:['income_proof','bank_statements']},
+  {id:'compliance',label:'Spanish Compliance',icon:'🇪🇸',docKeys:['criminal_record','health_insurance','padron','social_security','background_check']}
+];
+
+/* Get rejection info for a doc from the normalised documents table */
+function pGetDocRejection(appId,docName){
+  var docs=pGetAppDocuments(appId);
+  var d=docs.find(function(doc){return doc.name.toLowerCase().replace(/[^a-z]/g,'').indexOf(docName.toLowerCase().replace(/[^a-z]/g,''))!==-1;});
+  if(d&&d.rejection_reason) return {reason:d.rejection_reason,reviewedAt:d.reviewed_at||null};
+  return null;
+}
+
+/* Get translation file info for a doc */
+function pGetDocTranslation(appId,docKey){
+  var key='ns_translations';
+  var all=JSON.parse(localStorage.getItem(key)||'{}');
+  var appTranslations=all[appId]||{};
+  return appTranslations[docKey]||null;
+}
+
+function pSaveDocTranslation(appId,docKey,fileName){
+  var key='ns_translations';
+  var all=JSON.parse(localStorage.getItem(key)||'{}');
+  if(!all[appId]) all[appId]={};
+  all[appId][docKey]={fileName:fileName,uploadedAt:new Date().toISOString()};
+  localStorage.setItem(key,JSON.stringify(all));
 }
 
 /* ══════════════════════════════════════════
@@ -1849,6 +2484,7 @@ function pSeedData(){
   ];
   var apps=[
     {id:'app1',userId:'u_c1',pkg:'solo',stage:2,status:'in_progress',app_status:'document_prep',cmId:'u_cm1',created:'2024-02-02T00:00:00Z',updated:'2024-03-10T00:00:00Z',
+     entry_date:'2026-03-15',province_of_application:'Madrid',
      family_members_count:0,total_required_income:2849,
      docs:{passport:'uploaded',income:'uploaded',criminal:'pending',degree:'missing',insurance:'missing',other:'missing'},
      requiredDocs:['passport','income','criminal','degree','insurance','other'],
@@ -1858,6 +2494,7 @@ function pSeedData(){
      statusHistory:[{status:'lead',at:'2024-02-02T10:30:00Z'},{status:'payment_pending',at:'2024-02-03T00:00:00Z'},{status:'document_prep',at:'2024-02-20T14:15:00Z'}],
      last_activity:'2024-03-10T00:00:00Z'},
     {id:'app2',userId:'u_c2',pkg:'family',stage:0,status:'new',app_status:'lead',cmId:'u_cm1',created:'2024-02-16T00:00:00Z',updated:'2024-02-16T00:00:00Z',
+     entry_date:null,province_of_application:'Barcelona',
      family_members_count:2,total_required_income:3561.63,
      docs:{passport:'missing',income:'missing',criminal:'missing',degree:'missing',insurance:'missing',other:'missing'},
      requiredDocs:['passport','income','criminal','degree','insurance','other'],
@@ -1970,6 +2607,8 @@ function pMigrateNewFields(){
     if(!a.last_activity){a.last_activity=a.updated||a.created;changed=true;}
     if(a.family_members_count===undefined){a.family_members_count=a.deps||0;changed=true;}
     if(!a.total_required_income){a.total_required_income=calcIncomeThreshold(a.family_members_count||0);changed=true;}
+    if(!a.entry_date){a.entry_date=null;changed=true;}
+    if(!a.province_of_application){a.province_of_application=null;changed=true;}
     if(!a.app_status){
       /* Derive app_status from stage */
       a.app_status=a.stage>=5?APP_STATUS_ENUM.APPROVED:a.stage>=3?APP_STATUS_ENUM.SUBMITTED:a.stage>=1?APP_STATUS_ENUM.DOCUMENT_PREP:APP_STATUS_ENUM.LEAD;
@@ -2150,6 +2789,7 @@ function pShowDashboard(){
     setText('cu-email-top',pUser.email);setText('cu-greeting','Welcome back, '+pUser.first+' \uD83D\uDC4B');
     pRenderCustomer();
   }
+  pUpdateNotifBadge();
 }
 function pNav(role,panel,el){
   var prefix=role==='admin'?'ad':role==='cm'?'cm':'cu';
@@ -2168,6 +2808,7 @@ function pNav(role,panel,el){
     else if(panel==='products')pRenderAdProducts();
     else if(panel==='financials')pRenderAdFinancials();
     else if(panel==='support')pRenderAdSupport();
+    else if(panel==='change-requests')pRenderAdChangeRequests();
     else if(panel==='compliance')pRenderAdCompliance();
     else if(panel==='provinces')pRenderAdProvinces();
   } else if(role==='cm'){
@@ -2185,10 +2826,12 @@ function pNav(role,panel,el){
       document.querySelectorAll('#pCustomer .p-panel').forEach(function(p){p.classList.remove('active');});
       var mktPanel=document.getElementById('cu-marketplace');if(mktPanel)mktPanel.classList.add('active');
       if(titleEl)titleEl.textContent='Marketplace';
+      pRenderMarketplace();
       showToast('🔒 Complete your purchase to unlock this feature');
       return;
     }
-    if(panel==='overview')pRenderCuOverview();
+    if(panel==='marketplace')pRenderMarketplace();
+    else if(panel==='overview')pRenderCuOverview();
     else if(panel==='status')pRenderCuStatus();
     else if(panel==='documents')pRenderCuDocuments();
     else if(panel==='support')pRenderCuSupport();
@@ -2202,7 +2845,7 @@ function setHTML(id,v){var e=document.getElementById(id);if(e)e.innerHTML=v;}
 
 /* ══ CUSTOMER RENDERS ══ */
 function pRenderCustomer(){
-  pRenderCuOverview();pRenderCuDocuments();pLoadCuSettings();
+  pRenderCuOverview();pRenderCuDocuments();pLoadCuSettings();pRenderMarketplace();
   // show/hide lock icons
   var locked=['status','documents','support','finance'];
   var paid=pHasPaidApp();
@@ -2269,6 +2912,27 @@ function pRenderCuOverview(){
     progressHtml='<p style="color:var(--text3);font-size:13px;">No active application. Start by choosing a package.</p>';
   }
   setHTML('cu-my-progress',progressHtml);
+
+  /* ═══ Schengen Clock (Customer) ═══ */
+  var schengenWrap=document.getElementById('cu-schengen-clock-wrap');
+  if(schengenWrap&&app&&app.entry_date){
+    schengenWrap.innerHTML='<div class="p-card" style="margin-bottom:0;padding:0;overflow:hidden;">'+pRenderSchengenClock(app)+'</div>';
+    schengenWrap.style.marginBottom='20px';
+  } else if(schengenWrap){
+    schengenWrap.innerHTML='';schengenWrap.style.marginBottom='0';
+  }
+
+  /* ═══ Cita-Ready Pack (Customer) ═══ */
+  var citaWrap=document.getElementById('cu-cita-ready-wrap');
+  if(citaWrap&&app){
+    var citaHtml=pRenderCitaReadyPack(app,true);
+    if(citaHtml){
+      citaWrap.innerHTML='<div class="p-card" style="margin-bottom:0;padding:14px 18px;">'+citaHtml+'</div>';
+      citaWrap.style.marginBottom='20px';
+    } else {
+      citaWrap.innerHTML='';citaWrap.style.marginBottom='0';
+    }
+  }
 
   /* ═══ Document Expiry Alerts (Customer) ═══ */
   var expiryWrap=document.getElementById('cu-expiry-alerts-wrap');
@@ -2462,13 +3126,50 @@ function pRenderProfileDocs(app){
     section.docs.forEach(function(d){
       var status=prof.docs[d.key]||'missing';
       var fname=(prof.docFiles&&prof.docFiles[d.key])||'';
-      var clickable=!locked&&status!=='pending'&&status!=='verified';
+      var canReuploadRejected=(status==='rejected'&&!globalSubmitted);
+      var clickable=(!locked&&status!=='pending'&&status!=='verified')||canReuploadRejected;
       var badgeClass=status==='verified'?'verified':status==='uploaded'?'ok':status==='pending'?'pend':status==='rejected'?'rejected':'miss';
       var badgeLabel=status==='verified'?'✓ Verified':status==='uploaded'?'✓ Uploaded':status==='pending'?'⏳ Under Review':status==='rejected'?'✗ Rejected':'+ Upload';
-      html+='<div class="p-doc-row'+(clickable?'':' locked')+'"'+(clickable?' onclick="pUploadDoc(\''+d.key+'\')"':'')+' style="'+(status==='uploaded'||status==='verified'?'border-left:3px solid #10B981;padding-left:13px;':'')+'">'
+      html+='<div class="p-doc-row'+(clickable?'':' locked')+'"'+(clickable?' onclick="pUploadDoc(\''+d.key+'\')"':'')+' style="'+(status==='uploaded'||status==='verified'?'border-left:3px solid #10B981;padding-left:13px;':status==='rejected'?'border-left:3px solid #dc2626;padding-left:13px;':'')+'">'
         +'<div class="p-doc-row-icon">'+d.icon+'</div>'
-        +'<div class="p-doc-row-body"><div class="p-doc-row-name">'+escHtml(d.name)+'</div><div class="p-doc-row-sub">'+escHtml(d.sub)+'</div></div>'
-        +'<div class="p-doc-row-status"><span class="p-doc-badge '+badgeClass+'">'+badgeLabel+'</span>'+(fname?'<span class="p-doc-fname">'+escHtml(fname)+'</span>':'')+'</div>'
+        +'<div class="p-doc-row-body"><div class="p-doc-row-name">'+escHtml(d.name)+'</div><div class="p-doc-row-sub">'+escHtml(d.sub)+'</div>';
+      /* Rejection callout */
+      if(status==='rejected'){
+        var rej=pGetDocRejection(app.id,d.key);
+        var rejReason=rej?rej.reason:'Document did not meet requirements. Please re-upload.';
+        html+='<div class="doc-rejection-callout"><span class="doc-rejection-icon">⚠</span><div class="doc-rejection-text"><strong>Rejected:</strong> '+escHtml(rejReason)+'</div></div>';
+        if(canReuploadRejected){
+          html+='<div class="doc-reupload-notice"><button class="p-btn p-btn-primary p-btn-sm" onclick="event.stopPropagation();pUploadDoc(\''+d.key+'\')">📤 Re-upload Document</button>'
+            +'<span>Upload a corrected version to resubmit for review.</span></div>';
+        }
+      }
+      /* Translation toggle */
+      var translation=pGetDocTranslation(app.id,d.key);
+      if(translation){
+        html+='<div class="doc-translation-row"><span class="doc-translation-badge">📜 Sworn Translation: '+escHtml(translation.fileName)+'</span></div>';
+      } else if(status==='uploaded'||status==='pending'||status==='verified'){
+        html+='<div class="doc-translation-row"><span class="doc-translation-upload" onclick="event.stopPropagation();pUploadTranslation(\''+d.key+'\')">+ Upload Sworn Translation</span></div>';
+      }
+      html+='</div>'
+        +'<div class="p-doc-row-status">'
+        +'<span class="p-doc-badge '+badgeClass+'">'+badgeLabel+'</span>'
+        +(fname?'<span class="p-doc-fname">'+escHtml(fname)+'</span>':'');
+      /* Preview + Cancel buttons for uploaded/pending files (not when globally submitted) */
+      if((status==='uploaded'||status==='pending')&&!globalSubmitted){
+        html+='<div class="p-doc-actions">'
+          +'<button class="p-btn p-btn-ghost p-btn-xs" onclick="event.stopPropagation();pPreviewDoc(\''+d.key+'\')" title="Preview file">\u{1F441} Preview</button>';
+        if(status==='uploaded'){
+          html+='<button class="p-btn p-btn-ghost p-btn-xs p-btn-danger" onclick="event.stopPropagation();pCancelDoc(\''+d.key+'\')" title="Remove file">\u2715 Remove</button>';
+        }
+        html+='</div>';
+      }
+      /* Preview only for verified docs */
+      if(status==='verified'){
+        html+='<div class="p-doc-actions">'
+          +'<button class="p-btn p-btn-ghost p-btn-xs" onclick="event.stopPropagation();pPreviewDoc(\''+d.key+'\')" title="Preview file">\u{1F441} Preview</button>'
+          +'</div>';
+      }
+      html+='</div>'
         +'</div>';
     });
   });
@@ -2545,32 +3246,162 @@ function pUploadDoc(key){
   var fi=document.getElementById('cu-doc-file-input');
   if(fi){fi.value='';fi.click();}
 }
+/* ══ IndexedDB File Store for Document Previews ══ */
+var pFileDB=null;
+function pOpenFileDB(cb){
+  if(pFileDB){cb(pFileDB);return;}
+  var req=indexedDB.open('ns_doc_files',1);
+  req.onupgradeneeded=function(e){e.target.result.createObjectStore('files');};
+  req.onsuccess=function(e){pFileDB=e.target.result;cb(pFileDB);};
+  req.onerror=function(){cb(null);};
+}
+function pSaveFile(fileKey,dataUrl,cb){
+  pOpenFileDB(function(db){
+    if(!db){if(cb)cb(false);return;}
+    var tx=db.transaction('files','readwrite');
+    tx.objectStore('files').put(dataUrl,fileKey);
+    tx.oncomplete=function(){if(cb)cb(true);};
+    tx.onerror=function(){if(cb)cb(false);};
+  });
+}
+function pGetFile(fileKey,cb){
+  pOpenFileDB(function(db){
+    if(!db){cb(null);return;}
+    var tx=db.transaction('files','readonly');
+    var req=tx.objectStore('files').get(fileKey);
+    req.onsuccess=function(){cb(req.result||null);};
+    req.onerror=function(){cb(null);};
+  });
+}
+function pDeleteFile(fileKey,cb){
+  pOpenFileDB(function(db){
+    if(!db){if(cb)cb();return;}
+    var tx=db.transaction('files','readwrite');
+    tx.objectStore('files').delete(fileKey);
+    tx.oncomplete=function(){if(cb)cb();};
+    tx.onerror=function(){if(cb)cb();};
+  });
+}
+function pDocFileKey(appId,profileId,docKey){return appId+'_'+profileId+'_'+docKey;}
+
 function pHandleFileUpload(input){
   if(!input.files||!input.files[0]||!pPendingDocKey){return;}
   var file=input.files[0];
   var app=pGetMyApp();if(!app){return;}
-  showToast('⏳ Uploading '+file.name+'…');
+  showToast('\u23F3 Uploading '+file.name+'\u2026');
   var key=pPendingDocKey;var profileId=pActiveProfileId;pPendingDocKey=null;
-  setTimeout(function(){
-    var apps=pGetApps();
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var dataUrl=e.target.result;
+    var dbKey=pDocFileKey(app.id,profileId,key);
+    /* Store file in IndexedDB (large capacity) */
+    pSaveFile(dbKey,dataUrl,function(){
+      var apps=pGetApps();var now=new Date().toISOString();
+      var wasRejected=false;
+      apps=apps.map(function(a){
+        if(a.id===app.id){
+          if(!a.profiles||a.profiles.length===0) a.profiles=pGetOrInitProfiles(a);
+          a.profiles=a.profiles.map(function(p){
+            if(p.id===profileId){
+              if(p.docs[key]==='rejected') wasRejected=true;
+              p.docs[key]='uploaded';
+              if(!p.docFiles)p.docFiles={};
+              p.docFiles[key]=file.name;
+              /* Clean up legacy docData from localStorage if present */
+              if(p.docData)delete p.docData[key];
+            }
+            return p;
+          });
+          a.updated=now;
+          if(wasRejected){
+            if(!a.activityLog)a.activityLog=[];
+            a.activityLog.push({ts:now,icon:'\u{1F4E4}',type:'doc',text:'Re-uploaded rejected document: '+key.replace(/_/g,' '),detail:'File: '+file.name});
+            if(a.cmId){
+              pCreateNotification(a.cmId,'doc_resubmitted','\u{1F4E4} Document re-submitted',pUser.first+' '+pUser.last+' re-uploaded '+key.replace(/_/g,' ')+' after rejection.',a.id);
+            }
+          }
+        }
+        return a;
+      });
+      pSaveApps(apps);pRenderCuDocuments();pRenderCuOverview();
+      showToast(wasRejected?'\u2713 '+file.name+' re-submitted for review':'\u2713 '+file.name+' uploaded');
+    });
+  };
+  reader.readAsDataURL(file);
+}
+/* Preview an uploaded document */
+function pPreviewDoc(key){
+  var app=pGetMyApp();if(!app)return;
+  var prof=(app.profiles||[]).find(function(p){return p.id===pActiveProfileId;});
+  if(!prof)return;
+  var fname=(prof.docFiles&&prof.docFiles[key])||'Document';
+  var dbKey=pDocFileKey(app.id,pActiveProfileId,key);
+  /* Try IndexedDB first, fall back to legacy docData */
+  pGetFile(dbKey,function(dataUrl){
+    if(!dataUrl){dataUrl=(prof.docData&&prof.docData[key])||null;}
+    if(!dataUrl){showToast('No preview available \u2014 please re-upload the file to enable preview.');return;}
+    pShowDocPreview(dataUrl,fname);
+  });
+}
+function pShowDocPreview(dataUrl,fname){
+  var overlay=document.getElementById('docPreviewOverlay');
+  if(!overlay){
+    overlay=document.createElement('div');overlay.id='docPreviewOverlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);';
+    overlay.onclick=function(e){if(e.target===overlay)pCloseDocPreview();};
+    document.body.appendChild(overlay);
+  }
+  var isPDF=dataUrl.indexOf('application/pdf')!==-1;
+  var isImage=dataUrl.indexOf('image/')!==-1;
+  var contentHtml='';
+  if(isPDF){
+    contentHtml='<iframe src="'+dataUrl+'" style="width:100%;flex:1;border:none;border-radius:0 0 16px 16px;"></iframe>';
+  } else if(isImage){
+    contentHtml='<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:20px;"><img src="'+dataUrl+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;"></div>';
+  } else {
+    contentHtml='<div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px;text-align:center;"><div><div style="font-size:48px;margin-bottom:16px;">\u{1F4C4}</div><p style="font-size:14px;color:var(--text2);">Preview not supported for this file type.</p><a href="'+dataUrl+'" download="'+escHtml(fname)+'" style="display:inline-block;margin-top:12px;padding:10px 20px;background:var(--grad);color:#fff;border-radius:50px;font-size:13px;font-weight:700;text-decoration:none;">Download File</a></div></div>';
+  }
+  overlay.innerHTML='<div style="background:var(--white);border-radius:16px;width:100%;max-width:820px;height:85vh;display:flex;flex-direction:column;position:relative;overflow:hidden;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">'
+    +'<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">'+(isPDF?'\u{1F4C4}':isImage?'\u{1F5BC}':'\u{1F4CE}')+'</span><strong style="font-size:14px;">'+escHtml(fname)+'</strong></div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<a href="'+dataUrl+'" download="'+escHtml(fname)+'" class="p-btn p-btn-ghost p-btn-sm" style="text-decoration:none;">\u2B07 Download</a>'
+    +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="pCloseDocPreview()">\u2715 Close</button>'
+    +'</div></div>'
+    +contentHtml
+    +'</div>';
+  overlay.style.display='flex';
+}
+function pCloseDocPreview(){
+  var overlay=document.getElementById('docPreviewOverlay');
+  if(overlay)overlay.style.display='none';
+}
+/* Cancel / remove an uploaded document */
+function pCancelDoc(key){
+  if(!confirm('Remove this uploaded file? You can upload a new one afterwards.'))return;
+  var app=pGetMyApp();if(!app)return;
+  var profileId=pActiveProfileId;
+  var dbKey=pDocFileKey(app.id,profileId,key);
+  pDeleteFile(dbKey,function(){
+    var apps=pGetApps();var now=new Date().toISOString();
     apps=apps.map(function(a){
-      if(a.id===app.id){
-        if(!a.profiles||a.profiles.length===0) a.profiles=pGetOrInitProfiles(a);
+      if(a.id===app.id&&a.profiles){
         a.profiles=a.profiles.map(function(p){
           if(p.id===profileId){
-            p.docs[key]='uploaded';
-            if(!p.docFiles)p.docFiles={};
-            p.docFiles[key]=file.name;
+            p.docs[key]='missing';
+            if(p.docFiles)delete p.docFiles[key];
+            if(p.docData)delete p.docData[key];
+            if(p.submitted){delete p.submitted;}
           }
           return p;
         });
-        a.updated=new Date().toISOString();
+        a.updated=now;
       }
       return a;
     });
     pSaveApps(apps);pRenderCuDocuments();pRenderCuOverview();
-    showToast('\u2713 '+file.name+' uploaded');
-  },800);
+    showToast('\u2713 File removed. You can upload a replacement.');
+  });
 }
 /* Submit files for a single profile */
 function pSubmitProfile(profileId){
@@ -2611,6 +3442,28 @@ function pCompleteSubmission(){
   });
   pSaveApps(apps);pRenderCuDocuments();showToast('🏁 Submission complete! Your Case Manager will be in touch.');
 }
+/* Upload sworn translation for a document */
+var pPendingTranslationKey=null;
+function pUploadTranslation(docKey){
+  pPendingTranslationKey=docKey;
+  var fi=document.getElementById('cu-translation-file-input');
+  if(!fi){
+    fi=document.createElement('input');fi.type='file';fi.id='cu-translation-file-input';fi.style.display='none';
+    fi.onchange=function(){pHandleTranslationUpload(fi);};
+    document.body.appendChild(fi);
+  }
+  fi.value='';fi.click();
+}
+function pHandleTranslationUpload(input){
+  if(!input.files||!input.files[0]||!pPendingTranslationKey) return;
+  var file=input.files[0];
+  var app=pGetMyApp();if(!app) return;
+  pSaveDocTranslation(app.id,pPendingTranslationKey,file.name);
+  pPendingTranslationKey=null;
+  pRenderProfileDocs(app);
+  showToast('✓ Sworn translation uploaded: '+file.name);
+}
+
 function pSelectProfile(profileId){
   pActiveProfileId=profileId;
   // update card active states
@@ -3014,6 +3867,7 @@ function pSaveSettings(){
 
 /* ── MARKETPLACE ── */
 function pSelectPkg(pkg){
+  if(pHasPaidApp()){showToast('🔒 Your package is locked. Submit a change request to modify it.');pRenderMarketplace();return;}
   pSelectedPkg=pkg;pPromoDiscount=0;
   document.querySelectorAll('.p-mkt-card').forEach(function(c){c.classList.remove('sel');});
   var card=document.getElementById('mkt-'+pkg);if(card)card.classList.add('sel');
@@ -3142,6 +3996,158 @@ function pCompleteCheckout(){
   document.getElementById('cu-checkout').style.display='none';
   showToast('\u2713 Payment successful! Your application has been created.');
   pNav('cu','overview',null);
+}
+
+/* ══ MARKETPLACE LOCK + CHANGE REQUESTS ══ */
+function pRenderMarketplace(){
+  var lockedView=document.getElementById('cu-mkt-locked');
+  var openView=document.getElementById('cu-mkt-view');
+  if(!lockedView||!openView)return;
+  if(!pHasPaidApp()){
+    lockedView.style.display='none';
+    openView.style.display='block';
+    return;
+  }
+  /* Locked: show purchased package */
+  lockedView.style.display='block';
+  openView.style.display='none';
+  var app=pGetMyApp();
+  var pays=pGetPays().filter(function(p){return p.userId===pUser.id&&p.status==='paid';});
+  var totalPaid=pays.reduce(function(s,p){return s+(p.amount||0);},0);
+  var firstPay=pays[0];
+  var pkgKey=app?app.pkg:'solo';
+  var pkgLabel=(P_PKG_NAMES&&P_PKG_NAMES[pkgKey])||pkgKey;
+  if(pkgKey==='family'&&app&&app.deps){pkgLabel+=' (+'+app.deps+' dep'+(app.deps>1?'s':'')+')';}
+  setText('cu-mkt-locked-name',pkgLabel);
+  setText('cu-mkt-locked-paid','\u20AC'+totalPaid.toLocaleString());
+  setText('cu-mkt-locked-date',firstPay?fmtDate(firstPay.date):'\u2014');
+  setText('cu-mkt-locked-id',firstPay?firstPay.id:'\u2014');
+  /* Render my change requests */
+  var crs=pGetChangeRequests().filter(function(c){return c.userId===pUser.id;}).sort(function(a,b){return b.created.localeCompare(a.created);});
+  var listEl=document.getElementById('cu-cr-list');
+  if(!crs.length){
+    listEl.innerHTML='<p style="color:var(--text3);font-size:13px;padding:8px 0;">No change requests yet.</p>';
+  } else {
+    var html='';
+    crs.forEach(function(c){
+      var statusColor=c.status==='approved'?'#16A34A':c.status==='rejected'?'#DC2626':'#F59E0B';
+      var statusBg=c.status==='approved'?'rgba(22,163,74,0.1)':c.status==='rejected'?'rgba(220,38,38,0.1)':'rgba(245,158,11,0.1)';
+      html+='<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+        +'<div style="font-weight:700;font-size:13px;">'+escHtml(pCRTypeLabel(c.type))+'</div>'
+        +'<span class="p-badge" style="background:'+statusBg+';color:'+statusColor+';border:1px solid '+statusColor+'33;">'+c.status.toUpperCase()+'</span>'
+        +'</div>'
+        +'<div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:6px;">'+escHtml(c.details)+'</div>'
+        +'<div style="font-size:11px;color:var(--text3);">Submitted '+fmtDate(c.created)+(c.adminNote?' \u00b7 Admin: '+escHtml(c.adminNote):'')+'</div>'
+        +'</div>';
+    });
+    listEl.innerHTML=html;
+  }
+}
+function pCRTypeLabel(t){
+  return ({upgrade:'Upgrade Package',downgrade:'Downgrade Package',add_dependent:'Add Dependent',remove_dependent:'Remove Dependent',addon:'Add-on Service',other:'Other / Custom'})[t]||t;
+}
+function pOpenChangeRequest(){
+  if(!pHasPaidApp()){showToast('You must have an active package to request a change.');return;}
+  document.getElementById('crModalContent').style.display='block';
+  document.getElementById('crModalSuccess').style.display='none';
+  document.getElementById('crType').selectedIndex=0;
+  document.getElementById('crDetails').value='';
+  var btn=document.getElementById('crSubmitBtn');btn.disabled=false;btn.textContent='Submit Request \u2192';
+  document.getElementById('crModalOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function pCloseChangeRequest(){
+  document.getElementById('crModalOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+function pSubmitChangeRequest(){
+  var type=document.getElementById('crType').value;
+  var details=document.getElementById('crDetails').value.trim();
+  if(!type){showToast('Please select a request type.');return;}
+  if(!details||details.length<10){showToast('Please give us a few details (min 10 chars).');return;}
+  var btn=document.getElementById('crSubmitBtn');btn.disabled=true;btn.textContent='Submitting...';
+  var app=pGetMyApp();
+  var crs=pGetChangeRequests();
+  crs.push({
+    id:'cr_'+Date.now(),
+    userId:pUser.id,
+    userName:pUser.name||pUser.email||'',
+    appId:app?app.id:'',
+    currentPkg:app?app.pkg:'',
+    type:type,
+    details:details,
+    status:'pending',
+    created:new Date().toISOString(),
+    adminNote:'',
+    decidedBy:'',
+    decidedAt:''
+  });
+  pSaveChangeRequests(crs);
+  setTimeout(function(){
+    document.getElementById('crModalContent').style.display='none';
+    document.getElementById('crModalSuccess').style.display='block';
+    showToast('\u2713 Change request submitted.');
+    pRenderMarketplace();
+  },400);
+}
+
+/* Admin: change requests queue */
+var AD_CR_FILTER='all';
+function pFilterCRs(f,el){
+  AD_CR_FILTER=f;
+  ['all','pending','approved','rejected'].forEach(function(k){
+    var b=document.getElementById('cr-f-'+k);
+    if(b)b.classList.toggle('p-btn-primary',k===f);
+  });
+  pRenderAdChangeRequests();
+}
+function pRenderAdChangeRequests(){
+  var crs=pGetChangeRequests().slice().sort(function(a,b){return b.created.localeCompare(a.created);});
+  if(AD_CR_FILTER!=='all')crs=crs.filter(function(c){return c.status===AD_CR_FILTER;});
+  var pendingCount=pGetChangeRequests().filter(function(c){return c.status==='pending';}).length;
+  var badge=document.getElementById('ad-cr-badge');
+  if(badge){badge.textContent=pendingCount;badge.style.display=pendingCount?'inline-flex':'none';}
+  var wrap=document.getElementById('ad-cr-table');
+  if(!wrap)return;
+  if(!crs.length){wrap.innerHTML='<p style="color:var(--text3);font-size:14px;padding:20px;text-align:center;">No change requests'+(AD_CR_FILTER!=='all'?' ('+AD_CR_FILTER+')':'')+'.</p>';return;}
+  var html='<table class="p-table"><thead><tr><th>Customer</th><th>Current Pkg</th><th>Type</th><th>Details</th><th>Submitted</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead><tbody>';
+  crs.forEach(function(c){
+    var statusColor=c.status==='approved'?'#16A34A':c.status==='rejected'?'#DC2626':'#F59E0B';
+    var statusBg=c.status==='approved'?'rgba(22,163,74,0.1)':c.status==='rejected'?'rgba(220,38,38,0.1)':'rgba(245,158,11,0.1)';
+    var actions=c.status==='pending'
+      ?'<button class="p-btn p-btn-primary p-btn-sm" onclick="pDecideChangeRequest(\''+c.id+'\',\'approve\')">Approve</button> '
+       +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="pDecideChangeRequest(\''+c.id+'\',\'reject\')">Reject</button>'
+      :'<span style="font-size:11px;color:var(--text3);">'+(c.decidedAt?fmtDate(c.decidedAt):'\u2014')+'</span>';
+    html+='<tr>'
+      +'<td>'+escHtml(c.userName||'\u2014')+'</td>'
+      +'<td>'+escHtml((P_PKG_NAMES&&P_PKG_NAMES[c.currentPkg])||c.currentPkg||'\u2014')+'</td>'
+      +'<td>'+escHtml(pCRTypeLabel(c.type))+'</td>'
+      +'<td style="max-width:280px;font-size:12px;color:var(--text2);">'+escHtml(c.details)+'</td>'
+      +'<td style="font-size:12px;color:var(--text3);">'+fmtDate(c.created)+'</td>'
+      +'<td><span class="p-badge" style="background:'+statusBg+';color:'+statusColor+';border:1px solid '+statusColor+'33;">'+c.status.toUpperCase()+'</span></td>'
+      +'<td style="text-align:right;white-space:nowrap;">'+actions+'</td>'
+      +'</tr>';
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+function pDecideChangeRequest(id,action){
+  var note=prompt(action==='approve'?'Optional note to the customer (e.g. "Will email payment link"):':'Reason for rejection:');
+  if(action==='reject'&&!note)return;
+  var crs=pGetChangeRequests();
+  crs=crs.map(function(c){
+    if(c.id===id){
+      c.status=action==='approve'?'approved':'rejected';
+      c.adminNote=note||'';
+      c.decidedBy=pUser&&pUser.id||'admin';
+      c.decidedAt=new Date().toISOString();
+    }
+    return c;
+  });
+  pSaveChangeRequests(crs);
+  showToast(action==='approve'?'\u2713 Request approved':'Request rejected');
+  pRenderAdChangeRequests();
 }
 
 /* ══ ADMIN RENDERS ══ */
@@ -3656,6 +4662,16 @@ function pRenderCMManage(){
     +'</div>';
   html+=pRenderFinancialHealth(app,profile);
 
+  /* Schengen Clock + entry date input for CM */
+  html+=pRenderSchengenClock(app);
+  if(!app.entry_date||true){
+    html+='<div class="schengen-entry-input">'
+      +'<label>Entry Date:</label>'
+      +'<input type="date" id="cm-entry-date-input" value="'+(app.entry_date||'')+'">'
+      +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="pCMSetEntryDate(\''+app.id+'\')">Set</button>'
+      +'</div>';
+  }
+
   // Tabs
   html+='<div class="cm-manage-tabs">'
     +'<button class="cm-manage-tab'+(cmManageTab==='kanban'?' active':'')+'" onclick="pCMManageTabSwitch(\'kanban\')">Overview</button>'
@@ -3721,6 +4737,25 @@ function pCMRenderKanban(app,u){
     +'<button class="p-btn p-btn-ghost" style="margin-top:10px;width:100%;justify-content:center;" onclick="pCMSaveNote(\''+app.id+'\')">Save Note</button>'
     +'</div>';
   html+='</div>';
+
+  /* Quiz results (if lead came from eligibility quiz) */
+  if(app.checker_score!==undefined){
+    html+='<div class="p-card" style="margin-top:14px;">'
+      +'<div class="p-card-title" style="margin-bottom:10px;">Eligibility Quiz Results</div>'
+      +'<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">'
+      +'<div style="width:56px;height:56px;border-radius:50%;background:'+(app.checker_score>=60?'#d1fae5':'#fef2f2')+';display:flex;align-items:center;justify-content:center;">'
+      +'<span style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:20px;font-weight:800;color:'+(app.checker_score>=60?'#065f46':'#991b1b')+';">'+app.checker_score+'%</span></div>'
+      +'<div><div style="font-size:14px;font-weight:700;">'+(app.checker_score>=60?'Eligible':'Ineligible — Plan B')+'</div>'
+      +'<div style="font-size:12px;color:var(--text3);">Nationality: '+(app.nationality||'N/A')+' | Work: '+(app.work_type||'N/A')+' | Qual: '+(app.qualification||'N/A')+'</div></div></div>';
+    if(app.checker_issues&&app.checker_issues.length){
+      app.checker_issues.forEach(function(iss){
+        var cls=iss.type==='blocker'?'background:#fef2f2;border:1px solid #fecaca;color:#991b1b;':iss.type==='warning'?'background:#fefce8;border:1px solid #fde68a;color:#92400e;':'background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;';
+        html+='<div style="'+cls+'padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:6px;display:flex;gap:8px;align-items:flex-start;">'
+          +'<span>'+iss.icon+'</span><span>'+escHtml(iss.text)+'</span></div>';
+      });
+    }
+    html+='</div>';
+  }
 
   return html;
 }
@@ -3862,6 +4897,12 @@ function pCMMoveStage(appId,dir){
         a.app_status=newStatus;a.last_activity=now;
         a.statusHistory.push({status:newStatus,at:now});
         a.stage=newStage;a.updated=now;
+        /* Notify user about stage change */
+        pCreateNotification(a.userId,'stage_change','\uD83D\uDD04 Application Updated','Your application has moved to: '+P_STAGES[newStage],a.id);
+        /* Notify admin */
+        pGetUsers().filter(function(u){return u.role==='admin';}).forEach(function(u){
+          pCreateNotification(u.id,'stage_change','\uD83D\uDD04 Stage Change','App '+a.id+' moved to '+P_STAGES[newStage],a.id);
+        });
       }
     }
     return a;
@@ -3886,6 +4927,16 @@ function pCMDocAction(appId,profileId,docKey,action){
     }
     return a;
   });
+  /* Notify user about doc action */
+  var theApp=apps.find(function(a){return a.id===appId;});
+  if(theApp){
+    var docLabel=docKey.replace(/_/g,' ');
+    if(action==='verified'){
+      pCreateNotification(theApp.userId,'doc_approved','\u2705 Document Approved',docLabel+' has been verified by your Case Manager.',appId);
+    } else if(action==='rejected'){
+      pCreateNotification(theApp.userId,'doc_rejected','\u274C Document Rejected',docLabel+' was rejected. Please review the feedback and re-upload.',appId);
+    }
+  }
   pSaveApps(apps);pRenderCMManage();
   showToast(action==='verified'?'✓ Document approved':action==='rejected'?'Document rejected':'Re-upload requested');
 }
@@ -4074,7 +5125,23 @@ function pSaveUser(id){
   var users=pGetUsers();
   if(id){users=users.map(function(u){if(u.id===id){u.first=first;u.last=last;u.email=email;u.cmId=cmId;if(pass&&pass.length>=8)u.pass=pass;}return u;});}
   else{if(users.find(function(u){return u.email===email;})){showToast('Email already exists');return;}users.push({id:'u'+Date.now(),email:email,pass:pass||'changeme',role:'customer',first:first,last:last,phone:'',cmId:cmId,created:new Date().toISOString()});}
-  pSaveUsers(users);pCloseModal();pRenderAdUsers();showToast('\u2713 Customer saved');
+  pSaveUsers(users);
+  /* Cascade CM assignment to this user's applications so the CM actually sees them */
+  if(id){
+    var apps=pGetApps();var nowTs=new Date().toISOString();var cascaded=false;
+    apps=apps.map(function(a){
+      if(a.userId===id&&a.cmId!==cmId){
+        a.cmId=cmId||null;a.updated=nowTs;a.last_activity=nowTs;
+        if(!a.activityLog)a.activityLog=[];
+        var cmUser=cmId?users.find(function(u){return u.id===cmId;}):null;
+        a.activityLog.push({ts:nowTs,icon:'\u{1F464}',type:'action',text:'Case manager '+(cmUser?'assigned: '+cmUser.first+' '+cmUser.last:'unassigned')+' (via user edit)'});
+        cascaded=true;
+      }
+      return a;
+    });
+    if(cascaded)pSaveApps(apps);
+  }
+  pCloseModal();pRenderAdUsers();showToast('\u2713 Customer saved');
 }
 function pSaveCM(id){
   var first=(document.getElementById('pm-first').value||'').trim();
@@ -4248,8 +5315,10 @@ function buildProcessAdmin(){
 function buildCitiesAdmin(){
   var d=getAdminData(); var cont=document.getElementById('citiesAdmin'); if(!cont) return;
   var cities=(d.cities&&d.cities.list)||[
-    {name:'Barcelona',tagline:'Beach + tech scene'},{name:'Madrid',tagline:'Capital, culture, career'},
-    {name:'Valencia',tagline:'Sun, sea, affordable'},{name:'Sevilla',tagline:'Culture, warmth, history'}
+    {name:'Barcelona',tagline:'Beach meets tech capital'},{name:'Madrid',tagline:'Capital energy, global connections'},
+    {name:'Valencia',tagline:'Sun, sea & affordability'},{name:'Sevilla',tagline:'Flamenco, tapas & warmth'},
+    {name:'Málaga',tagline:'Costa del Sol tech corridor'},{name:'Bilbao',tagline:'Green, culinary & creative'},
+    {name:'Zaragoza',tagline:'Affordable & centrally located'},{name:'Granada',tagline:'Alhambra & Sierra Nevada'}
   ];
   cont.innerHTML=cities.map(function(c,i){
     return '<div class="admin-field"><label>City '+(i+1)+' Name</label><input type="text" id="city_name_'+i+'" value="'+escHtml(c.name)+'"></div>'
@@ -4273,8 +5342,8 @@ function saveSection(sec){
   if(sec==='hero'){setAdminData('hero',{badge:gv('ad_heroBadge'),h1:gv('ad_heroH1'),sub:gv('ad_heroSub'),stat1:gv('ad_heroStat1'),stat2:gv('ad_heroStat2'),stat3:gv('ad_heroStat3')});applyAdminDataToPage();}
   if(sec==='why'){var obj={title:gv('ad_whyTitle'),sub:gv('ad_whySub')};['wf1t','wf1d','wf2t','wf2d','wf3t','wf3d','wf4t','wf4d'].forEach(function(k){obj[k]=gv('ad_'+k);});setAdminData('why',obj);applyAdminDataToPage();}
   if(sec==='services'){var obj={};['pkg1name','pkg1price','pkg1note','pkg2name','pkg2price','pkg2note','pkg3name','pkg3price','pkg3dep'].forEach(function(k){obj[k]=gv('ad_'+k);});setAdminData('services',obj);}
-  if(sec==='process'){var steps=[];for(var i=0;i<6;i++){steps.push({n:'0'+(i+1),h:gv('proc_h_'+i),p:gv('proc_p_'+i)});}setAdminData('process',{steps:steps});var pg=document.querySelector('#process-section .process-grid');if(pg){pg.innerHTML=steps.map(function(s){return '<div class="p-step"><div class="p-num">'+s.n+'</div><h4>'+escHtml(s.h)+'</h4><p>'+escHtml(s.p)+'</p></div>';}).join('');}}
-  if(sec==='cities'){var list=[];for(var i=0;i<4;i++){list.push({name:gv('city_name_'+i),tagline:gv('city_tag_'+i)});}setAdminData('cities',{list:list});}
+  if(sec==='process'){var pIcons=['📋','📞','📁','🏛️','✅','🇪🇸'];var steps=[];for(var i=0;i<6;i++){steps.push({n:'0'+(i+1),h:gv('proc_h_'+i),p:gv('proc_p_'+i)});}setAdminData('process',{steps:steps});var pg=document.querySelector('#process-section .process-grid');if(pg){pg.innerHTML=steps.map(function(s,i){return '<div class="p-step'+(i===0?' active':'')+'" onclick="toggleProcessStep(this)"><div class="p-step-icon">'+(pIcons[i]||'📌')+'</div><div class="p-num">'+s.n+'</div><h4>'+escHtml(s.h)+'</h4><p>'+escHtml(s.p)+'</p></div>';}).join('');}}
+  if(sec==='cities'){var list=[];for(var i=0;i<8;i++){var n=gv('city_name_'+i);if(n)list.push({name:n,tagline:gv('city_tag_'+i)});}setAdminData('cities',{list:list});}
   if(sec==='checker'){setAdminData('checker',{title:gv('ad_checkerTitle'),sub:gv('ad_checkerSub')});}
   if(sec==='pricing'){setAdminData('pricing',{sub:gv('ad_pricingSub'),p1:gv('ad_p1price'),p2:gv('ad_p2price'),p3dep:gv('ad_p3dep')});}
   if(sec==='contact'){setAdminData('contact',{email:gv('ad_contactEmail'),wa:gv('ad_contactWA'),book:gv('ad_contactBook'),p:gv('ad_contactP')});applyAdminDataToPage();}
@@ -4568,6 +5637,7 @@ function exportEmails(){
 
 window.addEventListener('DOMContentLoaded', function() {
   seedDefaultArticles();
+  migrateArticleBodies();
   initCarousel();
   applyAdminDataToPage();
   initTesti();

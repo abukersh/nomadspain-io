@@ -184,13 +184,23 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:76px;display:flex;ali
 
 /* PROCESS */
 #process-section{background:var(--white);padding:100px 5%;}
-.process-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:0;}
-.p-step{text-align:center;padding:0 10px;position:relative;}
-.p-step::after{content:'→';position:absolute;right:-10px;top:22px;font-size:16px;color:var(--border2);}
-.p-step:last-child::after{display:none;}
-.p-num{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;}
-.p-step h4{font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:700;margin-bottom:6px;}
-.p-step p{font-size:12px;color:var(--text3);line-height:1.6;}
+.process-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;max-width:1100px;margin:0 auto;}
+.p-step{text-align:center;padding:20px 16px 24px;position:relative;cursor:pointer;border-radius:16px;transition:background 0.25s,box-shadow 0.25s,transform 0.2s;}
+.p-step:hover{background:rgba(0,0,0,0.02);transform:translateY(-2px);}
+.p-step.active{background:rgba(232,66,42,0.04);box-shadow:0 4px 20px rgba(232,66,42,0.08);}
+.p-step::after{display:none;}
+.p-num{font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:14px;letter-spacing:0.5px;}
+.p-step h4{font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:800;margin-bottom:8px;color:var(--text1);transition:color 0.2s;}
+.p-step.active h4{color:var(--brand);}
+.p-step p{font-size:13px;color:var(--text3);line-height:1.6;}
+.p-step-detail{max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.4,0,0.2,1),opacity 0.3s,margin 0.3s;opacity:0;margin-top:0;}
+.p-step.active .p-step-detail{max-height:300px;opacity:1;margin-top:14px;}
+.p-step-detail-inner{padding:16px 12px;background:var(--white);border-radius:12px;border:1px solid var(--border);font-size:13px;line-height:1.7;color:var(--text2);text-align:left;}
+.p-step-detail-inner ul{margin:8px 0 0 0;padding-left:18px;list-style:none;}
+.p-step-detail-inner ul li{position:relative;padding-left:8px;margin-bottom:6px;}
+.p-step-detail-inner ul li::before{content:'✓';position:absolute;left:-14px;color:var(--brand);font-weight:700;font-size:12px;}
+.p-step-icon{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,rgba(232,66,42,0.08),rgba(180,83,9,0.08));display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:22px;transition:transform 0.3s,background 0.3s;}
+.p-step.active .p-step-icon{background:linear-gradient(135deg,rgba(232,66,42,0.15),rgba(180,83,9,0.15));transform:scale(1.1);}
 
 /* CITIES */
 #cities-section{background:var(--bg2);padding:100px 5%;}
@@ -198,18 +208,24 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:76px;display:flex;ali
 .city-card{border-radius:var(--radius);overflow:hidden;position:relative;cursor:pointer;transition:transform 0.25s;aspect-ratio:3/4;}
 .city-card:hover{transform:translateY(-4px);}
 .city-card:hover .city-overlay{opacity:1;}
-.city-bg{width:100%;height:100%;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:24px;position:relative;}
-.city-barcelona{background:linear-gradient(160deg,#FF6B6B 0%,#FFB347 50%,#F7971E 100%);}
-.city-madrid{background:linear-gradient(160deg,#8B5CF6 0%,#C084FC 50%,#F472B6 100%);}
-.city-valencia{background:linear-gradient(160deg,#10B981 0%,#3B82F6 60%,#06B6D4 100%);}
-.city-sevilla{background:linear-gradient(160deg,#F59E0B 0%,#EF4444 50%,#EC4899 100%);}
+.city-bg{width:100%;height:100%;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:24px;position:relative;background-size:cover;background-position:center;}
+.city-bg::before{content:'';position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.1) 50%,rgba(0,0,0,0) 100%);z-index:1;}
+.city-bg>*{position:relative;z-index:2;}
 .city-emoji{font-size:36px;margin-bottom:12px;display:block;}
 .city-card h3{font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:800;color:#fff;letter-spacing:-0.5px;margin-bottom:4px;}
-.city-card p{font-size:12px;color:rgba(255,255,255,0.8);}
+.city-card p.city-tagline{font-size:12px;color:rgba(255,255,255,0.85);margin-bottom:2px;}
+.city-card p.city-desc{font-size:11px;color:rgba(255,255,255,0.7);line-height:1.5;max-height:0;overflow:hidden;transition:max-height 0.4s,opacity 0.3s,margin 0.3s;opacity:0;margin-top:0;}
+.city-card:hover p.city-desc{max-height:80px;opacity:1;margin-top:6px;}
 .city-tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
 .city-tag{background:rgba(255,255,255,0.2);backdrop-filter:blur(4px);color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.3);}
-.city-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.15);opacity:0;transition:opacity 0.25s;display:flex;align-items:flex-start;justify-content:flex-end;padding:16px;}
+.city-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.15);opacity:0;transition:opacity 0.25s;display:flex;align-items:flex-start;justify-content:flex-end;padding:16px;z-index:3;}
 .city-arrow{background:rgba(255,255,255,0.9);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.cities-scroll-row{display:none;}
+@media(max-width:900px){
+  .cities-grid{grid-template-columns:repeat(4,1fr);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
+  .cities-grid::-webkit-scrollbar{display:none;}
+  .city-card{min-width:240px;scroll-snap-align:start;}
+}
 
 /* CHECKER */
 #checker-section{background:var(--white);padding:100px 5%;}
@@ -238,6 +254,69 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:76px;display:flex;ali
 .c-text p{font-size:14px;color:var(--text2);line-height:1.65;}
 .submit-btn{width:100%;background:var(--grad);color:#fff;border:none;padding:15px;border-radius:50px;font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.22s;margin-top:6px;box-shadow:0 4px 18px rgba(232,66,42,0.28);}
 .submit-btn:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(232,66,42,0.38);}
+.submit-btn.ghost{background:transparent;color:var(--text2);border:1.5px solid var(--border2);box-shadow:none;width:auto;padding:13px 24px;}
+.submit-btn.ghost:hover{background:var(--bg2);color:var(--text);transform:none;box-shadow:none;}
+
+/* ══ QUIZ WIZARD ══ */
+.quiz-progress{height:6px;background:var(--border);border-radius:3px;margin-bottom:8px;overflow:hidden;}
+.quiz-progress-fill{height:100%;background:var(--grad);border-radius:3px;transition:width 0.4s ease;}
+.quiz-step-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:22px;}
+.quiz-step{display:none;}.quiz-step.active{display:block;}
+.quiz-nav-row{display:flex;gap:10px;margin-top:6px;}.quiz-nav-row .submit-btn{flex:1;}
+.quiz-input{width:100%;background:var(--white);border:1.5px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:12px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;outline:none;transition:border-color 0.2s;}
+.quiz-input:focus{border-color:var(--brand);}
+.quiz-income-calc{padding:14px 16px;background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius-sm);margin-bottom:16px;font-size:13px;line-height:1.7;}
+.quiz-income-calc strong{color:var(--text);}
+
+/* Gauge */
+.quiz-gauge-wrap{display:flex;justify-content:center;padding:10px 0;}
+.quiz-gauge-svg circle:nth-child(2){transition:stroke-dasharray 1.2s ease;}
+.quiz-income-breakdown{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin:16px 0;text-align:left;font-size:13px;line-height:1.7;}
+.quiz-result-actions{margin-top:24px;}
+.quiz-result-actions .submit-btn{width:100%;}
+
+/* Plan B */
+.planb-header{display:flex;align-items:flex-start;gap:14px;}
+.planb-icon{font-size:36px;flex-shrink:0;}
+.planb-header h3{font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.3px;line-height:1.3;color:var(--text);}
+.planb-issues{display:flex;flex-direction:column;gap:8px;margin:16px 0;}
+.planb-issue{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.5;}
+.planb-issue.blocker{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;}
+.planb-issue.warning{background:#fefce8;border:1px solid #fde68a;color:#92400e;}
+.planb-issue.info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;}
+.planb-issue-icon{flex-shrink:0;font-size:16px;}
+.planb-offer{background:linear-gradient(135deg,#faf5ff,#f0f9ff);border:1.5px solid #c4b5fd;border-radius:var(--radius-sm);padding:20px;margin:20px 0;}
+.planb-offer-badge{display:inline-block;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;padding:4px 12px;border-radius:20px;margin-bottom:10px;}
+.planb-offer h4{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;margin-bottom:8px;}
+.planb-offer p{font-size:13px;color:var(--text2);line-height:1.65;}
+.planb-list{list-style:none;margin-top:12px;padding:0;}
+.planb-list li{position:relative;padding-left:22px;font-size:13px;color:var(--text2);margin-bottom:6px;}
+.planb-list li::before{content:'✓';position:absolute;left:0;color:#7c3aed;font-weight:800;}
+
+/* ══ NOTIFICATION BELL & DROPDOWN ══ */
+.notif-bell-btn{position:relative;background:none;border:none;cursor:pointer;font-size:18px;padding:6px;border-radius:8px;transition:background 0.15s;}
+.notif-bell-btn:hover{background:var(--bg2);}
+.notif-badge{position:absolute;top:0;right:-2px;min-width:18px;height:18px;background:#dc2626;color:#fff;font-size:10px;font-weight:800;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;font-family:'Bricolage Grotesque',sans-serif;}
+.notif-dropdown{position:fixed;z-index:500;width:360px;max-height:480px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);display:none;overflow:hidden;}
+.notif-dropdown.open{display:block;}
+.notif-dd-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+.notif-dd-title{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:800;}
+.notif-mark-all{background:none;border:none;color:var(--brand);font-size:12px;font-weight:600;cursor:pointer;}
+.notif-mark-all:hover{text-decoration:underline;}
+.notif-dd-list{max-height:400px;overflow-y:auto;}
+.notif-dd-item{display:flex;gap:10px;padding:12px 18px;cursor:pointer;border-bottom:1px solid var(--bg2);transition:background 0.1s;}
+.notif-dd-item:hover{background:var(--bg2);}
+.notif-dd-item.unread{background:#fef7f0;}
+.notif-dd-icon{flex-shrink:0;font-size:18px;margin-top:2px;}
+.notif-dd-body{flex:1;min-width:0;}
+.notif-dd-item-title{font-size:13px;font-weight:700;color:var(--text);}
+.notif-dd-item-text{font-size:12px;color:var(--text2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.notif-dd-item-time{font-size:11px;color:var(--text3);margin-top:4px;}
+.notif-dd-empty{padding:40px 18px;text-align:center;font-size:13px;color:var(--text3);}
+
+/* ══ DOC RE-UPLOAD NOTICE ══ */
+.doc-reupload-notice{display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 12px;background:#fef7f0;border:1px solid #fed7aa;border-radius:6px;}
+.doc-reupload-notice span{font-size:12px;color:var(--text2);}
 
 /* KB TEASER */
 #kbteaser-section{background:var(--bg2);padding:100px 5%;}
@@ -339,23 +418,204 @@ footer{background:var(--bg);border-top:1px solid var(--border);padding:64px 5% 3
 
 /* ══════════ KNOWLEDGE HUB ══════════ */
 #knowledge-page{background:var(--bg);padding-top:72px;}
-.kb-hero{background:var(--white);border-bottom:1px solid var(--border);padding:72px 5% 60px;position:relative;overflow:hidden;}
-.kb-hero-blob{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;}
+.kb-hero{background:var(--white);border-bottom:1px solid var(--border);padding:72px 5% 60px;position:relative;overflow:visible;z-index:10;}
+.kb-hero-blob{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;}
 .kb-hb1{width:400px;height:400px;background:rgba(232,66,42,0.07);top:-100px;right:-60px;}
 .kb-hb2{width:300px;height:300px;background:rgba(245,166,35,0.06);bottom:-80px;left:-40px;}
 .kb-hero-inner{position:relative;z-index:1;max-width:700px;margin:0 auto;text-align:center;}
 .kb-hero-inner h1{font-size:clamp(32px,4.5vw,58px);font-weight:800;letter-spacing:-2px;margin-bottom:16px;}
 .kb-hero-inner>p{font-size:17px;color:var(--text2);margin-bottom:36px;}
-.search-wrap{position:relative;max-width:560px;margin:0 auto;}
-.search-wrap input{width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:50px;padding:16px 56px 16px 52px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;color:var(--text);outline:none;transition:all 0.2s;}
+.search-wrap{position:relative;max-width:560px;margin:0 auto;z-index:20;}
+.search-wrap input{width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:14px;padding:14px 48px 14px 44px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;color:var(--text);outline:none;transition:all 0.25s;}
 .search-wrap input:focus{border-color:var(--brand);background:var(--white);box-shadow:0 0 0 4px rgba(232,66,42,0.08);}
-.search-icon{position:absolute;left:18px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none;}
+.search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;color:var(--text3);display:flex;align-items:center;}
+.search-send-icon{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;color:var(--text3);display:flex;align-items:center;transition:opacity 0.2s;}
 .search-results-count{text-align:center;margin-top:12px;font-size:13px;color:var(--text3);min-height:20px;}
+/* Search Dropdown */
+.search-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--white);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,0.1);overflow:hidden;max-height:0;opacity:0;transition:max-height 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.25s;pointer-events:none;z-index:30;}
+.search-dropdown.open{max-height:400px;opacity:1;pointer-events:auto;}
+.search-dd-list{list-style:none;padding:6px;margin:0;max-height:320px;overflow-y:auto;}
+.search-dd-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background 0.15s;gap:12px;}
+.search-dd-item:hover{background:rgba(0,0,0,0.04);}
+.search-dd-left{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+.search-dd-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.search-dd-icon.visa{background:rgba(232,66,42,0.08);color:var(--brand);}
+.search-dd-icon.tax{background:rgba(245,166,35,0.1);color:#D97706;}
+.search-dd-icon.lifestyle{background:rgba(59,130,246,0.1);color:#3B82F6;}
+.search-dd-icon.legal{background:rgba(139,92,246,0.1);color:#8B5CF6;}
+.search-dd-icon.housing{background:rgba(16,185,129,0.1);color:#10B981;}
+.search-dd-icon.community{background:rgba(236,72,153,0.1);color:#EC4899;}
+.search-dd-title{font-size:13px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.search-dd-meta{font-size:11px;color:var(--text3);margin-top:1px;}
+.search-dd-tag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--bg2);color:var(--text3);white-space:nowrap;flex-shrink:0;}
+.search-dd-footer{padding:8px 14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px;color:var(--text3);}
+.search-dd-footer kbd{background:var(--bg2);padding:1px 5px;border-radius:4px;font-family:inherit;font-size:10px;border:1px solid var(--border);}
 .kb-filters{padding:24px 5%;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;overflow-x:auto;scrollbar-width:none;}
 .kb-filters::-webkit-scrollbar{display:none;}
 .filter-pill{flex-shrink:0;padding:8px 18px;border-radius:50px;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;border:1.5px solid var(--border);background:var(--white);color:var(--text2);}
 .filter-pill:hover{border-color:var(--brand);color:var(--brand);}
 .filter-pill.active{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(232,66,42,0.25);}
+
+/* COOPERATION PAGE */
+.coop-hero{background:var(--white);padding:100px 5% 80px;text-align:center;position:relative;overflow:hidden;}
+.coop-hero::before{content:'';position:absolute;top:-200px;right:-200px;width:500px;height:500px;background:radial-gradient(circle,rgba(232,66,42,0.06) 0%,transparent 70%);pointer-events:none;}
+.coop-hero::after{content:'';position:absolute;bottom:-200px;left:-200px;width:500px;height:500px;background:radial-gradient(circle,rgba(245,166,35,0.05) 0%,transparent 70%);pointer-events:none;}
+.coop-hero .section-label{display:block;text-align:center;margin-bottom:16px;}
+.coop-hero h1{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(32px,4.5vw,56px);font-weight:800;letter-spacing:-2px;line-height:1.05;margin-bottom:20px;}
+.coop-hero h1 em{font-style:normal;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.coop-hero-sub{font-size:18px;color:var(--text2);max-width:600px;margin:0 auto 20px;line-height:1.7;}
+.coop-hero-tag{display:inline-block;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:700;background:rgba(232,66,42,0.07);color:var(--brand);padding:6px 18px;border-radius:50px;border:1px solid rgba(232,66,42,0.15);}
+.coop-pillars{background:var(--bg2);padding:80px 5%;}
+.coop-pillars-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1100px;margin:0 auto;}
+.coop-pillar{background:var(--white);border:1.5px solid var(--border);border-radius:20px;padding:36px 28px;transition:transform 0.25s,box-shadow 0.25s;}
+.coop-pillar:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,0.06);}
+.coop-pillar-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:18px;}
+.coop-pillar-icon.legal{background:rgba(139,92,246,0.1);}
+.coop-pillar-icon.affiliate{background:rgba(232,66,42,0.08);}
+.coop-pillar-icon.b2b{background:rgba(59,130,246,0.1);}
+.coop-pillar h3{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;margin-bottom:10px;letter-spacing:-0.5px;}
+.coop-pillar p{font-size:14px;color:var(--text2);line-height:1.7;}
+.coop-why{background:var(--white);padding:80px 5%;}
+.coop-why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1100px;margin:0 auto;}
+.coop-why-card{text-align:center;padding:32px 24px;}
+.coop-why-card .coop-why-num{font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;}
+.coop-why-card h4{font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:800;margin-bottom:8px;}
+.coop-why-card p{font-size:13px;color:var(--text2);line-height:1.7;}
+.coop-network{background:var(--bg2);padding:60px 5%;text-align:center;}
+.coop-logos{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;margin-top:28px;opacity:0.4;}
+.coop-logo-placeholder{width:100px;height:40px;background:var(--border);border-radius:8px;}
+.coop-form-section{background:var(--white);padding:80px 5%;}
+.coop-form-wrap{max-width:640px;margin:0 auto;background:var(--bg2);border:1.5px solid var(--border);border-radius:24px;padding:40px 36px;}
+.coop-form-wrap h2{font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:8px;text-align:center;}
+.coop-form-wrap>p{font-size:14px;color:var(--text2);text-align:center;margin-bottom:32px;}
+.coop-field{margin-bottom:20px;}
+.coop-field label{display:block;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.coop-field input,.coop-field select,.coop-field textarea{width:100%;background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color 0.2s;}
+.coop-field input:focus,.coop-field select:focus,.coop-field textarea:focus{border-color:var(--brand);}
+.coop-field textarea{resize:vertical;min-height:100px;}
+.coop-checks{display:flex;flex-wrap:wrap;gap:10px;}
+.coop-check{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text2);}
+.coop-check input[type=checkbox]{accent-color:var(--brand);width:16px;height:16px;}
+.coop-form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.coop-submit{display:block;width:100%;background:var(--grad);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.2s;margin-top:8px;}
+.coop-submit:hover{opacity:0.9;}
+.coop-success{text-align:center;padding:48px 24px;}
+.coop-success-icon{font-size:48px;margin-bottom:16px;}
+.coop-success h3{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;margin-bottom:12px;}
+.coop-success p{font-size:14px;color:var(--text2);line-height:1.7;max-width:480px;margin:0 auto;}
+@media(max-width:768px){
+  .coop-pillars-grid,.coop-why-grid{grid-template-columns:1fr;}
+  .coop-form-row{grid-template-columns:1fr;}
+  .coop-form-wrap{padding:28px 20px;}
+}
+
+/* WORK WITH US PAGE */
+.ww-hero{position:relative;background:var(--white);padding:110px 5% 90px;text-align:center;overflow:hidden;}
+.ww-hero-bg{position:absolute;inset:0;pointer-events:none;opacity:0.55;z-index:0;}
+.ww-hero-bg svg{width:100%;height:100%;display:block;}
+.ww-hero-bg .ww-dot{fill:rgba(232,66,42,0.35);animation:wwFloat 9s ease-in-out infinite;}
+.ww-hero-bg .ww-line{stroke:rgba(232,66,42,0.18);stroke-width:1;fill:none;}
+@keyframes wwFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.ww-hero-inner{position:relative;z-index:1;}
+.ww-hero .section-label{display:block;margin-bottom:16px;}
+.ww-hero h1{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(34px,5vw,60px);font-weight:800;letter-spacing:-2px;line-height:1.05;margin-bottom:22px;}
+.ww-hero h1 em{font-style:normal;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.ww-hero-sub{font-size:18px;color:var(--text2);max-width:620px;margin:0 auto 28px;line-height:1.7;}
+.ww-avatars{display:flex;justify-content:center;align-items:center;gap:0;margin-top:8px;}
+.ww-avatar{width:52px;height:52px;border-radius:50%;border:3px solid var(--white);background:var(--bg2);display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:14px;color:var(--brand);margin-left:-12px;box-shadow:0 4px 14px rgba(0,0,0,0.08);transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);position:relative;cursor:default;overflow:hidden;}
+.ww-avatar:first-child{margin-left:0;}
+.ww-avatar img{width:100%;height:100%;object-fit:cover;}
+.ww-avatar:hover{transform:translateY(-8px);z-index:5;}
+.ww-avatar[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;}
+.ww-about{background:var(--bg2);padding:80px 5%;}
+.ww-about-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;max-width:1100px;margin:0 auto;align-items:center;}
+.ww-about-text h2{font-family:'Bricolage Grotesque',sans-serif;font-size:36px;font-weight:800;letter-spacing:-1.5px;margin-bottom:18px;line-height:1.15;}
+.ww-about-text h2 em{font-style:normal;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.ww-about-text p{font-size:15px;color:var(--text2);line-height:1.75;margin-bottom:14px;}
+.ww-about-stats{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px;}
+.ww-stat{background:var(--white);border:1.5px solid var(--border);border-radius:16px;padding:20px;}
+.ww-stat-num{font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
+.ww-stat-lbl{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:6px;}
+.ww-about-visual{background:var(--white);border:1.5px solid var(--border);border-radius:24px;padding:36px;}
+.ww-about-visual h4{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px;}
+.ww-timeline-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px dashed var(--border);}
+.ww-timeline-item:last-child{border-bottom:none;}
+.ww-timeline-year{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:14px;color:var(--brand);min-width:48px;}
+.ww-timeline-text{font-size:13px;color:var(--text2);line-height:1.6;}
+.ww-remote{background:var(--white);padding:80px 5%;text-align:center;position:relative;overflow:hidden;}
+.ww-remote::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(232,66,42,0.04) 0%,transparent 60%);pointer-events:none;}
+.ww-remote-inner{max-width:780px;margin:0 auto;position:relative;}
+.ww-remote-badge{display:inline-block;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;background:rgba(232,66,42,0.08);color:var(--brand);padding:8px 20px;border-radius:50px;border:1px solid rgba(232,66,42,0.2);margin-bottom:20px;}
+.ww-remote h2{font-family:'Bricolage Grotesque',sans-serif;font-size:42px;font-weight:800;letter-spacing:-2px;line-height:1.1;margin-bottom:18px;}
+.ww-remote h2 em{font-style:normal;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.ww-remote p{font-size:16px;color:var(--text2);line-height:1.75;max-width:600px;margin:0 auto;}
+.ww-remote-perks{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;max-width:900px;margin:40px auto 0;}
+.ww-perk{background:var(--bg2);border:1.5px solid var(--border);border-radius:16px;padding:22px 16px;text-align:center;transition:transform 0.25s,box-shadow 0.25s;}
+.ww-perk:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(0,0,0,0.05);}
+.ww-perk-emoji{font-size:26px;margin-bottom:10px;}
+.ww-perk h5{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;margin-bottom:4px;}
+.ww-perk p{font-size:11px;color:var(--text3);line-height:1.55;margin:0;}
+.ww-jobs{background:var(--bg2);padding:80px 5%;}
+.ww-jobs-header{text-align:center;margin-bottom:40px;}
+.ww-jobs-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1100px;margin:0 auto;}
+.ww-job{background:var(--white);border:1.5px solid var(--border);border-radius:20px;padding:32px 28px;transition:transform 0.25s,box-shadow 0.25s,border-color 0.25s;display:flex;flex-direction:column;}
+.ww-job:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,0.07);border-color:rgba(232,66,42,0.25);}
+.ww-job-tags{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.ww-job-tag{font-family:'Bricolage Grotesque',sans-serif;font-size:11px;font-weight:700;padding:5px 12px;border-radius:50px;background:var(--bg2);color:var(--text2);}
+.ww-job-tag.brand{background:rgba(232,66,42,0.08);color:var(--brand);}
+.ww-job h3{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:10px;}
+.ww-job-desc{font-size:14px;color:var(--text2);line-height:1.65;margin-bottom:18px;flex:1;}
+.ww-job-meta{display:flex;gap:14px;font-size:12px;color:var(--text3);margin-bottom:18px;flex-wrap:wrap;}
+.ww-job-meta span{display:inline-flex;align-items:center;gap:5px;}
+.ww-job-btn{display:block;width:100%;background:var(--grad);color:#fff;border:none;padding:13px;border-radius:50px;font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity 0.2s;}
+.ww-job-btn:hover{opacity:0.9;}
+.ww-structure{background:var(--white);padding:80px 5%;}
+.ww-structure-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1100px;margin:32px auto 0;}
+.ww-struct-card{text-align:left;padding:28px 24px;background:var(--bg2);border:1.5px solid var(--border);border-radius:18px;}
+.ww-struct-num{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px;}
+.ww-struct-card h4{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:800;margin-bottom:8px;}
+.ww-struct-card p{font-size:13px;color:var(--text2);line-height:1.65;}
+/* Job application modal */
+.ww-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:700;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
+.ww-modal-overlay.open{display:flex;animation:wwFade 0.2s ease-out;}
+@keyframes wwFade{from{opacity:0;}to{opacity:1;}}
+.ww-modal{background:var(--white);border-radius:24px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:36px 32px;position:relative;animation:wwSlide 0.25s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes wwSlide{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.ww-modal-close{position:absolute;top:14px;right:14px;background:var(--bg2);border:none;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px;color:var(--text2);display:flex;align-items:center;justify-content:center;}
+.ww-modal-close:hover{background:var(--border);}
+.ww-modal h2{font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;letter-spacing:-1px;margin-bottom:6px;}
+.ww-modal-sub{font-size:13px;color:var(--text3);margin-bottom:24px;}
+.ww-field{margin-bottom:16px;}
+.ww-field label{display:block;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.ww-field label .req{color:var(--brand);}
+.ww-field input,.ww-field select,.ww-field textarea{width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color 0.2s,background 0.2s;}
+.ww-field input:focus,.ww-field select:focus,.ww-field textarea:focus{border-color:var(--brand);background:var(--white);}
+.ww-field textarea{resize:vertical;min-height:70px;}
+.ww-radio-group{display:flex;gap:10px;}
+.ww-radio{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:11px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);transition:all 0.2s;}
+.ww-radio input{display:none;}
+.ww-radio.selected{border-color:var(--brand);background:rgba(232,66,42,0.06);color:var(--brand);}
+.ww-file-wrap{position:relative;}
+.ww-file-wrap input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.ww-file-label{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:1.5px dashed var(--border);border-radius:12px;padding:14px;font-size:13px;color:var(--text3);cursor:pointer;}
+.ww-file-label.has-file{border-style:solid;border-color:var(--brand);color:var(--brand);}
+.ww-modal-submit{display:block;width:100%;background:var(--grad);color:#fff;border:none;padding:14px;border-radius:50px;font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.2s;margin-top:8px;}
+.ww-modal-submit:hover{opacity:0.9;}
+.ww-modal-submit:disabled{opacity:0.6;cursor:not-allowed;}
+.ww-modal-success{text-align:center;padding:30px 10px 10px;}
+.ww-modal-success-icon{font-size:48px;margin-bottom:14px;}
+.ww-modal-success h3{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;margin-bottom:10px;}
+.ww-modal-success p{font-size:14px;color:var(--text2);line-height:1.7;}
+@media(max-width:900px){
+  .ww-about-grid{grid-template-columns:1fr;gap:40px;}
+  .ww-jobs-grid{grid-template-columns:1fr;}
+  .ww-remote-perks{grid-template-columns:repeat(2,1fr);}
+  .ww-structure-grid{grid-template-columns:1fr;}
+}
+@media(max-width:560px){
+  .ww-about-stats{grid-template-columns:1fr;}
+  .ww-modal{padding:28px 22px;}
+}
 .kb-content{padding:64px 5%;}
 .kb-section-title{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:24px;display:flex;align-items:center;gap:10px;}
 .blog-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:48px;}
@@ -649,6 +909,10 @@ body.portal-active nav{display:none!important;}
 .p-doc-badge.miss{background:var(--bg2);color:var(--text3);}
 .p-doc-badge.rejected{background:#fee2e2;color:#dc2626;}
 .p-doc-fname{font-size:10px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.p-doc-actions{display:flex;gap:5px;margin-top:4px;}
+.p-btn-xs{font-size:10px!important;padding:3px 8px!important;border-radius:6px!important;}
+.p-btn-danger{color:#dc2626!important;border-color:#fecaca!important;}
+.p-btn-danger:hover{background:#fee2e2!important;}
 /* Profile progress banner */
 .p-vault-progress{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;}
 .p-vault-prog-bar{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
@@ -993,6 +1257,49 @@ body.portal-active nav{display:none!important;}
 .ex17-check-box{font-size:16px;}
 .ex17-completeness{padding:16px 18px;background:var(--bg2);border-top:1px solid var(--border);}
 
+/* ══ SCHENGEN CLOCK ══ */
+.schengen-clock{display:flex;align-items:center;gap:16px;padding:16px 18px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--white);margin-bottom:14px;}
+.schengen-clock.empty{border-style:dashed;opacity:0.7;}
+.schengen-clock.ok{border-color:#bbf7d0;background:#f0fdf4;}
+.schengen-clock.urgent{border-color:#fde68a;background:#fefce8;}
+.schengen-clock.expired{border-color:#fecaca;background:#fef2f2;}
+.schengen-ring{flex-shrink:0;}
+.schengen-icon{font-size:32px;flex-shrink:0;}
+.schengen-body{flex:1;min-width:0;}
+.schengen-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.schengen-sub{font-size:12px;color:var(--text3);}
+.schengen-alert{font-size:12px;font-weight:600;margin-top:6px;padding:6px 10px;border-radius:6px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+.schengen-alert.warn{background:#fefce8;color:#92400e;border-color:#fde68a;}
+.schengen-entry-input{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;}
+.schengen-entry-input input[type="date"]{padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;}
+
+/* ══ CITA-READY PACK ══ */
+.cita-ready-wrap{margin-bottom:14px;}
+.cita-ready-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.cita-ready-icon{font-size:28px;flex-shrink:0;}
+.cita-ready-title{font-size:15px;font-weight:700;}
+.cita-ready-sub{font-size:12px;color:var(--text3);}
+.cita-pack-card{border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--white);margin-bottom:10px;overflow:hidden;}
+.cita-pack-card.urgent{border-color:#fde68a;background:#fffbeb;}
+.cita-pack-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.cita-pack-countdown{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;color:var(--text);}
+.cita-pack-countdown.urgent{color:#d97706;}
+.cita-pack-countdown.expired{color:#dc2626;font-size:13px;}
+.cita-pack-items{padding:10px 16px;}
+.cita-pack-item{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--bg2);}
+.cita-pack-item:last-child{border-bottom:none;}
+.cita-item-icon{flex-shrink:0;font-size:16px;width:22px;text-align:center;}
+.cita-item-text{flex:1;min-width:0;}
+
+/* ══ DOCUMENT VAULT ENHANCED ══ */
+.doc-rejection-callout{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;margin-top:6px;border-radius:6px;background:#fef2f2;border:1px solid #fecaca;font-size:12px;color:#991b1b;}
+.doc-rejection-icon{flex-shrink:0;font-size:14px;}
+.doc-rejection-text{flex:1;}
+.doc-translation-row{display:flex;align-items:center;gap:8px;padding:6px 0;margin-top:4px;font-size:12px;color:var(--text2);}
+.doc-translation-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;background:#e0f2fe;color:#0369a1;font-size:11px;font-weight:600;}
+.doc-translation-upload{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;background:var(--bg2);color:var(--text2);font-size:11px;cursor:pointer;border:1px dashed var(--border2);}
+.doc-translation-upload:hover{background:var(--border);color:var(--text);}
+
 /* ══ ANALYTICS FUNNEL ══ */
 .an-funnel{display:flex;gap:2px;margin-bottom:24px;}
 .an-funnel-step{flex:1;text-align:center;padding:14px 8px;position:relative;background:var(--bg2);transition:background 0.3s;}
@@ -1140,11 +1447,10 @@ body.portal-active nav{display:none!important;}
   .hero-visual{display:none;}
   .footer-top{grid-template-columns:1fr 1fr;}
   .faq-grid{grid-template-columns:1fr;}
-  .process-grid{grid-template-columns:repeat(3,1fr);gap:24px;}
+  .process-grid{grid-template-columns:repeat(2,1fr);gap:8px;}
   .p-step::after{display:none;}
   .why-grid{grid-template-columns:1fr;}
   .why-right{display:grid;grid-template-columns:1fr 1fr;}
-  .cities-grid{grid-template-columns:1fr 1fr;}
   .dashboard-grid{grid-template-columns:1fr;}
   .relocation-services-grid{grid-template-columns:1fr 1fr!important;}
 }
@@ -1168,15 +1474,14 @@ body.portal-active nav{display:none!important;}
   .footer-bottom{flex-direction:column;gap:16px;text-align:center;}
   .logos-bar{gap:16px;}
   .why-features{grid-template-columns:1fr;}
-  .cities-grid{grid-template-columns:1fr 1fr;}
   .kbt-grid{grid-template-columns:1fr;}
   .testi-header{flex-direction:column;align-items:center;}
   .pkg-radio-group{grid-template-columns:1fr;}
   .admin-2col,.admin-3col{grid-template-columns:1fr;}
 }
 @media(max-width:480px){
-  .resources-grid,.cities-grid{grid-template-columns:1fr;}
-  .process-grid{grid-template-columns:1fr 1fr;}
+  .resources-grid{grid-template-columns:1fr;}
+  .process-grid{grid-template-columns:1fr;}
   .footer-top{grid-template-columns:1fr;}
   .why-right{grid-template-columns:1fr;}
 }
@@ -1205,7 +1510,7 @@ body.portal-active nav{display:none!important;}
     <li><a onclick="goHome('pricing-section')">Pricing</a></li>
   </ul>
   <div class="nav-cta">
-    <a onclick="goHome('contact-section')" class="btn btn-ghost">Get in touch</a>
+    <a onclick="goHome('checker-section')" class="btn btn-ghost">Check Eligibility</a>
     <a onclick="showPage('portal')" class="btn-nav-cta">
       <span class="cta-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       Get started
@@ -1220,7 +1525,7 @@ body.portal-active nav{display:none!important;}
   <a onclick="goHome('process-section');closeMenu()">How it works</a>
   <a onclick="showPage('knowledge');closeMenu()">Knowledge Hub</a>
   <a onclick="goHome('pricing-section');closeMenu()">Pricing</a>
-  <a onclick="goHome('contact-section');closeMenu()">Contact</a>
+  <a onclick="goHome('checker-section');closeMenu()">Check Eligibility</a>
   <a onclick="showPage('portal');closeMenu()" class="btn-nav-cta" style="justify-content:center;width:100%;margin-top:16px;">
     <span class="cta-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14M13 6l6 6-6 6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     Get started
@@ -1408,12 +1713,48 @@ body.portal-active nav{display:none!important;}
     <p class="section-sub" style="margin:0 auto;">From first inquiry to approved resident in as little as 90 days.</p>
   </div>
   <div class="process-grid fade-up">
-    <div class="p-step"><div class="p-num">01</div><h4>Eligibility Check</h4><p>Quick assessment to confirm you qualify.</p></div>
-    <div class="p-step"><div class="p-num">02</div><h4>Onboarding Call</h4><p>Meet your case manager, map your roadmap.</p></div>
-    <div class="p-step"><div class="p-num">03</div><h4>Document Prep</h4><p>Gather, translate &amp; certify every document.</p></div>
-    <div class="p-step"><div class="p-num">04</div><h4>Embassy Filing</h4><p>We submit your complete application file.</p></div>
-    <div class="p-step"><div class="p-num">05</div><h4>Approval</h4><p>Receive your visa approval letter.</p></div>
-    <div class="p-step"><div class="p-num">06</div><h4>TIE Card</h4><p>Get your resident card and start living in Spain.</p></div>
+    <div class="p-step active" onclick="toggleProcessStep(this)">
+      <div class="p-step-icon">📋</div>
+      <div class="p-num">01</div>
+      <h4>Eligibility Check</h4>
+      <p>Quick assessment to confirm you qualify.</p>
+      <div class="p-step-detail"><div class="p-step-detail-inner">We evaluate your profile against Spanish Digital Nomad Visa requirements in under 5 minutes.<ul><li>Nationality &amp; residency review</li><li>Income &amp; employment verification</li><li>Qualification assessment</li><li>Personalised eligibility score</li></ul></div></div>
+    </div>
+    <div class="p-step" onclick="toggleProcessStep(this)">
+      <div class="p-step-icon">📞</div>
+      <div class="p-num">02</div>
+      <h4>Onboarding Call</h4>
+      <p>Meet your case manager, map your roadmap.</p>
+      <div class="p-step-detail"><div class="p-step-detail-inner">A dedicated case manager walks you through the entire process and builds your personalised timeline.<ul><li>30-minute strategy session</li><li>Document checklist tailored to your profile</li><li>Timeline with key milestones</li><li>Direct WhatsApp support line</li></ul></div></div>
+    </div>
+    <div class="p-step" onclick="toggleProcessStep(this)">
+      <div class="p-step-icon">📁</div>
+      <div class="p-num">03</div>
+      <h4>Document Prep</h4>
+      <p>Gather, translate &amp; certify every document.</p>
+      <div class="p-step-detail"><div class="p-step-detail-inner">We guide you through collecting, translating and apostilling every required document.<ul><li>Criminal background check guidance</li><li>Sworn translation coordination</li><li>Apostille &amp; legalisation support</li><li>Document quality review before submission</li></ul></div></div>
+    </div>
+    <div class="p-step" onclick="toggleProcessStep(this)">
+      <div class="p-step-icon">🏛️</div>
+      <div class="p-num">04</div>
+      <h4>Embassy Filing</h4>
+      <p>We submit your complete application file.</p>
+      <div class="p-step-detail"><div class="p-step-detail-inner">Your case manager compiles and submits your complete dossier to the Spanish consulate.<ul><li>Application form completion (EX-17)</li><li>Consulate appointment booking</li><li>Pre-submission compliance check</li><li>Submission tracking &amp; follow-up</li></ul></div></div>
+    </div>
+    <div class="p-step" onclick="toggleProcessStep(this)">
+      <div class="p-step-icon">✅</div>
+      <div class="p-num">05</div>
+      <h4>Approval</h4>
+      <p>Receive your visa approval letter.</p>
+      <div class="p-step-detail"><div class="p-step-detail-inner">Once approved, we help you prepare for the next stage — entering Spain and settling in.<ul><li>Visa collection guidance</li><li>Travel planning assistance</li><li>NIE number pre-registration</li><li>Bank account &amp; housing resources</li></ul></div></div>
+    </div>
+    <div class="p-step" onclick="toggleProcessStep(this)">
+      <div class="p-step-icon">🇪🇸</div>
+      <div class="p-num">06</div>
+      <h4>TIE Card</h4>
+      <p>Get your resident card and start living in Spain.</p>
+      <div class="p-step-detail"><div class="p-step-detail-inner">We assist with your TIE (Tarjeta de Identidad de Extranjero) appointment and resident card issuance.<ul><li>Cita previa appointment booking</li><li>TIE application form support</li><li>Empadronamiento guidance</li><li>Social security registration help</li></ul></div></div>
+    </div>
   </div>
 </section>
 
@@ -1425,127 +1766,193 @@ body.portal-active nav{display:none!important;}
     <p class="section-sub">From beach life to cosmopolitan buzz — Spain has a city for every lifestyle and budget.</p>
   </div>
   <div class="cities-grid fade-up">
-    <div class="city-card"><div class="city-bg city-barcelona"><div class="city-overlay"><div class="city-arrow">→</div></div><span class="city-emoji">🏖️</span><h3>Barcelona</h3><p>Beach + tech scene</p><div class="city-tags"><span class="city-tag">€1,800/mo</span><span class="city-tag">Beach</span><span class="city-tag">Tech</span></div></div></div>
-    <div class="city-card"><div class="city-bg city-madrid"><div class="city-overlay"><div class="city-arrow">→</div></div><span class="city-emoji">🏛️</span><h3>Madrid</h3><p>Capital, culture, career</p><div class="city-tags"><span class="city-tag">€1,600/mo</span><span class="city-tag">Culture</span><span class="city-tag">Business</span></div></div></div>
-    <div class="city-card"><div class="city-bg city-valencia"><div class="city-overlay"><div class="city-arrow">→</div></div><span class="city-emoji">🌊</span><h3>Valencia</h3><p>Sun, sea, affordable</p><div class="city-tags"><span class="city-tag">€1,200/mo</span><span class="city-tag">Beach</span><span class="city-tag">Affordable</span></div></div></div>
-    <div class="city-card"><div class="city-bg city-sevilla"><div class="city-overlay"><div class="city-arrow">→</div></div><span class="city-emoji">💃</span><h3>Sevilla</h3><p>Culture, warmth, history</p><div class="city-tags"><span class="city-tag">€1,100/mo</span><span class="city-tag">Culture</span><span class="city-tag">Warm</span></div></div></div>
+    <div class="city-card"><div class="city-bg" style="background-image:url('https://images.unsplash.com/photo-1583422409516-2895a77efded?w=600&q=80')"><div class="city-overlay"><div class="city-arrow">→</div></div><h3>Barcelona</h3><p class="city-tagline">Beach meets tech capital</p><p class="city-desc">Mediterranean lifestyle with Europe's fastest-growing startup ecosystem. World-class coworking, reliable fibre, and year-round sunshine.</p><div class="city-tags"><span class="city-tag">€1,800/mo</span><span class="city-tag">Beach</span><span class="city-tag">Tech Hub</span></div></div></div>
+    <div class="city-card"><div class="city-bg" style="background-image:url('https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=600&q=80')"><div class="city-overlay"><div class="city-arrow">→</div></div><h3>Madrid</h3><p class="city-tagline">Capital energy, global connections</p><p class="city-desc">Spain's business hub with top-tier infrastructure, vibrant nightlife, and direct flights worldwide. Ideal for freelancers needing client access.</p><div class="city-tags"><span class="city-tag">€1,600/mo</span><span class="city-tag">Business</span><span class="city-tag">Culture</span></div></div></div>
+    <div class="city-card"><div class="city-bg" style="background-image:url('https://images.unsplash.com/photo-1725208179317-c5e56702816a?w=600&q=80')"><div class="city-overlay"><div class="city-arrow">→</div></div><h3>Valencia</h3><p class="city-tagline">Sun, sea &amp; affordability</p><p class="city-desc">Best cost-of-living-to-quality ratio in Spain. Stunning beaches, City of Arts &amp; Sciences, and a booming digital nomad community.</p><div class="city-tags"><span class="city-tag">€1,200/mo</span><span class="city-tag">Beach</span><span class="city-tag">Affordable</span></div></div></div>
+    <div class="city-card"><div class="city-bg" style="background-image:url('https://images.unsplash.com/photo-1559386081-325882507af7?w=600&q=80')"><div class="city-overlay"><div class="city-arrow">→</div></div><h3>Sevilla</h3><p class="city-tagline">Flamenco, tapas &amp; warmth</p><p class="city-desc">Andalusia's jewel with stunning architecture, warm winters, and some of the lowest living costs in Western Europe.</p><div class="city-tags"><span class="city-tag">€1,100/mo</span><span class="city-tag">Culture</span><span class="city-tag">Warm</span></div></div></div>
+    <div class="city-card"><div class="city-bg" style="background-image:url('https://images.unsplash.com/photo-1549816108-ccd7987fffa3?w=600&q=80')"><div class="city-overlay"><div class="city-arrow">→</div></div><h3>M&aacute;laga</h3><p class="city-tagline">Costa del Sol tech corridor</p><p class="city-desc">Google's new campus city. Booming tech scene, 320 sunny days per year, and a growing international remote worker community.</p><div class="city-tags"><span class="city-tag">€1,300/mo</span><span class="city-tag">Tech</span><span class="city-tag">Sunshine</span></div></div></div>
+    <div class="city-card"><div class="city-bg" style="background-image:url('https://images.unsplash.com/photo-1636556604646-222c6f2b9830?w=600&q=80')"><div class="city-overlay"><div class="city-arrow">→</div></div><h3>Bilbao</h3><p class="city-tagline">Green, culinary &amp; creative</p><p class="city-desc">Guggenheim city with world-famous gastronomy, mild Atlantic climate, and an emerging innovation district in Zorrotzaurre.</p><div class="city-tags"><span class="city-tag">€1,400/mo</span><span class="city-tag">Gastronomy</span><span class="city-tag">Creative</span></div></div></div>
+    <div class="city-card"><div class="city-bg" style="background-image:url('https://images.unsplash.com/photo-1636620325921-b6567885937a?w=600&q=80')"><div class="city-overlay"><div class="city-arrow">→</div></div><h3>Zaragoza</h3><p class="city-tagline">Affordable &amp; centrally located</p><p class="city-desc">Halfway between Madrid and Barcelona by AVE high-speed rail. Extremely affordable with a compact, walkable historic centre.</p><div class="city-tags"><span class="city-tag">€950/mo</span><span class="city-tag">Affordable</span><span class="city-tag">Central</span></div></div></div>
+    <div class="city-card"><div class="city-bg" style="background-image:url('https://images.unsplash.com/photo-1534423839368-1796a4dd1845?w=600&q=80')"><div class="city-overlay"><div class="city-arrow">→</div></div><h3>Granada</h3><p class="city-tagline">Alhambra &amp; Sierra Nevada</p><p class="city-desc">Historic university city at the foot of the mountains. Ski in the morning, relax in Arabic baths by evening — all on a student budget.</p><div class="city-tags"><span class="city-tag">€1,000/mo</span><span class="city-tag">Mountains</span><span class="city-tag">History</span></div></div></div>
   </div>
 </section>
 
-<!-- ELIGIBILITY CHECKER -->
+<!-- ELIGIBILITY CHECKER — Multi-Step Quiz -->
 <section id="checker-section">
   <div class="checker-wrap">
     <div class="fade-up">
-      <span class="section-label">Quick Check</span>
+      <span class="section-label">Eligibility Engine</span>
       <h2 class="section-title">Am I <em>eligible?</em></h2>
-      <p class="section-sub" style="margin-bottom:40px;">The Spanish digital nomad visa has specific requirements. Check yours instantly — no email required.</p>
+      <p class="section-sub" style="margin-bottom:40px;">Answer 4 quick questions and we'll calculate your exact match for Spain's Digital Nomad Visa (2026 rules).</p>
       <div class="c-items">
-        <div class="c-item"><div class="c-num">01</div><div class="c-text"><h4>Remote income requirement</h4><p>You must earn at least €2,849/month from remote work. At least 80% from non-Spanish clients.</p></div></div>
+        <div class="c-item"><div class="c-num">01</div><div class="c-text"><h4>Remote income requirement</h4><p>You must earn at least €2,849/month (200% SMI) from remote work. 80%+ from non-Spanish clients.</p></div></div>
         <div class="c-item"><div class="c-num">02</div><div class="c-text"><h4>Non-EU/EEA nationals welcome</h4><p>Open to citizens of any non-EU/EEA country. EU/EEA nationals have simpler pathways.</p></div></div>
         <div class="c-item"><div class="c-num">03</div><div class="c-text"><h4>Education or experience</h4><p>University degree OR 3+ years relevant professional experience required.</p></div></div>
       </div>
     </div>
-    <div class="checker-form fade-up d1">
-      <h3>Check your eligibility</h3>
-      <div class="form-group">
-        <label>Your Nationality</label>
-        <select id="nationality">
-          <option value="">Select your nationality</option>
-          <option value="eu_eea">🇪🇺 EU / EEA National</option>
-          <optgroup label="🌍 Middle East &amp; North Africa">
-            <option value="sa">🇸🇦 Saudi Arabia</option>
-            <option value="ae">🇦🇪 UAE</option>
-            <option value="kw">🇰🇼 Kuwait</option>
-            <option value="qa">🇶🇦 Qatar</option>
-            <option value="bh">🇧🇭 Bahrain</option>
-            <option value="om">🇴🇲 Oman</option>
-            <option value="eg">🇪🇬 Egypt</option>
-            <option value="ma">🇲🇦 Morocco</option>
-            <option value="tn">🇹🇳 Tunisia</option>
-            <option value="dz">🇩🇿 Algeria</option>
-            <option value="ly">🇱🇾 Libya</option>
-            <option value="jo">🇯🇴 Jordan</option>
-            <option value="lb">🇱🇧 Lebanon</option>
-            <option value="sy">🇸🇾 Syria</option>
-            <option value="iq">🇮🇶 Iraq</option>
-            <option value="ye">🇾🇪 Yemen</option>
-            <option value="ps">🇵🇸 Palestine</option>
-            <option value="sd">🇸🇩 Sudan</option>
-          </optgroup>
-          <optgroup label="🌍 Africa">
-            <option value="ng">🇳🇬 Nigeria</option><option value="gh">🇬🇭 Ghana</option><option value="za">🇿🇦 South Africa</option><option value="ke">🇰🇪 Kenya</option><option value="et">🇪🇹 Ethiopia</option><option value="tz">🇹🇿 Tanzania</option><option value="ug">🇺🇬 Uganda</option><option value="cm">🇨🇲 Cameroon</option><option value="sn">🇸🇳 Senegal</option><option value="ci">🇨🇮 Côte d'Ivoire</option>
-          </optgroup>
-          <optgroup label="🌎 Americas">
-            <option value="us">🇺🇸 United States</option><option value="ca">🇨🇦 Canada</option><option value="br">🇧🇷 Brazil</option><option value="mx">🇲🇽 Mexico</option><option value="ar">🇦🇷 Argentina</option><option value="co">🇨🇴 Colombia</option><option value="cl">🇨🇱 Chile</option><option value="pe">🇵🇪 Peru</option><option value="ve">🇻🇪 Venezuela</option><option value="ec">🇪🇨 Ecuador</option>
-          </optgroup>
-          <optgroup label="🌏 Asia & Pacific">
-            <option value="in">🇮🇳 India</option><option value="cn">🇨🇳 China</option><option value="jp">🇯🇵 Japan</option><option value="kr">🇰🇷 South Korea</option><option value="pk">🇵🇰 Pakistan</option><option value="bd">🇧🇩 Bangladesh</option><option value="ph">🇵🇭 Philippines</option><option value="vn">🇻🇳 Vietnam</option><option value="th">🇹🇭 Thailand</option><option value="id">🇮🇩 Indonesia</option><option value="my">🇲🇾 Malaysia</option><option value="sg">🇸🇬 Singapore</option><option value="au">🇦🇺 Australia</option><option value="nz">🇳🇿 New Zealand</option>
-          </optgroup>
-          <optgroup label="🌍 Other Europe (Non-EU)">
-            <option value="gb">🇬🇧 United Kingdom</option><option value="ua">🇺🇦 Ukraine</option><option value="tr">🇹🇷 Turkey</option><option value="ru">🇷🇺 Russia</option><option value="rs">🇷🇸 Serbia</option><option value="ge">🇬🇪 Georgia</option><option value="am">🇦🇲 Armenia</option><option value="az">🇦🇿 Azerbaijan</option>
-          </optgroup>
-        </select>
+    <div class="checker-form fade-up d1" id="quizForm">
+      <!-- Progress bar -->
+      <div class="quiz-progress">
+        <div class="quiz-progress-fill" id="quizProgressFill" style="width:25%"></div>
       </div>
-      <div class="form-group">
-        <label>Monthly Income (Remote)</label>
-        <select id="income">
-          <option value="">Select income range</option>
-          <option value="below2000">Below €2,000/month</option>
-          <option value="2000_2849">€2,000 – €2,849/month</option>
-          <option value="above2849">€2,849+/month</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Work Arrangement</label>
-        <select id="work">
-          <option value="">Select work type</option>
-          <option value="employed">Employed by foreign company</option>
-          <option value="freelance">Freelancer / Self-employed</option>
-          <option value="spanish_employer">Working for Spanish company</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Criminal Record?</label>
-        <select id="criminal">
-          <option value="">Select</option>
-          <option value="no">No criminal record</option>
-          <option value="yes">Yes, I have a criminal record</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Family Members (dependents moving with you)</label>
-        <select id="familyMembers">
-          <option value="0">Just me (no dependents)</option>
-          <option value="1">1 dependent (spouse/child)</option>
-          <option value="2">2 dependents</option>
-          <option value="3">3 dependents</option>
-          <option value="4">4+ dependents</option>
-        </select>
-      </div>
-      <div class="form-group" id="emailCollectGroup" style="display:none;"></div>
-      <button class="submit-btn" onclick="checkEligibility()">Check my eligibility →</button>
-      <div id="resultBox" class="result-box">
-        <h4 id="resultTitle"></h4>
-        <p id="resultText"></p>
-        <!-- Email capture shown after every result -->
-        <div id="checkerEmailCapture" style="display:none;margin-top:18px;background:rgba(255,255,255,0.12);border-radius:12px;padding:18px 20px;">
-          <p id="checkerEmailLabel" style="font-size:14px;font-weight:600;margin-bottom:12px;line-height:1.4;"></p>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <input type="email" id="checkerEmailInput" placeholder="your@email.com" style="flex:1;min-width:180px;padding:11px 16px;border-radius:50px;border:none;font-size:14px;outline:none;font-family:'Bricolage Grotesque',sans-serif;">
-            <button onclick="claimCheckerDiscount()" id="checkerEmailBtn" style="background:#fff;color:var(--brand);font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:700;padding:11px 22px;border-radius:50px;border:none;cursor:pointer;white-space:nowrap;">Get my code →</button>
-          </div>
-          <p style="font-size:11px;opacity:0.7;margin-top:8px;">No spam. One email only.</p>
+      <div class="quiz-step-label" id="quizStepLabel">Step 1 of 4</div>
+
+      <!-- Step 1: Nationality & Qualifications -->
+      <div class="quiz-step active" id="quizStep1">
+        <h3>Background & Qualifications</h3>
+        <div class="form-group">
+          <label>Your Nationality</label>
+          <select id="nationality">
+            <option value="">Select your nationality</option>
+            <option value="eu_eea">EU / EEA National</option>
+            <optgroup label="Middle East &amp; North Africa">
+              <option value="sa">Saudi Arabia</option><option value="ae">UAE</option><option value="kw">Kuwait</option><option value="qa">Qatar</option><option value="bh">Bahrain</option><option value="om">Oman</option><option value="eg">Egypt</option><option value="ma">Morocco</option><option value="tn">Tunisia</option><option value="dz">Algeria</option><option value="ly">Libya</option><option value="jo">Jordan</option><option value="lb">Lebanon</option><option value="sy">Syria</option><option value="iq">Iraq</option><option value="ye">Yemen</option><option value="ps">Palestine</option><option value="sd">Sudan</option>
+            </optgroup>
+            <optgroup label="Africa">
+              <option value="ng">Nigeria</option><option value="gh">Ghana</option><option value="za">South Africa</option><option value="ke">Kenya</option><option value="et">Ethiopia</option><option value="tz">Tanzania</option><option value="ug">Uganda</option><option value="cm">Cameroon</option><option value="sn">Senegal</option><option value="ci">C&ocirc;te d'Ivoire</option>
+            </optgroup>
+            <optgroup label="Americas">
+              <option value="us">United States</option><option value="ca">Canada</option><option value="br">Brazil</option><option value="mx">Mexico</option><option value="ar">Argentina</option><option value="co">Colombia</option><option value="cl">Chile</option><option value="pe">Peru</option><option value="ve">Venezuela</option><option value="ec">Ecuador</option>
+            </optgroup>
+            <optgroup label="Asia &amp; Pacific">
+              <option value="in">India</option><option value="cn">China</option><option value="jp">Japan</option><option value="kr">South Korea</option><option value="pk">Pakistan</option><option value="bd">Bangladesh</option><option value="ph">Philippines</option><option value="vn">Vietnam</option><option value="th">Thailand</option><option value="id">Indonesia</option><option value="my">Malaysia</option><option value="sg">Singapore</option><option value="au">Australia</option><option value="nz">New Zealand</option>
+            </optgroup>
+            <optgroup label="Other Europe (Non-EU)">
+              <option value="gb">United Kingdom</option><option value="ua">Ukraine</option><option value="tr">Turkey</option><option value="ru">Russia</option><option value="rs">Serbia</option><option value="ge">Georgia</option><option value="am">Armenia</option><option value="az">Azerbaijan</option>
+            </optgroup>
+          </select>
         </div>
-        <!-- Non-eligible thank you -->
-        <div id="checkerThanks" style="display:none;margin-top:16px;background:rgba(255,255,255,0.15);border-radius:12px;padding:16px 18px;text-align:center;">
-          <p style="font-size:15px;font-weight:700;">✅ You're on the list!</p>
-          <p style="font-size:13px;opacity:0.85;margin-top:4px;">We'll be in touch very soon with a personalised plan.</p>
+        <div class="form-group">
+          <label>Education & Professional Experience</label>
+          <select id="quizQualification">
+            <option value="">Select your highest qualification</option>
+            <option value="degree_and_exp">University degree + 3 years experience</option>
+            <option value="degree_only">University degree (less than 3 years experience)</option>
+            <option value="exp_only">No degree, but 3+ years professional experience</option>
+            <option value="none">No degree and less than 3 years experience</option>
+          </select>
         </div>
-        <!-- Revealed after email submitted (eligible) -->
-        <div id="discountBox" class="discount-box" style="display:none;">
-          <strong>🎉 Limited Offer: 5% OFF Personal Package</strong>
-          <p>You qualify! Use code <strong>NOMAD5</strong> for €125 off your Personal Package. Valid 48 hours.</p>
-          <button onclick="showPage('portal')" class="btn btn-white" style="margin-top:12px;font-size:14px;">Claim discount →</button>
+        <button class="submit-btn" onclick="quizNext(1)">Next step →</button>
+      </div>
+
+      <!-- Step 2: Employment Type -->
+      <div class="quiz-step" id="quizStep2">
+        <h3>Employment Details</h3>
+        <div class="form-group">
+          <label>Work Arrangement</label>
+          <select id="work">
+            <option value="">Select work type</option>
+            <option value="employed">Employed by foreign company</option>
+            <option value="freelance">Freelancer / Self-employed</option>
+            <option value="mixed">Mix of freelance + employment</option>
+            <option value="spanish_employer">Working for Spanish company</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Criminal Record?</label>
+          <select id="criminal">
+            <option value="">Select</option>
+            <option value="no">No criminal record</option>
+            <option value="yes">Yes, I have a criminal record</option>
+          </select>
+        </div>
+        <div class="quiz-nav-row">
+          <button class="submit-btn ghost" onclick="quizBack(2)">← Back</button>
+          <button class="submit-btn" onclick="quizNext(2)">Next step →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Financials -->
+      <div class="quiz-step" id="quizStep3">
+        <h3>Financial Requirements</h3>
+        <div class="form-group">
+          <label>Monthly Remote Income (after tax)</label>
+          <select id="income">
+            <option value="">Select income range</option>
+            <option value="below2000">Below €2,000/month</option>
+            <option value="2000_2849">€2,000 – €2,849/month</option>
+            <option value="2849_4000">€2,849 – €4,000/month</option>
+            <option value="4000_6000">€4,000 – €6,000/month</option>
+            <option value="above6000">€6,000+/month</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Family Members (dependents moving with you)</label>
+          <select id="familyMembers">
+            <option value="0">Just me (no dependents)</option>
+            <option value="1">1 dependent (spouse/child)</option>
+            <option value="2">2 dependents</option>
+            <option value="3">3 dependents</option>
+            <option value="4">4+ dependents</option>
+          </select>
+        </div>
+        <div id="quizIncomeCalc" class="quiz-income-calc" style="display:none;"></div>
+        <div class="quiz-nav-row">
+          <button class="submit-btn ghost" onclick="quizBack(3)">← Back</button>
+          <button class="submit-btn" onclick="quizNext(3)">Next step →</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Email Capture -->
+      <div class="quiz-step" id="quizStep4">
+        <h3>Almost there!</h3>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:20px;">Enter your email to see your personalised eligibility report and download your custom roadmap.</p>
+        <div class="form-group">
+          <label>Your Name</label>
+          <input type="text" id="quizName" placeholder="Full name" class="quiz-input">
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="quizEmail" placeholder="your@email.com" class="quiz-input">
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin-bottom:16px;">We'll send your personalised roadmap. No spam — one email only.</p>
+        <div class="quiz-nav-row">
+          <button class="submit-btn ghost" onclick="quizBack(4)">← Back</button>
+          <button class="submit-btn" onclick="quizSubmit()">See my results →</button>
+        </div>
+      </div>
+
+      <!-- Results: Eligible -->
+      <div class="quiz-step" id="quizResultEligible" style="text-align:center;">
+        <div class="quiz-gauge-wrap">
+          <svg viewBox="0 0 120 120" width="140" height="140" class="quiz-gauge-svg">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#e5e7eb" stroke-width="10"/>
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#16a34a" stroke-width="10" stroke-dasharray="0 327" stroke-linecap="round" transform="rotate(-90 60 60)" id="quizGaugeArc"/>
+            <text x="60" y="55" text-anchor="middle" fill="#065f46" font-size="28" font-weight="800" font-family="'Bricolage Grotesque',sans-serif" id="quizGaugePct">0%</text>
+            <text x="60" y="72" text-anchor="middle" fill="#6b7280" font-size="10" font-weight="600">MATCH</text>
+          </svg>
+        </div>
+        <h3 style="color:#065f46;margin-top:16px;" id="quizResultTitle">You Qualify!</h3>
+        <p style="font-size:14px;color:var(--text2);margin-top:8px;line-height:1.6;" id="quizResultDesc"></p>
+        <div id="quizIncomeBreakdown" class="quiz-income-breakdown"></div>
+        <div class="quiz-result-actions">
+          <button class="submit-btn" onclick="showPage('portal')">Create Account & Start Application →</button>
+          <p style="font-size:12px;color:var(--text3);margin-top:8px;">Your quiz answers will be pre-loaded into your document checklist.</p>
+        </div>
+      </div>
+
+      <!-- Results: Plan B (Ineligible) -->
+      <div class="quiz-step" id="quizResultPlanB">
+        <div class="planb-header">
+          <div class="planb-icon">🧭</div>
+          <h3>Your profile has some gaps — but your move to Spain isn't over.</h3>
+        </div>
+        <p style="font-size:14px;color:var(--text2);margin:16px 0;line-height:1.7;" id="planbDesc"></p>
+        <div class="planb-issues" id="planbIssues"></div>
+        <div class="planb-offer">
+          <div class="planb-offer-badge">Our Speciality</div>
+          <h4>We fix complex cases every day.</h4>
+          <p>We can help you with missing documentation, contract restructuring, income bridging, or finding alternative visa pathways (Student Visa, Non-Lucrative Visa, Beckham Law).</p>
+          <ul class="planb-list">
+            <li>Income gap strategies and employer restructuring</li>
+            <li>Alternative visa pathways (Student, NLV, Entrepreneur)</li>
+            <li>Criminal record documentation and legal support</li>
+            <li>Experience validation and credential assessment</li>
+          </ul>
+        </div>
+        <div class="quiz-result-actions">
+          <button class="submit-btn" onclick="showPage('portal')">Book a Strategy Session →</button>
+          <p style="font-size:12px;color:var(--text3);margin-top:8px;">60-minute deep-dive with a residency specialist. We'll map your optimal path forward.</p>
         </div>
       </div>
     </div>
@@ -1773,6 +2180,8 @@ body.portal-active nav{display:none!important;}
         <li><a onclick="goHome('why-section')">About Us</a></li>
         <li><a onclick="goHome('testi-section')">Success Stories</a></li>
         <li><a onclick="goHome('contact-section')">Contact</a></li>
+        <li><a onclick="showPage('cooperation')" style="cursor:pointer;">Cooperation</a></li>
+        <li><a onclick="showPage('workwithus')" style="cursor:pointer;">Work with us</a></li>
         <li><a>Privacy Policy</a></li>
       </ul>
     </div>
@@ -1793,9 +2202,14 @@ body.portal-active nav{display:none!important;}
       <span class="section-label" style="display:block;text-align:center;">Knowledge Hub</span>
       <h1>Your Spain Visa <em>Playbook</em></h1>
       <p>Guides, tax tips, city comparisons, checklists, and FAQs — all free, all in one place.</p>
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="kbSearch" placeholder="Search guides, tips, FAQs..." oninput="handleSearch(this.value)">
+      <div class="search-wrap" id="kbSearchWrap">
+        <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+        <input type="text" id="kbSearch" placeholder="Search guides, tips, FAQs..." oninput="handleSearch(this.value)" onfocus="kbSearchFocus()" autocomplete="off">
+        <span class="search-send-icon" id="kbSearchSend" style="opacity:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg></span>
+        <div class="search-dropdown" id="kbSearchDropdown">
+          <ul class="search-dd-list" id="kbSearchDDList"></ul>
+          <div class="search-dd-footer"><span><kbd>↵</kbd> to open</span><span><kbd>ESC</kbd> to close</span></div>
+        </div>
       </div>
       <div class="search-results-count" id="searchCount"></div>
     </div>
@@ -1917,6 +2331,415 @@ body.portal-active nav{display:none!important;}
   </div>
 </div>
 
+<!-- ═══════════ COOPERATION PAGE ═══════════ -->
+<div id="cooperation-page" class="page">
+
+  <!-- HERO -->
+  <div class="coop-hero">
+    <span class="section-label">Partnerships</span>
+    <h1>Scale the Nomad Movement<br><em>with Us</em></h1>
+    <p class="coop-hero-sub">We've built the tech. You provide the expertise. Let's make moving to Spain seamless.</p>
+    <span class="coop-hero-tag">Built by Nomads, for Nomads</span>
+  </div>
+
+  <!-- PARTNERSHIP PILLARS -->
+  <div class="coop-pillars">
+    <div class="section-header fade-up" style="text-align:center;margin-bottom:40px;">
+      <span class="section-label" style="text-align:center;">Partnership Pillars</span>
+      <h2 class="section-title">Three ways to <em>grow together</em></h2>
+    </div>
+    <div class="coop-pillars-grid fade-up">
+      <div class="coop-pillar">
+        <div class="coop-pillar-icon legal">&sect;</div>
+        <h3>Legal &amp; Linguistic Experts</h3>
+        <p>For Sworn Translators and Lawyers who want a steady stream of pre-vetted, organized digital nomad cases. Get access to our Partner Portal with clean, OCR-verified documents ready for processing.</p>
+      </div>
+      <div class="coop-pillar">
+        <div class="coop-pillar-icon affiliate">&#x1F4E2;</div>
+        <h3>Affiliates &amp; Creators</h3>
+        <p>For those who inspire the move. Earn high commissions by referring leads to our "360&deg; Strategy Sessions." We provide tracking links, branded assets, and real-time conversion dashboards.</p>
+      </div>
+      <div class="coop-pillar">
+        <div class="coop-pillar-icon b2b">&#x1F3E2;</div>
+        <h3>B2B &amp; Corporate</h3>
+        <p>For HR departments and startups relocating entire teams. We provide bulk processing, compliance tracking, and dedicated account management for corporate relocations.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHY PARTNER -->
+  <div class="coop-why">
+    <div class="section-header fade-up" style="text-align:center;margin-bottom:40px;">
+      <span class="section-label" style="text-align:center;">Why partner with us</span>
+      <h2 class="section-title">What makes us <em>different</em></h2>
+    </div>
+    <div class="coop-why-grid fade-up">
+      <div class="coop-why-card">
+        <div class="coop-why-num">01</div>
+        <h4>Organized Data</h4>
+        <p>No more messy emails. You get access to our Partner Portal with clean, OCR-verified documents and structured case files.</p>
+      </div>
+      <div class="coop-why-card">
+        <div class="coop-why-num">02</div>
+        <h4>High Volume</h4>
+        <p>We handle lead generation and client onboarding. You focus on the specialized service you do best.</p>
+      </div>
+      <div class="coop-why-card">
+        <div class="coop-why-num">03</div>
+        <h4>2026 Ready</h4>
+        <p>Our system is always updated with the latest regulations, including Supreme Court rulings like the removal of the 183-day rule.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUR NETWORK -->
+  <div class="coop-network">
+    <span class="section-label" style="display:block;text-align:center;">Our Current Network</span>
+    <h3 style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;margin-top:12px;">Trusted by leading firms across Spain</h3>
+    <div class="coop-logos">
+      <div class="coop-logo-placeholder"></div>
+      <div class="coop-logo-placeholder"></div>
+      <div class="coop-logo-placeholder"></div>
+      <div class="coop-logo-placeholder"></div>
+      <div class="coop-logo-placeholder"></div>
+      <div class="coop-logo-placeholder"></div>
+    </div>
+  </div>
+
+  <!-- PARTNER INQUIRY FORM -->
+  <div class="coop-form-section">
+    <div class="coop-form-wrap" id="coopFormWrap">
+      <div id="coopFormContent">
+        <h2>Partner Inquiry</h2>
+        <p>Tell us about your organization and how we can grow together.</p>
+        <div class="coop-form-row">
+          <div class="coop-field">
+            <label>Full Name / Contact Person</label>
+            <input type="text" id="coopName" placeholder="Your full name">
+          </div>
+          <div class="coop-field">
+            <label>Company / Entity Name</label>
+            <input type="text" id="coopCompany" placeholder="Your company name">
+          </div>
+        </div>
+        <div class="coop-field">
+          <label>Entity Type</label>
+          <select id="coopType">
+            <option value="">Select your entity type...</option>
+            <option value="law_firm">Law Firm / Lawyer</option>
+            <option value="translator">Sworn Translator (Traductor Jurado)</option>
+            <option value="relocation">Relocation / Real Estate Agency</option>
+            <option value="creator">Content Creator / Influencer</option>
+            <option value="coworking">Coworking Space / Community</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="coop-field">
+          <label>Collaboration Interest</label>
+          <div class="coop-checks">
+            <label class="coop-check"><input type="checkbox" value="referral"> Referral / Affiliate Program</label>
+            <label class="coop-check"><input type="checkbox" value="services"> Specialized Services (Legal/Translation)</label>
+            <label class="coop-check"><input type="checkbox" value="b2b"> Corporate / B2B Bulk Services</label>
+          </div>
+        </div>
+        <div class="coop-field">
+          <label>Website / LinkedIn Profile</label>
+          <input type="text" id="coopWebsite" placeholder="https://...">
+        </div>
+        <div class="coop-field">
+          <label>Message / Proposal</label>
+          <textarea id="coopMessage" placeholder="How can we grow together?"></textarea>
+        </div>
+        <button class="coop-submit" onclick="submitCoopForm()">Submit Partnership Inquiry &#x2192;</button>
+      </div>
+      <div id="coopFormSuccess" class="coop-success" style="display:none;">
+        <div class="coop-success-icon">&#x1F91D;</div>
+        <h3>Thank you for reaching out!</h3>
+        <p>A NomadSpain partnership manager will contact you within 24 hours to explore our synergy. We're excited about the possibilities.</p>
+        <button class="coop-submit" onclick="resetCoopForm()" style="margin-top:24px;max-width:280px;margin-left:auto;margin-right:auto;">Submit Another Inquiry</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════ WORK WITH US PAGE ═══════════ -->
+<div id="workwithus-page" class="page">
+
+  <!-- HERO -->
+  <div class="ww-hero">
+    <div class="ww-hero-bg">
+      <svg viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <g class="ww-lines">
+          <path class="ww-line" d="M120,120 L320,200 L540,90 L780,260 L1000,140 L1140,300"/>
+          <path class="ww-line" d="M80,360 L260,280 L460,400 L660,300 L880,420 L1100,340"/>
+          <path class="ww-line" d="M200,60 L400,180 L620,80 L820,220 L1080,80"/>
+        </g>
+        <g class="ww-dots">
+          <circle class="ww-dot" cx="120" cy="120" r="4" style="animation-delay:0s;"/>
+          <circle class="ww-dot" cx="320" cy="200" r="3" style="animation-delay:0.5s;"/>
+          <circle class="ww-dot" cx="540" cy="90" r="4" style="animation-delay:1s;"/>
+          <circle class="ww-dot" cx="780" cy="260" r="3" style="animation-delay:1.5s;"/>
+          <circle class="ww-dot" cx="1000" cy="140" r="4" style="animation-delay:2s;"/>
+          <circle class="ww-dot" cx="80" cy="360" r="3" style="animation-delay:2.5s;"/>
+          <circle class="ww-dot" cx="260" cy="280" r="4" style="animation-delay:3s;"/>
+          <circle class="ww-dot" cx="460" cy="400" r="3" style="animation-delay:0.8s;"/>
+          <circle class="ww-dot" cx="660" cy="300" r="4" style="animation-delay:1.3s;"/>
+          <circle class="ww-dot" cx="880" cy="420" r="3" style="animation-delay:1.8s;"/>
+          <circle class="ww-dot" cx="1100" cy="340" r="4" style="animation-delay:2.3s;"/>
+          <circle class="ww-dot" cx="200" cy="60" r="3" style="animation-delay:0.4s;"/>
+          <circle class="ww-dot" cx="400" cy="180" r="4" style="animation-delay:0.9s;"/>
+          <circle class="ww-dot" cx="620" cy="80" r="3" style="animation-delay:1.4s;"/>
+          <circle class="ww-dot" cx="820" cy="220" r="4" style="animation-delay:1.9s;"/>
+          <circle class="ww-dot" cx="1080" cy="80" r="3" style="animation-delay:2.4s;"/>
+        </g>
+      </svg>
+    </div>
+    <div class="ww-hero-inner">
+      <span class="section-label">Careers</span>
+      <h1>Built by <em>nomads</em><br>for nomads</h1>
+      <p class="ww-hero-sub">We're a remote-first team scattered across Spain, Latin America, and beyond — building the visa platform we wish we had when we made the move.</p>
+      <div class="ww-avatars">
+        <div class="ww-avatar" data-tip="Alex · Madrid">AB</div>
+        <div class="ww-avatar" data-tip="María · Barcelona">MR</div>
+        <div class="ww-avatar" data-tip="Diego · Mexico City">DL</div>
+        <div class="ww-avatar" data-tip="Sofía · Valencia">SF</div>
+        <div class="ww-avatar" data-tip="Lucas · Lisbon">LP</div>
+        <div class="ww-avatar" data-tip="+12 nomads">+12</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABOUT THE COMPANY -->
+  <div class="ww-about">
+    <div class="ww-about-grid fade-up">
+      <div class="ww-about-text">
+        <span class="section-label">Our story</span>
+        <h2>Founded by people who <em>did the paperwork</em></h2>
+        <p>NomadSpain started in 2024 in a coworking space in Valencia, after our founder spent eight months wrestling with apostilles, sworn translations, and a consulate that lost his paperwork twice.</p>
+        <p>We knew there had to be a better way — so we built it. Today, we're a small but mighty team helping thousands of remote workers move to Spain without the bureaucratic nightmare.</p>
+        <div class="ww-about-stats">
+          <div class="ww-stat">
+            <div class="ww-stat-num">2,400+</div>
+            <div class="ww-stat-lbl">Visas processed</div>
+          </div>
+          <div class="ww-stat">
+            <div class="ww-stat-num">14</div>
+            <div class="ww-stat-lbl">Team members</div>
+          </div>
+          <div class="ww-stat">
+            <div class="ww-stat-num">9</div>
+            <div class="ww-stat-lbl">Countries</div>
+          </div>
+          <div class="ww-stat">
+            <div class="ww-stat-num">98%</div>
+            <div class="ww-stat-lbl">Approval rate</div>
+          </div>
+        </div>
+      </div>
+      <div class="ww-about-visual">
+        <h4>Our journey</h4>
+        <div class="ww-timeline-item">
+          <div class="ww-timeline-year">2024</div>
+          <div class="ww-timeline-text">Founded in Valencia after a frustrating personal visa experience.</div>
+        </div>
+        <div class="ww-timeline-item">
+          <div class="ww-timeline-year">2024</div>
+          <div class="ww-timeline-text">First 100 clients approved. Built our partner network of sworn translators.</div>
+        </div>
+        <div class="ww-timeline-item">
+          <div class="ww-timeline-year">2025</div>
+          <div class="ww-timeline-text">Launched the AI-powered document checker and EX-17 auto-fill engine.</div>
+        </div>
+        <div class="ww-timeline-item">
+          <div class="ww-timeline-year">2026</div>
+          <div class="ww-timeline-text">Expanded to handle the new Supreme Court ruling and 2026 regulations.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 100% REMOTE -->
+  <div class="ww-remote">
+    <div class="ww-remote-inner fade-up">
+      <span class="ww-remote-badge">🌍 100% REMOTE</span>
+      <h2>Work from <em>anywhere</em>.<br>Seriously.</h2>
+      <p>We don't have an office. We never will. Our team works from Madrid cafés, Mexico City coworking spaces, beachside apartments in Tarifa, and the occasional train. As long as you can hop on a Zoom and ship great work, we don't care where you are.</p>
+      <div class="ww-remote-perks">
+        <div class="ww-perk">
+          <div class="ww-perk-emoji">🏝️</div>
+          <h5>Async First</h5>
+          <p>Deep work over meetings. Most of our communication is written.</p>
+        </div>
+        <div class="ww-perk">
+          <div class="ww-perk-emoji">💸</div>
+          <h5>Fair Pay</h5>
+          <p>Competitive salaries calibrated to your local market — not deflated.</p>
+        </div>
+        <div class="ww-perk">
+          <div class="ww-perk-emoji">🌴</div>
+          <h5>Unlimited PTO</h5>
+          <p>Take what you need. We track ship velocity, not vacation days.</p>
+        </div>
+        <div class="ww-perk">
+          <div class="ww-perk-emoji">✈️</div>
+          <h5>Annual Retreat</h5>
+          <p>Once a year we meet up in Spain. Last year: a finca outside Granada.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW WE WORK -->
+  <div class="ww-structure">
+    <div class="section-header fade-up" style="text-align:center;">
+      <span class="section-label" style="text-align:center;">How we work</span>
+      <h2 class="section-title">Our team <em>structure</em></h2>
+    </div>
+    <div class="ww-structure-grid fade-up">
+      <div class="ww-struct-card">
+        <div class="ww-struct-num">01 · APPLY</div>
+        <h4>Send us your story</h4>
+        <p>Skip the corporate cover letter. Tell us where you're working from, why you care about this mission, and what you'd ship in your first 90 days.</p>
+      </div>
+      <div class="ww-struct-card">
+        <div class="ww-struct-num">02 · INTERVIEW</div>
+        <h4>Two conversations</h4>
+        <p>One chat with the founder, one paid trial project (we never ask for free work). Both happen on your timezone, async-friendly.</p>
+      </div>
+      <div class="ww-struct-card">
+        <div class="ww-struct-num">03 · SHIP</div>
+        <h4>Onboard in a week</h4>
+        <p>Laptop stipend, Notion access, intro calls with the team. By week two you're shipping things our clients see.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- AVAILABLE JOBS -->
+  <div class="ww-jobs">
+    <div class="ww-jobs-header fade-up">
+      <span class="section-label" style="display:block;text-align:center;">Open positions</span>
+      <h2 class="section-title" style="margin-top:10px;">We're hiring <em>two roles</em></h2>
+    </div>
+    <div class="ww-jobs-grid fade-up">
+      <div class="ww-job">
+        <div class="ww-job-tags">
+          <span class="ww-job-tag brand">Sales · Growth</span>
+          <span class="ww-job-tag">Full-time</span>
+        </div>
+        <h3>Client Acquisition Officer</h3>
+        <p class="ww-job-desc">Own the top of our funnel. You'll talk to nomads-in-waiting, run discovery calls, and convert curiosity into committed clients. Background in SaaS or relocation a plus, but nomad lived experience matters more.</p>
+        <div class="ww-job-meta">
+          <span>🌍 Remote</span>
+          <span>💼 Full-time</span>
+          <span>💰 Base + commission</span>
+        </div>
+        <a class="ww-job-btn" href="mailto:jobs@nomadspain.io?subject=Application%3A%20Client%20Acquisition%20Officer" style="text-align:center;text-decoration:none;">Apply to Position →</a>
+      </div>
+      <div class="ww-job">
+        <div class="ww-job-tags">
+          <span class="ww-job-tag brand">Legal · Operations</span>
+          <span class="ww-job-tag">Full-time</span>
+        </div>
+        <h3>Spanish Immigration Expert</h3>
+        <p class="ww-job-desc">You know the BOE inside out. You've handled DNV, Lucrativa, and Arraigo cases and stay current with UGE rulings. Help us audit cases, train our AI document checker, and represent clients at their consulate appointments.</p>
+        <div class="ww-job-meta">
+          <span>🇪🇸 Spain-based</span>
+          <span>💼 Full-time</span>
+          <span>⚖️ Bar admission required</span>
+        </div>
+        <a class="ww-job-btn" href="mailto:jobs@nomadspain.io?subject=Application%3A%20Spanish%20Immigration%20Expert" style="text-align:center;text-decoration:none;">Apply to Position →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOB APPLICATION MODAL -->
+  <div class="ww-modal-overlay" id="wwModalOverlay" onclick="if(event.target===this)closeJobModal()">
+    <div class="ww-modal">
+      <button class="ww-modal-close" onclick="closeJobModal()">&times;</button>
+      <div id="wwModalContent">
+        <h2 id="wwModalTitle">Apply for Position</h2>
+        <p class="ww-modal-sub">All fields marked with <span style="color:var(--brand);">*</span> are required. We read every application.</p>
+        <div class="ww-field">
+          <label>Full Name <span class="req">*</span></label>
+          <input type="text" id="wwName" placeholder="Your full name">
+        </div>
+        <div class="ww-field">
+          <label>Email <span class="req">*</span></label>
+          <input type="email" id="wwEmail" placeholder="your@email.com">
+        </div>
+        <div class="ww-field">
+          <label>LinkedIn Profile <span class="req">*</span></label>
+          <input type="text" id="wwLinkedin" placeholder="https://linkedin.com/in/...">
+        </div>
+        <div class="ww-field">
+          <label>Where are you working from today? (City / Country)</label>
+          <input type="text" id="wwLocation" placeholder="e.g. Lisbon, Portugal">
+        </div>
+        <div class="ww-field">
+          <label>Do you know what an Apostille is?</label>
+          <div class="ww-radio-group" id="wwApostille">
+            <label class="ww-radio" data-val="yes" onclick="wwSelectRadio(this)"><span>✓</span> Yes</label>
+            <label class="ww-radio" data-val="no" onclick="wwSelectRadio(this)"><span>✗</span> No</label>
+          </div>
+        </div>
+        <div class="ww-field">
+          <label>Resume / CV (PDF)</label>
+          <div class="ww-file-wrap">
+            <div class="ww-file-label" id="wwFileLabel"><span>Choose a PDF file...</span><span>📎</span></div>
+            <input type="file" id="wwResume" accept="application/pdf" onchange="wwFileChange(this)">
+          </div>
+        </div>
+        <button class="ww-modal-submit" id="wwSubmitBtn" onclick="submitJobApplication()">Submit Application →</button>
+      </div>
+      <div id="wwModalSuccess" class="ww-modal-success" style="display:none;">
+        <div class="ww-modal-success-icon">🎉</div>
+        <h3>Application received!</h3>
+        <p>Thanks for applying. We'll review your submission and get back to you within 5 business days. Keep an eye on your inbox.</p>
+        <button class="ww-modal-submit" onclick="closeJobModal()" style="margin-top:24px;max-width:240px;margin-left:auto;margin-right:auto;">Close</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CHANGE REQUEST MODAL (shared customer/admin) -->
+<div class="ww-modal-overlay" id="crModalOverlay" onclick="if(event.target===this)pCloseChangeRequest()">
+  <div class="ww-modal">
+    <button class="ww-modal-close" onclick="pCloseChangeRequest()">&times;</button>
+    <div id="crModalContent">
+      <h2>Request a Change</h2>
+      <p class="ww-modal-sub">Your selection is locked. Submit a request and an admin will review it within 24 hours.</p>
+      <div class="ww-field">
+        <label>Request Type <span class="req">*</span></label>
+        <select id="crType">
+          <option value="">Select request type...</option>
+          <option value="upgrade">Upgrade Package (e.g. Solo → Family)</option>
+          <option value="downgrade">Downgrade Package</option>
+          <option value="add_dependent">Add Dependent</option>
+          <option value="remove_dependent">Remove Dependent</option>
+          <option value="addon">Add-on Service (NIE, Translation, etc.)</option>
+          <option value="other">Other / Custom</option>
+        </select>
+      </div>
+      <div class="ww-field">
+        <label>Details <span class="req">*</span></label>
+        <textarea id="crDetails" placeholder="Tell us what you need and why..." style="min-height:110px;"></textarea>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12px;color:var(--text2);margin-bottom:14px;">
+        <strong>⚠ Note:</strong> Approval may affect pricing. An admin will follow up with payment instructions if any balance is owed.
+      </div>
+      <button class="ww-modal-submit" id="crSubmitBtn" onclick="pSubmitChangeRequest()">Submit Request →</button>
+    </div>
+    <div id="crModalSuccess" class="ww-modal-success" style="display:none;">
+      <div class="ww-modal-success-icon">📨</div>
+      <h3>Request submitted</h3>
+      <p>Your change request is now pending admin approval. You'll see its status in the marketplace panel.</p>
+      <button class="ww-modal-submit" onclick="pCloseChangeRequest()" style="margin-top:24px;max-width:240px;margin-left:auto;margin-right:auto;">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ PORTAL PLATFORM ═══════════ -->
 <div id="portal-page" class="page">
 
@@ -1996,6 +2819,7 @@ body.portal-active nav{display:none!important;}
         <div class="p-topbar-title" id="cu-topbar-title">Overview</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:12px;color:var(--text3);" id="cu-email-top"></span>
+          <button class="notif-bell-btn" onclick="pToggleNotifDropdown()" title="Notifications">🔔<span class="notif-badge" id="cu-notif-count" style="display:none;">0</span></button>
           <button class="p-btn p-btn-ghost p-btn-sm" onclick="pNav('cu','marketplace',null)">+ New Application</button>
         </div>
       </div>
@@ -2024,6 +2848,10 @@ body.portal-active nav{display:none!important;}
           <div class="p-card-title" style="margin-bottom:14px;">My Progress</div>
           <div id="cu-my-progress"></div>
         </div>
+        <!-- Schengen Clock -->
+        <div id="cu-schengen-clock-wrap"></div>
+        <!-- Cita-Ready Pack -->
+        <div id="cu-cita-ready-wrap"></div>
         <!-- Document Expiry Alerts -->
         <div id="cu-expiry-alerts-wrap"></div>
         <div class="p-card">
@@ -2039,6 +2867,40 @@ body.portal-active nav{display:none!important;}
       <!-- Marketplace -->
       <div id="cu-marketplace" class="p-panel">
         <div class="p-page-hd"><div class="p-page-title">Marketplace</div><div class="p-page-sub">Choose your visa package and complete your purchase.</div></div>
+        <!-- Locked view (shown after payment) -->
+        <div id="cu-mkt-locked" style="display:none;">
+          <div class="p-card" style="background:linear-gradient(145deg,#0f172a 0%,#1e3a5f 100%);color:#fff;border:none;">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
+              <div style="width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:28px;">🔒</div>
+              <div style="flex:1;">
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.6);">Active package</div>
+                <div id="cu-mkt-locked-name" style="font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;margin-top:2px;">—</div>
+              </div>
+              <span class="p-badge" style="background:rgba(34,197,94,0.18);color:#86efac;border:1px solid rgba(134,239,172,0.3);">✓ PAID</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;">
+              <div style="background:rgba(255,255,255,0.06);border-radius:10px;padding:14px;">
+                <div style="font-size:11px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Total Paid</div>
+                <div id="cu-mkt-locked-paid" style="font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:800;margin-top:4px;">€0</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.06);border-radius:10px;padding:14px;">
+                <div style="font-size:11px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Purchased</div>
+                <div id="cu-mkt-locked-date" style="font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:700;margin-top:6px;">—</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.06);border-radius:10px;padding:14px;">
+                <div style="font-size:11px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;font-weight:700;">Order ID</div>
+                <div id="cu-mkt-locked-id" style="font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:700;margin-top:6px;font-family:monospace;">—</div>
+              </div>
+            </div>
+            <p style="font-size:13px;color:rgba(255,255,255,0.7);line-height:1.65;margin-bottom:18px;">Your selection is locked to protect the integrity of your case. To upgrade, downgrade, or request additional services, submit a change request — an admin will review and approve it.</p>
+            <button class="p-btn p-btn-primary" onclick="pOpenChangeRequest()" style="border-radius:50px;padding:12px 22px;">✏️ Request Change or Additional Service</button>
+          </div>
+          <!-- My Change Requests -->
+          <div class="p-card" id="cu-cr-list-card" style="margin-top:20px;">
+            <div class="p-card-hd"><div class="p-card-title">My Change Requests</div></div>
+            <div id="cu-cr-list"></div>
+          </div>
+        </div>
         <div id="cu-mkt-view">
           <div class="p-mkt-grid">
             <div class="p-mkt-card" id="mkt-consultation" onclick="pSelectPkg('consultation')">
@@ -2283,6 +3145,7 @@ body.portal-active nav{display:none!important;}
       <div class="p-nav-item" onclick="pNav('admin','financials',this)"><span class="p-nav-icon">💰</span> Financials</div>
       <div class="p-nav-section">Operations</div>
       <div class="p-nav-item" onclick="pNav('admin','support',this)"><span class="p-nav-icon">🎧</span> Support Hub</div>
+      <div class="p-nav-item" onclick="pNav('admin','change-requests',this)"><span class="p-nav-icon">✏️</span> Change Requests <span class="notif-badge" id="ad-cr-badge" style="display:none;">0</span></div>
       <div class="p-nav-item" onclick="pNav('admin','compliance',this)"><span class="p-nav-icon">📜</span> Compliance</div>
       <div class="p-nav-section">Intelligence</div>
       <div class="p-nav-item" onclick="pNav('admin','provinces',this)"><span class="p-nav-icon">🗺️</span> Province Tracker</div>
@@ -2293,6 +3156,7 @@ body.portal-active nav{display:none!important;}
         <div class="p-topbar-title" id="ad-topbar-title">Analytics</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:12px;color:var(--text3);">Admin</span>
+          <button class="notif-bell-btn" onclick="pToggleNotifDropdown()" title="Notifications">🔔<span class="notif-badge" id="ad-notif-count" style="display:none;">0</span></button>
           <button class="p-btn p-btn-ghost p-btn-sm" onclick="pNav('admin','applications',null)">+ New Application</button>
         </div>
       </div>
@@ -2445,6 +3309,22 @@ body.portal-active nav{display:none!important;}
           </div>
         </div>
       </div>
+      <!-- Change Requests -->
+      <div id="ad-change-requests" class="p-panel">
+        <div class="p-page-hd"><div class="p-page-title">Change Requests</div><div class="p-page-sub">Customer-submitted requests to modify locked packages. Approve or reject each one.</div></div>
+        <div class="p-card">
+          <div class="p-card-hd">
+            <div class="p-card-title">All Requests</div>
+            <div style="display:flex;gap:6px;">
+              <button class="p-btn p-btn-ghost p-btn-sm" onclick="pFilterCRs('all',this)" id="cr-f-all">All</button>
+              <button class="p-btn p-btn-ghost p-btn-sm" onclick="pFilterCRs('pending',this)" id="cr-f-pending">Pending</button>
+              <button class="p-btn p-btn-ghost p-btn-sm" onclick="pFilterCRs('approved',this)" id="cr-f-approved">Approved</button>
+              <button class="p-btn p-btn-ghost p-btn-sm" onclick="pFilterCRs('rejected',this)" id="cr-f-rejected">Rejected</button>
+            </div>
+          </div>
+          <div id="ad-cr-table"></div>
+        </div>
+      </div>
       <!-- Compliance -->
       <div id="ad-compliance" class="p-panel">
         <div class="p-page-hd">
@@ -2508,7 +3388,10 @@ body.portal-active nav{display:none!important;}
     <div class="p-main">
       <div class="p-topbar">
         <div class="p-topbar-title" id="cm-topbar-title">Worklist</div>
-        <span style="font-size:12px;color:var(--text3);" id="cm-email-top"></span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:12px;color:var(--text3);" id="cm-email-top"></span>
+          <button class="notif-bell-btn" onclick="pToggleNotifDropdown()" title="Notifications">🔔<span class="notif-badge" id="cm-notif-count" style="display:none;">0</span></button>
+        </div>
       </div>
       <!-- Worklist -->
       <div id="cm-worklist" class="p-panel active">
