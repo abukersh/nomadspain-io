@@ -683,6 +683,54 @@ var CONSULATE_GUIDES=[
     {icon:'🇪🇸',label:'Applying from Within Spain','text':'Egyptian nationals cannot enter Spain visa-free, so you must apply from Cairo through BLS. Unlike EU/US/UK passport holders, there is no option to enter as a tourist and convert. You must hold the 1-year DNV visa before traveling to Spain.'},
     {icon:'👨\u200D👩\u200D👧',label:'Family Members','text':'Spouse/domestic partner, dependent minor/adult children, and dependent ascendants can apply simultaneously. Requires legalized birth/marriage certificates from the Egyptian MFA.'},
     {icon:'⚖️',label:'If Refused','text':'Appeal to the Madrid High Court of Justice within 2 months, or file a reinstatement appeal to the same consular post within 1 month of notification.'}
+  ]},
+  {id:'philippines',flag:'🇵🇭',name:'Philippines',color:'#0038A8',items:[
+    {icon:'📅',label:'Booking','text':'Appointments booked via BLS International Philippines (ph.blsspainvisa.com). Submit at the BLS office in Manila.'},
+    {icon:'💶',label:'Visa Fee (Filipinos)','text':'Visa fee: PHP 6,240 + BLS service charge: PHP 1,170 = PHP 7,410 total. Payable in cash only at the submission window. All fees are non-refundable and subject to exchange rate changes.'},
+    {icon:'📝',label:'Application Form','text':'Complete Application Form 790 (Code 052). Download the national visa form and the document checklist PDF from the BLS Philippines website.'},
+    {icon:'⏱\uFE0F',label:'Processing Time','text':'Official resolution time is 10 working days. BLS recommends applying at least 15 days before intended travel. May be extended if additional documents or an interview are required.'},
+    {icon:'🎓',label:'Education / Experience','text':'Graduate or postgraduate degree from a recognized university, or minimum 3 years of relevant professional experience. Regulated professions require accreditation.'},
+    {icon:'💰',label:'Income Requirement','text':'Main applicant: 200% of Spain\u2019s monthly minimum wage (SMI). First family member: +75% SMI. Each additional: +25% SMI. Proof via contracts, invoices, or bank statements.'},
+    {icon:'🏢',label:'Company Requirements','text':'Employer incorporated for at least 1 year. Employee must have 3+ months tenure. Self-employed may work for Spanish clients up to 20% of total activity.'},
+    {icon:'📸',label:'Photo Specs','text':'Recent photo (max 6 months old), color, light/white background, full face, no sunglasses, no head covering (unless religious). Must be on photographic paper \u2014 non-compliant photos will make the application incomplete.'},
+    {icon:'🏥',label:'Health Insurance','text':'Private health insurance from an insurer authorized to operate in Spain (registered with the DGSFP). Must cover all risks of the Spanish public health system.'},
+    {icon:'📜',label:'Criminal Record','text':'NBI (National Bureau of Investigation) clearance required. Must be authenticated by DFA (Department of Foreign Affairs) and legalized by the Spanish Embassy in Manila.'},
+    {icon:'📄',label:'Documents','text':'Valid passport (1+ year validity, 2+ blank pages), proof of Manila consular district residence, company certificate authorizing remote work, Social Security registration proof.'},
+    {icon:'✈\uFE0F',label:'Visa Validity','text':'Valid for 1 year. After arrival in Spain, apply for the Alien Identity Card (TIE) within 1 month at the Provincial Aliens Office.'},
+    {icon:'🇪🇸',label:'Applying from Within Spain','text':'Filipino nationals require a visa to enter Spain. You must apply from Manila through BLS \u2014 there is no visa-free tourist entry to convert. You must hold the DNV visa before traveling.'},
+    {icon:'👨\u200D👩\u200D👧',label:'Family Members','text':'Spouse/partner, dependent children, and dependent ascendants can apply simultaneously. Birth/marriage certificates must be authenticated by DFA and legalized by the Spanish Embassy.'}
+  ]},
+  {id:'turkey',flag:'🇹🇷',name:'T\u00fcrkiye',color:'#E30A17',items:[
+    {icon:'📅',label:'Booking','text':'Appointments booked via BLS International Istanbul (turkey.blsspainvisa.com). Book through the BLS online portal at turkey.blsspainglobal.com.'},
+    {icon:'💶',label:'Visa Fee (Turkish Citizens)','text':'Visa fee: $106 USD + BLS service charge: $20 USD = $126 USD total. Payable in cash only. All fees are non-refundable and subject to exchange rate changes.'},
+    {icon:'⏱\uFE0F',label:'Processing Time','text':'BLS recommends applying at least 15 days before travel. Official resolution time is 10 working days from the day after submission. May be extended for additional documents or interviews.'},
+    {icon:'📝',label:'Application Form','text':'Complete the National Visa Application Form (visado_nacional). Download it along with the digital nomad checklist from the BLS Turkey website.'},
+    {icon:'🎓',label:'Education / Experience','text':'Graduate or postgraduate degree from a recognized university, or minimum 3 years of relevant professional experience. Regulated professions require qualification accreditation.'},
+    {icon:'💰',label:'Income Requirement','text':'Main applicant: 200% of Spain\u2019s monthly minimum wage (SMI). First family member: +75% SMI. Each additional: +25% SMI. Any proof accepted (contracts, invoices, bank statements).'},
+    {icon:'🏢',label:'Company Requirements','text':'Employer must be incorporated for at least 1 year. Employee must have 3+ months tenure. Self-employed may serve Spanish clients up to 20% of total activity.'},
+    {icon:'📸',label:'Photo Specs','text':'ICAO standard photo: white background, max 3 months old, head and shoulders with face taking 70\u201380% of frame. Forehead and eyebrows visible. Glasses not acceptable. Sharp focus required.'},
+    {icon:'🏥',label:'Health Insurance','text':'Public or private health insurance from an insurer authorized to operate in Spain (registered with the DGSFP). Must cover all risks of the Spanish public health system.'},
+    {icon:'📜',label:'Criminal Record','text':'Turkish criminal record certificate (Adli Sicil Kayd\u0131) required. Must be apostilled (Turkey is a Hague Convention member) and sworn-translated into Spanish.'},
+    {icon:'📄',label:'Documents','text':'Valid passport (1+ year validity, issued within last 10 years, 2+ blank pages), proof of Istanbul consular district residence, company certificate with remote work authorization.'},
+    {icon:'✈\uFE0F',label:'Visa Validity','text':'Valid for 1 year. After arrival, apply for the Alien Identity Card (TIE) within 1 month at the Provincial Aliens Office.'},
+    {icon:'🇪🇸',label:'Applying from Within Spain','text':'Turkish nationals can enter Spain visa-free for up to 90 days (Schengen). However, the DNV consulate visa route via BLS Istanbul is recommended for a smoother transition to the 1-year residence permit.'},
+    {icon:'👨\u200D👩\u200D👧',label:'Family Members','text':'Spouse/partner, dependent children, and dependent ascendants can apply simultaneously. Turkish birth/marriage certificates must be apostilled and sworn-translated.'}
+  ]},
+  {id:'nigeria',flag:'🇳🇬',name:'Nigeria',color:'#008751',items:[
+    {icon:'🏛\uFE0F',label:'Consulates','text':'Two Spanish consulates serve Nigeria: Embassy in Abuja (27 Lobito Crescent, Wuse II) and Consulate General in Lagos (11 Abeokuta Street, Victoria Island). Appointments book up weeks in advance during peak seasons.'},
+    {icon:'💶',label:'Visa Fee','text':'Consulate fee: approximately \u20AC80\u2013100. Exact amount varies \u2014 confirm with the embassy. Payable in local currency equivalent. All fees are non-refundable.'},
+    {icon:'💰',label:'Income Requirement','text':'Minimum \u20AC2,760/month (200% of Spain\u2019s SMI). At least 80% of income must come from clients or companies outside Spain. First dependent: +75% SMI. Each additional: +25% SMI.'},
+    {icon:'🎓',label:'Education / Experience','text':'University degree, professional qualification, or 3+ years of relevant work experience required. Degree certificates must be legalized through the full Nigerian authentication chain.'},
+    {icon:'🏢',label:'Company Requirements','text':'Employer must be established for at least 1 year. Employee needs 3+ months tenure. Self-employed may work for Spanish clients up to 20% of total activity.'},
+    {icon:'📜',label:'Criminal Record','text':'Nigeria Police Force clearance certificate required, covering the last 5 years. Must be authenticated by the issuing authority and legalized through the Nigerian Ministry of Foreign Affairs, then the Spanish Embassy.'},
+    {icon:'\u26A0\uFE0F',label:'No Apostille (Important)','text':'Nigeria is NOT a member of the Hague Apostille Convention. All documents require a multi-step legalization: authentication by Nigerian authority \u2192 Ministry of Foreign Affairs \u2192 Spanish Embassy. This takes significantly longer than apostille countries.'},
+    {icon:'🏥',label:'Health Insurance','text':'Private health insurance from a DGSFP-registered Spanish insurer required before arrival. Must cover all risks of the Spanish public health system.'},
+    {icon:'📄',label:'Documents','text':'Valid Nigerian passport (1+ year validity, 2+ blank pages), proof of residence, employment contracts or freelance agreements, employer letter confirming remote work, bank statements, accommodation proof in Spain.'},
+    {icon:'⏱\uFE0F',label:'Processing Time','text':'Processing typically takes 6\u201312 weeks from the Nigerian consulates. Apply well in advance. After approval, collect passport within 1 month of notification.'},
+    {icon:'✈\uFE0F',label:'Visa Validity & Renewal','text':'Initial visa: 1 year. Renewable in 2-year increments up to 5 years total. Permanent residency available after 5 years. Citizenship pathway after 10 years (requires CCSE exam + DELE A2 Spanish).'},
+    {icon:'🇪🇸',label:'Applying from Within Spain','text':'Nigerian nationals require a visa to enter Spain. You must apply from Abuja or Lagos \u2014 there is no visa-free tourist entry to convert. Hold the DNV visa before traveling.'},
+    {icon:'💸',label:'Tax Benefits','text':'The Beckham Law offers a flat 24% tax on Spanish-source income for up to 6 years, with foreign income largely untaxed. Important: Nigeria also taxes worldwide income \u2014 use the Spain-Nigeria tax treaty to avoid double taxation.'},
+    {icon:'👨\u200D👩\u200D👧',label:'Family Members','text':'Spouse/partner, dependent children, and dependent ascendants can apply. All Nigerian family documents (birth/marriage certificates) must go through the full legalization chain (no apostille shortcut).'}
   ]}
 ];
 
