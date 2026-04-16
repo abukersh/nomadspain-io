@@ -10,6 +10,7 @@ function showPage(name) {
   if (navKb) navKb.classList.toggle('active', name === 'knowledge');
   closeMenu();
   if (name === 'home') setTimeout(initFadeUps, 60);
+  if (name === 'services') { renderServicesPage(); }
   if (name === 'knowledge') { clearSearch(); resetFilter(); renderKbGrid(); renderFaqGrid(); phConsulateActive=null; renderConsulateGuides('kb-consulate-grid','kb-consulate-detail'); }
   if (name === 'portal') { renderPortalBg(); }
 }
@@ -624,6 +625,78 @@ function toggleFaq(id){
   if(!wasOpen)item.classList.add('open');
 }
 
+/* GUIDED SERVICES / PERMITS */
+var SERVICES_DATA=[
+  {id:'consultation',cat:'core',name:'360\u00b0 Strategy Session',desc:'60-minute deep-dive with a residency specialist covering your optimal visa route, Beckham Law tax eligibility, and a personalised Plan B.',price:50,note:'/session',icon:'\uD83C\uDFAF'},
+  {id:'nlv',cat:'core',name:'Non-Lucrative Visa (NLV)',desc:'Full NLV application for retirees and passive income earners \u2014 proof of funds structuring, compliant health insurance, and consulate submission.',price:2500,note:'one-time',icon:'\u2728'},
+  {id:'concierge',cat:'core',name:'Post-Arrival Concierge',desc:'Soft landing support \u2014 bank account opening, TIE card appointment, NIE registration, rental contract review, and local setup.',price:500,note:'one-time',icon:'\uD83D\uDD50'},
+  {id:'regularization2026',cat:'permit',name:'Immigration Regularization 2026',desc:'Extraordinary regularization procedure for foreign nationals already residing in Spain before December 31, 2025.',price:600,note:'one-time',icon:'\uD83D\uDCDC'},
+  {id:'study_initial',cat:'permit',name:'Initial Stay Authorization for Studies',desc:'Application for a stay for studies in Spain, submitted from Spanish territory, meeting the requirements established for the initial stay.',price:550,note:'one-time',icon:'\uD83C\uDF93'},
+  {id:'study_extension',cat:'permit',name:'Extension of Stay for Studies',desc:'Application to extend a stay for studies, research, student exchange, non-labour internships, or volunteering.',price:550,note:'one-time',icon:'\uD83D\uDCDA'},
+  {id:'family_spanish',cat:'permit',name:'Temporary Residence for Family Members of Spanish Nationals',desc:'Residence for family members of Spanish citizens with whom they live or will live in Spain, including spouse, stable partner, children, ascendants, and other dependent relatives.',price:550,note:'one-time',icon:'\uD83C\uDDEA\uD83C\uDDF8'},
+  {id:'family_eu',cat:'permit',name:'Residence for Family Member of an EU Citizen',desc:'Residence for family members of citizens of the European Union, the European Economic Area, or Switzerland who are in Spain.',price:550,note:'one-time',icon:'\uD83C\uDDEA\uD83C\uDDFA'},
+  {id:'nationality',cat:'permit',name:'Spanish Nationality by Residence',desc:'Obtaining Spanish nationality by residence after meeting the legal and continuous residence requirements in Spain for the period set by law.',price:650,note:'one-time',icon:'\uD83C\uDDEA\uD83C\uDDF8'},
+  {id:'study_to_work_emp',cat:'permit',name:'Change from Study Stay to Work (Employee)',desc:'Application to change a stay for studies to an initial residence and work authorization as an employee after completing studies.',price:650,note:'one-time',icon:'\uD83D\uDCBC'},
+  {id:'study_to_work_self',cat:'permit',name:'Change from Study Stay to Work (Self Employed)',desc:'Application to change a stay for studies to an initial residence and self-employment work permit after completing studies in Spain.',price:650,note:'one-time',icon:'\uD83D\uDCDD'},
+  {id:'job_search',cat:'permit',name:'Residence Authorization for Job Search',desc:'Authorization that allows foreign graduates of higher education in Spain to stay for 12 months in order to find a job or start a business project.',price:550,note:'one-time',icon:'\uD83D\uDD0D'},
+  {id:'internships',cat:'permit',name:'Residence Permit for Internships',desc:'Residence permit for internships for foreign students who have obtained a higher education degree in the last two years or are currently pursuing such a degree.',price:800,note:'one-time',icon:'\uD83C\uDF1F'},
+  {id:'family_reunification_spouse',cat:'permit',name:'Family Reunification: Spouse or Partner',desc:'Temporary residence authorization for the spouse or partner of foreign residents in Spain through family reunification.',price:550,note:'one-time',icon:'\uD83D\uDC91'},
+  {id:'social_roots',cat:'permit',name:'Temporary Residence Permit for Social Roots',desc:'Temporary residence permit for social roots in Spain for foreign nationals with at least two years of continuous stay and family ties or a favourable social integration report.',price:550,note:'one-time',icon:'\uD83C\uDFE0'},
+  {id:'family_roots',cat:'permit',name:'Temporary Residence Permit for Family Roots',desc:'Temporary residence permit for exceptional circumstances for foreign citizens who are parents or guardians of minors who are nationals of the EU, EEA, or Switzerland.',price:550,note:'one-time',icon:'\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67'},
+  {id:'socio_edu_roots',cat:'permit',name:'Temporary Residence Permit for Socio-Educational Roots',desc:'Temporary residence permit for socio-educational roots in Spain for foreign nationals with at least two years of continuous stay who are enrolled in or committed to undertake training in Spain.',price:550,note:'one-time',icon:'\uD83D\uDCD6'},
+  {id:'socio_labor_roots',cat:'permit',name:'Temporary Residence Permit for Socio-Labor Roots',desc:'Temporary residence permit for socio-labor roots in Spain for foreign nationals with at least two years of continuous stay who have an employment contract.',price:550,note:'one-time',icon:'\u2692\uFE0F'},
+  {id:'second_chance_roots',cat:'permit',name:'Temporary Residence Permit for Second-Chance Roots',desc:'Temporary residence permit for exceptional circumstances for foreigners who previously held a temporary residence in Spain and lost it for reasons unrelated to public order, security, or public health.',price:550,note:'one-time',icon:'\uD83D\uDD04'},
+  {id:'renewal_work_employee',cat:'permit',name:'Renewal of Residence and Work Permit as an Employee',desc:'Procedure to renew the temporary residence and work permit granted for employment in Spain, provided the requirements are still met.',price:550,note:'one-time',icon:'\uD83D\uDD01'},
+  {id:'change_to_employment',cat:'permit',name:'Change of Residence Status to Employment (Cuenta Ajena)',desc:'Application for authorized to obtain residence and employment work permit, intended for individuals who already hold a temporary residence permit allowing them to work and have resided in Spain for at least one year.',price:650,note:'one-time',icon:'\uD83D\uDCC4'},
+  {id:'change_to_self_employment',cat:'permit',name:'Change of Residence Status to Self-Employment',desc:'Application for authorization to obtain residence and self-employment work permit, intended for individuals who already hold a temporary residence permit allowing them to work and have resided in Spain for at least one year.',price:650,note:'one-time',icon:'\uD83D\uDCC2'},
+  {id:'renewal_hqp',cat:'permit',name:'Renewal of Highly Qualified Professional Permit (Same Employer)',desc:'Application for renewal of the temporary residence and work permit for highly qualified professionals who continue to work in Spain with the same employer.',price:650,note:'one-time',icon:'\uD83C\uDF96\uFE0F'},
+  {id:'renewal_family_reunification',cat:'permit',name:'Renewal of Temporary Residence for Family Reunification',desc:'Application to renew the temporary residence authorization for family reunification for foreign nationals to continue living in Spain with their sponsoring relatives.',price:550,note:'one-time',icon:'\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC66'},
+  {id:'hqp',cat:'permit',name:'Highly Qualified Professional',desc:'Application for a residence permit as a highly qualified professional in Spain, submitted from Spanish territory, meeting the requirements established for the initial authorization.',price:800,note:'one-time',icon:'\uD83C\uDFC6'}
+];
+function renderServicesPage(){
+  var grid=document.getElementById('svc-grid');
+  if(!grid)return;
+  var core=SERVICES_DATA.filter(function(s){return s.cat==='core';});
+  var permits=SERVICES_DATA.filter(function(s){return s.cat==='permit';});
+  var html='<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:18px;font-weight:800;margin-bottom:16px;">Our Core Services</div>';
+  html+=renderSvcCards(core);
+  html+='<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:18px;font-weight:800;margin:36px 0 8px;">Guided Procedures &amp; Permits</div>';
+  html+='<p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Select your residency and let us take it from there. Each price includes our full management fee.</p>';
+  html+=renderSvcCards(permits);
+  grid.innerHTML=html;
+}
+function renderSvcCards(items){
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;">'+items.map(function(s){
+    return '<div class="svc-card" onclick="goHome(\'checker-section\')" style="border:2px solid var(--border);border-radius:16px;padding:22px 20px;cursor:pointer;transition:all 0.2s;background:var(--white);display:flex;flex-direction:column;gap:10px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:24px;">'+s.icon+'</span><div style="flex:1;font-family:\'Bricolage Grotesque\',sans-serif;font-size:14px;font-weight:800;">'+s.name+'</div></div>'
+      +'<p style="font-size:12px;color:var(--text2);line-height:1.6;margin:0;flex:1;">'+s.desc+'</p>'
+      +'<div style="display:flex;align-items:baseline;gap:4px;margin-top:4px;"><span style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:22px;font-weight:800;color:var(--brand);">\u20ac'+s.price.toLocaleString()+'</span><span style="font-size:11px;color:var(--text3);">'+s.note+'</span></div>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--brand);margin-top:2px;">Get Started \u2192</div>'
+      +'</div>';
+  }).join('')+'</div>';
+}
+function renderMktAddons(){
+  var wrap=document.getElementById('cu-mkt-addons');
+  if(!wrap)return;
+  var permits=SERVICES_DATA.filter(function(s){return s.cat==='permit';});
+  var core=SERVICES_DATA.filter(function(s){return s.cat==='core';});
+  var all=core.concat(permits);
+  wrap.innerHTML='<div class="p-card-title" style="margin-bottom:14px;">Additional Services &amp; Permits</div>'
+    +'<p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Need something beyond your main package? Add any of these guided procedures.</p>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">'+all.map(function(s){
+      return '<div class="svc-card" onclick="pSelectAddon(\''+s.id+'\')" style="border:1.5px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;background:var(--white);">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:18px;">'+s.icon+'</span><div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:12px;font-weight:800;line-height:1.3;">'+s.name+'</div></div>'
+        +'<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:18px;font-weight:800;color:var(--brand);">\u20ac'+s.price.toLocaleString()+' <span style="font-size:10px;color:var(--text3);font-weight:600;">'+s.note+'</span></div>'
+        +'</div>';
+    }).join('')+'</div>';
+}
+function pSelectAddon(id){
+  var svc=SERVICES_DATA.find(function(s){return s.id===id;});
+  if(!svc){return;}
+  showPage('home');
+  setTimeout(function(){goTo('checker-section');},140);
+}
+
 /* CONSULATE GUIDES */
 var CONSULATE_GUIDES=[
   {id:'serbia',flag:'🇷🇸',name:'Serbia',color:'#C6363C',items:[
@@ -755,11 +828,15 @@ function renderConsulateGuides(gridId,detailId){
     +'<button onclick="pCopyConsulateChecklist()" title="Copy checklist" style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:50px;border:1.5px solid var(--border);background:var(--white);font-family:\'Bricolage Grotesque\',sans-serif;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor=\'var(--brand)\';this.style.color=\'var(--brand)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--text2)\'">\u{1F4CB} Copy Checklist</button>'
     +'</div>'
     +guide.items.map(function(item,i){
-      return '<div style="display:flex;gap:14px;padding:12px 0;'+(i<guide.items.length-1?'border-bottom:1px solid var(--border);':'')+'">'
+      return '<div style="display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);">'
         +'<div style="font-size:20px;flex-shrink:0;margin-top:1px;">'+item.icon+'</div>'
         +'<div><div style="font-size:13px;font-weight:700;color:var(--brand);margin-bottom:2px;">'+item.label+'</div>'
         +'<div style="font-size:13px;color:var(--text2);line-height:1.6;">'+item.text+'</div></div></div>';
-    }).join('');
+    }).join('')
+    +'<div style="margin-top:24px;padding:20px 24px;background:linear-gradient(135deg,rgba(232,66,42,0.06),rgba(245,166,35,0.06));border-radius:14px;text-align:center;">'
+    +'<div style="font-size:15px;color:var(--text1);line-height:1.6;margin-bottom:12px;">Feeling like this is too much bureaucracy or too time-consuming?<br><strong>That\u2019s exactly why you should hire us to get things done!</strong></div>'
+    +'<a onclick="goHome(\'pricing-section\');" style="display:inline-block;padding:10px 28px;background:var(--brand);color:#fff;border-radius:50px;font-family:\'Bricolage Grotesque\',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;transition:opacity 0.2s;" onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'1\'">See Our Packages \u2192</a>'
+    +'</div>';
 }
 function selectConsulate(id,gridId,detailId){
   phConsulateActive=id;
@@ -4088,6 +4165,7 @@ function pRenderMarketplace(){
   var lockedView=document.getElementById('cu-mkt-locked');
   var openView=document.getElementById('cu-mkt-view');
   if(!lockedView||!openView)return;
+  renderMktAddons();
   if(!pHasPaidApp()){
     lockedView.style.display='none';
     openView.style.display='block';
