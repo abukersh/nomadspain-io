@@ -666,6 +666,23 @@ var CONSULATE_GUIDES=[
     {icon:'📍',label:'Jurisdiction','text':'Apply to the consulate covering your state (e.g., Chicago, Miami, LA). State ID or Driver\'s License required.'},
     {icon:'📜',label:'Criminal Record','text':'Only FBI (Department of Justice) background checks accepted — state or local checks not valid.'},
     {icon:'🌍',label:'Non-Americans','text':'Must provide Green Card or long-term visa. B1/B2 holders cannot apply from within the US.'}
+  ]},
+  {id:'egypt',flag:'🇪🇬',name:'Egypt',color:'#C8102E',items:[
+    {icon:'🪪',label:'NIE First','text':'You must obtain your NIE number before your visa appointment. Email emb.elcairo.sc@maec.es to request it \u2014 this is mandatory before BLS submission.'},
+    {icon:'📅',label:'Booking','text':'Appointments booked via BLS International (egypt.blsspainvisa.com). Submit through the BLS office in Cairo.'},
+    {icon:'⏱️',label:'Processing Time','text':'Official resolution time is 10 working days from the day after submission. May be extended if additional documents are requested or an interview is held.'},
+    {icon:'💶',label:'Visa Fee (Egyptians)','text':'Consulate fee: $86 USD + BLS service fee: $20 USD = $106 USD total. Payable in cash only \u2014 exact amount recommended. Refusal does not result in a refund.'},
+    {icon:'💰',label:'Income Requirement','text':'Main applicant must prove 200% of Spain\u2019s monthly minimum wage (SMI). First family member: +75% SMI. Each additional family member: +25% SMI. Any means of proof accepted (contract, invoices, bank statements).'},
+    {icon:'🎓',label:'Education / Experience','text':'Graduate or postgraduate degree from a recognized university, or minimum 3 years of relevant professional experience. For regulated professions, accreditation of the necessary qualification is required.'},
+    {icon:'🏢',label:'Company Requirements','text':'Employer must have been incorporated for at least 1 year. Employee must have 3+ months tenure. Self-employed workers may serve Spanish clients up to 20% of total activity.'},
+    {icon:'📜',label:'Criminal Record','text':'Original + copy from country/countries of residence in the last 2 years, plus a sworn declaration covering the last 5 years. Must be legalized by the Egyptian Ministry of Foreign Affairs and the Spanish Embassy.'},
+    {icon:'🏥',label:'Health Insurance','text':'Public or private health insurance from an insurer authorized to operate in Spain (registered with the DGSFP). Must cover all risks insured by the Spanish public health system.'},
+    {icon:'📸',label:'Photo Specs','text':'One recent photo (max 6 months old), 3.5\u00d74.5 cm, color, white background, full face, no glasses. Professional photographic paper required.'},
+    {icon:'📄',label:'Documents','text':'Valid passport (1+ year validity, issued within last 10 years, 2+ blank pages), proof of consular district residence, company certificate with authorization for remote work, Social Security registration proof (or A1 equivalent).'},
+    {icon:'✈️',label:'Visa Validity','text':'Valid for 1 year (or shorter if residence permit is less). After arrival in Spain, apply for the Alien Identity Card (TIE) within 1 month at the Provincial Aliens Office.'},
+    {icon:'🇪🇸',label:'Applying from Within Spain','text':'Egyptian nationals cannot enter Spain visa-free, so you must apply from Cairo through BLS. Unlike EU/US/UK passport holders, there is no option to enter as a tourist and convert. You must hold the 1-year DNV visa before traveling to Spain.'},
+    {icon:'👨\u200D👩\u200D👧',label:'Family Members','text':'Spouse/domestic partner, dependent minor/adult children, and dependent ascendants can apply simultaneously. Requires legalized birth/marriage certificates from the Egyptian MFA.'},
+    {icon:'⚖️',label:'If Refused','text':'Appeal to the Madrid High Court of Justice within 2 months, or file a reinstatement appeal to the same consular post within 1 month of notification.'}
   ]}
 ];
 
@@ -685,8 +702,10 @@ function renderConsulateGuides(gridId,detailId){
   var guide=CONSULATE_GUIDES.find(function(c){return c.id===phConsulateActive;})||CONSULATE_GUIDES[0];
   detail.innerHTML='<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">'
     +'<span style="font-size:36px;">'+guide.flag+'</span>'
-    +'<div><div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:20px;font-weight:800;">'+guide.name+'</div>'
-    +'<div style="font-size:12px;color:var(--text3);">Consulate-specific requirements</div></div></div>'
+    +'<div style="flex:1;"><div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:20px;font-weight:800;">'+guide.name+'</div>'
+    +'<div style="font-size:12px;color:var(--text3);">Consulate-specific requirements</div></div>'
+    +'<button onclick="pCopyConsulateChecklist()" title="Copy checklist" style="flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:50px;border:1.5px solid var(--border);background:var(--white);font-family:\'Bricolage Grotesque\',sans-serif;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor=\'var(--brand)\';this.style.color=\'var(--brand)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--text2)\'">\u{1F4CB} Copy Checklist</button>'
+    +'</div>'
     +guide.items.map(function(item,i){
       return '<div style="display:flex;gap:14px;padding:12px 0;'+(i<guide.items.length-1?'border-bottom:1px solid var(--border);':'')+'">'
         +'<div style="font-size:20px;flex-shrink:0;margin-top:1px;">'+item.icon+'</div>'
@@ -697,6 +716,24 @@ function renderConsulateGuides(gridId,detailId){
 function selectConsulate(id,gridId,detailId){
   phConsulateActive=id;
   renderConsulateGuides(gridId,detailId);
+}
+function pCopyConsulateChecklist(){
+  var guide=CONSULATE_GUIDES.find(function(c){return c.id===phConsulateActive;});
+  if(!guide){showToast('Select a country first.');return;}
+  var text=guide.flag+' '+guide.name+' \u2014 Digital Nomad Visa Checklist\n';
+  text+='\u2500'.repeat(40)+'\n\n';
+  guide.items.forEach(function(item,i){
+    text+='\u2610 '+item.label+'\n   '+item.text+'\n\n';
+  });
+  text+='Source: NomadSpain.io \u2014 Consulate-Specific Guides';
+  navigator.clipboard.writeText(text).then(function(){
+    showToast('\u2713 Checklist copied to clipboard!');
+  }).catch(function(){
+    /* Fallback for older browsers */
+    var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;top:-999px;';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    showToast('\u2713 Checklist copied to clipboard!');
+  });
 }
 
 /* QUICK RESOURCES */
