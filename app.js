@@ -3298,6 +3298,10 @@ function pRenderProfileDocs(app){
       /* Rejection callout */
       if(status==='rejected'){
         var rej=pGetDocRejection(app.id,d.key);
+        /* Also check profile-level docRejections (set by CM doc action) */
+        if(!rej&&prof.docRejections&&prof.docRejections[d.key]){
+          rej={reason:prof.docRejections[d.key].reason};
+        }
         var rejReason=rej?rej.reason:'Document did not meet requirements. Please re-upload.';
         html+='<div class="doc-rejection-callout"><span class="doc-rejection-icon">⚠</span><div class="doc-rejection-text"><strong>Rejected:</strong> '+escHtml(rejReason)+'</div></div>';
         if(canReuploadRejected){
@@ -4779,6 +4783,18 @@ function pSaveCMSettings(){var first=(document.getElementById('cm-set-first')||{
 var cmManageAppId=null;
 var cmManageTab='kanban';
 var cmManageProfileIdx=0;
+var CM_REJECTION_REASONS=[
+  'Document is expired or outdated — please upload a current version.',
+  'Document is illegible or blurry — please upload a clearer scan.',
+  'Wrong document uploaded — this does not match the required type.',
+  'Missing apostille — document must be apostilled before submission.',
+  'Missing sworn translation — a certified Spanish translation is required.',
+  'Incomplete document — pages or sections appear to be missing.',
+  'Name mismatch — the name on this document does not match your passport.',
+  'Document not signed or notarised where required.',
+  'File format not accepted — please upload as PDF or high-resolution image.',
+  'Income proof insufficient — amounts do not meet the minimum threshold.'
+];
 
 function pCMManageApp(appId){
   cmManageAppId=appId;cmManageTab='kanban';cmManageProfileIdx=0;
@@ -4968,16 +4984,32 @@ function pCMRenderDocs(app){
       var badgeClass=s==='verified'?'verified':s==='pending'?'pending':s==='uploaded'?'uploaded':s==='rejected'?'rejected':'missing';
       var badgeLabel=s==='verified'?'Approved':s==='pending'?'Under Review':s==='uploaded'?'Uploaded':s==='rejected'?'Rejected':'Missing';
       var btns='';
+      var previewBtn=(s==='pending'||s==='uploaded'||s==='verified'||s==='rejected')
+        ?'<button class="cm-doc-btn preview" onclick="event.stopPropagation();pCMPreviewDoc(\''+app.id+'\',\''+prof.id+'\',\''+d.key+'\')" title="Preview document">\uD83D\uDC41 Preview</button>':'';
       if(s==='pending'||s==='uploaded'){
-        btns='<button class="cm-doc-btn approve" onclick="pCMDocAction(\''+app.id+'\',\''+prof.id+'\',\''+d.key+'\',\'verified\')">✓ Approve</button>'
-          +'<button class="cm-doc-btn reject" onclick="pCMDocAction(\''+app.id+'\',\''+prof.id+'\',\''+d.key+'\',\'rejected\')">✗ Reject</button>';
+        btns=previewBtn
+          +'<button class="cm-doc-btn approve" onclick="pCMDocAction(\''+app.id+'\',\''+prof.id+'\',\''+d.key+'\',\'verified\')">✓ Approve</button>'
+          +'<button class="cm-doc-btn reject" onclick="pCMOpenRejectModal(\''+app.id+'\',\''+prof.id+'\',\''+d.key+'\',\''+escHtml(d.name).replace(/'/g,"\\'")+'\')">✗ Reject</button>';
       } else if(s==='rejected'){
-        btns='<button class="cm-doc-btn request" onclick="pCMDocAction(\''+app.id+'\',\''+prof.id+'\',\''+d.key+'\',\'missing\')">Request Re-upload</button>';
+        var rejObj=(prof.docRejections&&prof.docRejections[d.key])||null;
+        btns=previewBtn
+          +'<button class="cm-doc-btn request" onclick="pCMDocAction(\''+app.id+'\',\''+prof.id+'\',\''+d.key+'\',\'missing\')">Request Re-upload</button>';
       } else if(s==='verified'){
-        btns='<button class="cm-doc-btn reject" onclick="pCMDocAction(\''+app.id+'\',\''+prof.id+'\',\''+d.key+'\',\'rejected\')">Revoke</button>';
+        btns=previewBtn
+          +'<button class="cm-doc-btn reject" onclick="pCMOpenRejectModal(\''+app.id+'\',\''+prof.id+'\',\''+d.key+'\',\''+escHtml(d.name).replace(/'/g,"\\'")+'\')">Revoke</button>';
+      } else {
+        btns=previewBtn;
+      }
+      /* Show rejection reason if rejected */
+      var rejInfo='';
+      if(s==='rejected'){
+        var rejData=(prof.docRejections&&prof.docRejections[d.key])||null;
+        if(rejData){
+          rejInfo='<div style="margin-top:4px;font-size:11px;color:#dc2626;line-height:1.5;"><strong>Reason:</strong> '+escHtml(rejData.reason)+'</div>';
+        }
       }
       html+='<div class="cm-doc-row">'
-        +'<div class="cm-doc-info"><span class="cm-doc-icon">'+d.icon+'</span><div><div class="cm-doc-name">'+escHtml(d.name)+'</div><div class="cm-doc-sub">'+escHtml(d.sub)+'</div></div></div>'
+        +'<div class="cm-doc-info"><span class="cm-doc-icon">'+d.icon+'</span><div><div class="cm-doc-name">'+escHtml(d.name)+'</div><div class="cm-doc-sub">'+escHtml(d.sub)+'</div>'+rejInfo+'</div></div>'
         +'<div class="cm-doc-actions"><span class="cm-doc-badge '+badgeClass+'">'+badgeLabel+'</span>'+btns+'</div>'
         +'</div>';
     });
@@ -5074,18 +5106,95 @@ function pCMMoveStage(appId,dir){
   showToast('\u2713 Stage updated');
 }
 
-function pCMDocAction(appId,profileId,docKey,action){
+/* CM Preview — reuses IndexedDB file store */
+function pCMPreviewDoc(appId,profileId,docKey){
+  var app=pGetApps().find(function(a){return a.id===appId;});if(!app)return;
+  var prof=(app.profiles||[]).find(function(p){return p.id===profileId;});if(!prof)return;
+  var fname=(prof.docFiles&&prof.docFiles[docKey])||docKey;
+  var dbKey=pDocFileKey(appId,profileId,docKey);
+  pGetFile(dbKey,function(dataUrl){
+    if(!dataUrl&&prof.docData&&prof.docData[docKey]) dataUrl=prof.docData[docKey];
+    if(!dataUrl){showToast('File not available for preview.');return;}
+    pShowDocPreview(dataUrl,fname);
+  });
+}
+
+/* Rejection modal */
+function pCMOpenRejectModal(appId,profileId,docKey,docName){
+  var overlay=document.getElementById('cmRejectOverlay');
+  if(!overlay){
+    overlay=document.createElement('div');overlay.id='cmRejectOverlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+    document.body.appendChild(overlay);
+  }
+  var html='<div style="background:var(--white);border-radius:16px;padding:28px 30px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    +'<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:18px;font-weight:800;margin-bottom:4px;">Reject Document</div>'
+    +'<div style="font-size:13px;color:var(--text2);margin-bottom:18px;">'+escHtml(docName)+'</div>'
+    +'<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:10px;">Select a reason</div>';
+  CM_REJECTION_REASONS.forEach(function(r,i){
+    html+='<label style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background 0.15s;margin-bottom:2px;" onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'transparent\'">'
+      +'<input type="radio" name="cmRejectReason" value="'+i+'" style="margin-top:3px;accent-color:var(--brand);">'
+      +'<span style="font-size:13px;color:var(--text1);line-height:1.5;">'+escHtml(r)+'</span></label>';
+  });
+  html+='<label style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;" onmouseover="this.style.background=\'var(--bg2)\'" onmouseout="this.style.background=\'transparent\'">'
+    +'<input type="radio" name="cmRejectReason" value="custom" style="margin-top:3px;accent-color:var(--brand);">'
+    +'<span style="font-size:13px;color:var(--text1);line-height:1.5;">Other (write custom reason)</span></label>'
+    +'<textarea id="cmRejectCustom" placeholder="Enter custom rejection reason..." style="width:100%;min-height:60px;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;margin:8px 0 16px;resize:vertical;font-family:inherit;display:none;" oninput="this.style.display=\'block\'"></textarea>'
+    +'<div style="display:flex;gap:10px;justify-content:flex-end;">'
+    +'<button class="p-btn p-btn-ghost" onclick="pCMCloseRejectModal()">Cancel</button>'
+    +'<button class="p-btn p-btn-danger" onclick="pCMConfirmReject(\''+appId+'\',\''+profileId+'\',\''+docKey+'\')">Reject Document</button>'
+    +'</div></div>';
+  overlay.innerHTML=html;
+  overlay.style.display='flex';
+  /* Show/hide custom textarea based on radio selection */
+  overlay.querySelectorAll('input[name=cmRejectReason]').forEach(function(r){
+    r.addEventListener('change',function(){
+      var ta=document.getElementById('cmRejectCustom');
+      ta.style.display=this.value==='custom'?'block':'none';
+    });
+  });
+}
+function pCMCloseRejectModal(){
+  var overlay=document.getElementById('cmRejectOverlay');
+  if(overlay) overlay.style.display='none';
+}
+function pCMConfirmReject(appId,profileId,docKey){
+  var overlay=document.getElementById('cmRejectOverlay');
+  var selected=overlay?overlay.querySelector('input[name=cmRejectReason]:checked'):null;
+  if(!selected){showToast('Please select a rejection reason.');return;}
+  var reason='';
+  if(selected.value==='custom'){
+    reason=(document.getElementById('cmRejectCustom').value||'').trim();
+    if(!reason){showToast('Please enter a custom reason.');return;}
+  } else {
+    reason=CM_REJECTION_REASONS[parseInt(selected.value)]||'';
+  }
+  pCMCloseRejectModal();
+  pCMDocAction(appId,profileId,docKey,'rejected',reason);
+}
+
+function pCMDocAction(appId,profileId,docKey,action,rejectionReason){
   var apps=pGetApps();var now=new Date().toISOString();
   apps=apps.map(function(a){
     if(a.id===appId&&a.profiles){
       a.profiles=a.profiles.map(function(p){
-        if(p.id===profileId){p.docs[docKey]=action;}
+        if(p.id===profileId){
+          p.docs[docKey]=action;
+          /* Store / clear rejection reason */
+          if(!p.docRejections) p.docRejections={};
+          if(action==='rejected'&&rejectionReason){
+            p.docRejections[docKey]={reason:rejectionReason,at:now,by:pUser?pUser.id:null};
+          } else if(action!=='rejected'){
+            delete p.docRejections[docKey];
+          }
+        }
         return p;
       });
       if(!a.activityLog)a.activityLog=[];
       var actionLabel=action==='verified'?'Approved':action==='rejected'?'Rejected':action==='missing'?'Re-upload requested':'Updated';
       var prof=(a.profiles||[]).find(function(p){return p.id===profileId;});
-      a.activityLog.push({ts:now,icon:action==='verified'?'✅':action==='rejected'?'❌':'🔄',type:'doc',text:actionLabel+': '+docKey.replace(/_/g,' ')+' ('+escHtml((prof||{}).name||'')+')',detail:null});
+      var detail=action==='rejected'&&rejectionReason?rejectionReason:null;
+      a.activityLog.push({ts:now,icon:action==='verified'?'✅':action==='rejected'?'❌':'🔄',type:'doc',text:actionLabel+': '+docKey.replace(/_/g,' ')+' ('+escHtml((prof||{}).name||'')+')',detail:detail});
       a.updated=now;
     }
     return a;
@@ -5097,7 +5206,10 @@ function pCMDocAction(appId,profileId,docKey,action){
     if(action==='verified'){
       pCreateNotification(theApp.userId,'doc_approved','\u2705 Document Approved',docLabel+' has been verified by your Case Manager.',appId);
     } else if(action==='rejected'){
-      pCreateNotification(theApp.userId,'doc_rejected','\u274C Document Rejected',docLabel+' was rejected. Please review the feedback and re-upload.',appId);
+      var body=docLabel+' was rejected.';
+      if(rejectionReason) body+='\n\nReason: '+rejectionReason+'\n\nPlease re-upload a corrected version.';
+      else body+=' Please review the feedback and re-upload.';
+      pCreateNotification(theApp.userId,'doc_rejected','\u274C Document Rejected',body,appId);
     }
   }
   pSaveApps(apps);pRenderCMManage();
