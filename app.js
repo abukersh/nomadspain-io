@@ -1500,6 +1500,8 @@ var PROFILE_CHECKLISTS={
   ]
 };
 var PROFILE_TYPE_LABELS={main:'Main Applicant',spouse:'Legal Spouse',dependent_minor:'Dependent (Under 18)',dependent_adult:'Dependent (Over 18)'};
+// Keys of documents that require a sworn translation for Spanish visa
+var DOCS_NEED_TRANSLATION={criminal_record:true,diploma:true,marriage_cert:true,birth_cert:true,birth_cert_apostilled:true,employer_letter:true,no_record_declaration:true,proof_of_study:true,single_status_proof:true,company_age:true,contracts_invoices:true};
 var P_STAGES=['Onboarding','Document Prep','Under Review','Embassy Filing','Pending Decision','Approved'];
 /* Stage meta: emoji, docsRequired[], duration, desc */
 var P_STAGE_META=[
@@ -3502,248 +3504,278 @@ function pStatusToggleNotes(btn){
   if(btn)btn.textContent=open?'📝 Manager Notes':'📝 Hide Notes';
 }
 function pRenderCuDocuments(){
+  var panel=document.getElementById('cu-documents');
+  if(!panel)return;
   var app=pGetMyApp();
   if(!app){
-    setHTML('cu-profile-row','<p style="color:var(--text3);font-size:14px;">No active application.</p>');
-    setHTML('cu-profile-docs','');setHTML('cu-doc-submit-wrap','');return;
+    panel.innerHTML='<input type="file" id="cu-doc-file-input" style="display:none;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="pHandleFileUpload(this)">'
+      +'<div class="p-page-hd"><div class="p-page-title">Document Vault</div><div class="p-page-sub">Upload and manage your visa documents.</div></div>'
+      +'<div class="p-card"><p style="color:var(--text3);font-size:14px;">No active application. <button class="p-btn p-btn-primary p-btn-sm" onclick="pNav(\'cu\',\'marketplace\',null)">Browse packages →</button></p></div>';
+    return;
   }
-  // init profiles if needed
   if(!app.profiles||app.profiles.length===0){
     var apps=pGetApps();
-    apps=apps.map(function(a){if(a.id===app.id){a.profiles=pGetOrInitProfiles(a);} return a;});
+    apps=apps.map(function(a){if(a.id===app.id){a.profiles=pGetOrInitProfiles(a);}return a;});
     pSaveApps(apps);app=pGetMyApp();
   }
   var profiles=app.profiles;
   var limit=pGetProfileLimit(app);
   var atLimit=profiles.length>=limit;
-  // default active profile
-  if(!pActiveProfileId||!profiles.find(function(p){return p.id===pActiveProfileId;})){
-    pActiveProfileId=profiles[0].id;
-  }
-  // Render profile cards
   var isFamily=app.pkg==='family';
   var hasSpouse=profiles.some(function(p){return p.type==='spouse';});
-  var cardsHtml=profiles.map(function(prof){
-    var prog=pGetProfileProgress(app,prof.id);
-    var isActive=prof.id===pActiveProfileId;
-    var initials=prof.name.split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2)||'?';
-    var canDelete=prof.type!=='main'&&!app.docsSubmitted;
-    var isSubmitted=!!prof.submitted;
-    return '<div class="p-profile-card'+(isActive?' active':'')+'" onclick="pSelectProfile(\''+prof.id+'\')" id="pcard-'+prof.id+'">'
-      +(canDelete?'<button class="p-profile-del" onclick="event.stopPropagation();pRemoveProfile(\''+prof.id+'\')">✕</button>':'')
-      +'<div class="p-profile-avatar" style="'+(isSubmitted?'background:#10B981;':'')+'">'+initials+'</div>'
-      +'<div class="p-profile-name" id="pname-'+prof.id+'" ondblclick="event.stopPropagation();pStartRename(\''+prof.id+'\')">'+escHtml(prof.name)+'</div>'
-      +'<div class="p-profile-type">'+escHtml(PROFILE_TYPE_LABELS[prof.type]||prof.type)+'</div>'
-      +(isSubmitted
-        ?'<div style="font-size:11px;color:#10B981;font-weight:700;margin-top:4px;">✅ Files Submitted</div>'
-        :'<div class="p-profile-prog-bar"><div class="p-profile-prog-fill" style="width:'+prog.pct+'%"></div></div>'
-         +'<div class="p-profile-pct">'+prog.done+'/'+prog.total+' · '+prog.pct+'%</div>'
-      )
-      +'</div>';
-  }).join('');
-  // Add profile buttons — disabled when limit reached
-  if(isFamily){
-    if(!hasSpouse&&!app.docsSubmitted){
-      if(atLimit){
-        cardsHtml+='<div class="p-profile-card add-card" style="opacity:0.4;cursor:not-allowed;" title="Profile limit reached for your package"><div style="font-size:24px;">💍</div><div style="font-size:12px;font-weight:700;">Add Spouse</div><div style="font-size:10px;color:var(--text3);">Limit reached</div></div>';
-      } else {
-        cardsHtml+='<div class="p-profile-card add-card" onclick="pAddProfile(\'spouse\')"><div style="font-size:24px;">💍</div><div style="font-size:12px;font-weight:700;">Add Spouse</div></div>';
-      }
-    }
-    if(!app.docsSubmitted){
-      if(atLimit){
-        cardsHtml+='<div class="p-profile-card add-card" style="opacity:0.4;cursor:not-allowed;" title="Profile limit reached for your package"><div style="font-size:24px;">👶</div><div style="font-size:12px;font-weight:700;">Add Dependent</div><div style="font-size:10px;color:var(--text3);">Limit reached</div></div>';
-      } else {
-        cardsHtml+='<div class="p-profile-card add-card" onclick="pShowAddDependent()"><div style="font-size:24px;">👶</div><div style="font-size:12px;font-weight:700;">Add Dependent</div></div>';
-      }
-    }
-  }
-  // Package limit info banner
-  var pkgLabel=app.pkg==='solo'?'Nomad Solo (€2,500)':app.pkg==='family'?(app.deps>=1?'Family +'+(app.deps)+' (€'+(3000+(app.deps||0)*500).toLocaleString()+')':'Family +1 (€3,000)'):'Standard';
-  cardsHtml='<div style="font-size:11px;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:8px;"><span>📦 <strong>'+escHtml(pkgLabel)+'</strong> — up to <strong>'+limit+'</strong> profile'+(limit>1?'s':'')+'</span>'+(atLimit?'<span style="color:#10B981;font-weight:700;">✓ All slots filled</span>':'<span style="color:var(--text3);">('+profiles.length+'/'+limit+' used)</span>')+'</div>'+cardsHtml;
-  setHTML('cu-profile-row',cardsHtml);
-  // Render active profile docs
-  pRenderProfileDocs(app);
-  // Bottom CTA area
-  var allSubmitted=pAllProfilesSubmitted(app);
-  var globalSubmitted=app.docsSubmitted;
-  if(globalSubmitted){
-    // Post-submission UI: timestamp + CM details
-    var cm=app.cmId?pGetUsers().find(function(u){return u.id===app.cmId;}):null;
-    var cmHtml=cm
-      ?'<div style="display:flex;align-items:center;gap:16px;margin-top:18px;padding:16px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border);">'
-        +'<div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#e05c1a);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">👤</div>'
-        +'<div><div style="font-size:14px;font-weight:700;color:var(--text1);">'+escHtml(cm.first+' '+cm.last)+'</div>'
-        +'<div style="font-size:12px;color:var(--text2);margin-top:2px;">📧 '+escHtml(cm.email)+'</div>'
-        +'<div style="font-size:12px;color:var(--text3);margin-top:2px;">Your Case Manager</div>'
-        +'</div></div>'
-      :'';
-    setHTML('cu-doc-submit-wrap',
-      '<div style="padding:20px 22px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;">'
-      +'<div style="font-size:15px;font-weight:700;color:#15803d;">✅ Submission Complete</div>'
-      +'<div style="font-size:12px;color:#166534;margin-top:4px;">Submitted on '+fmtDateTime(globalSubmitted)+'</div>'
-      +'<div style="font-size:13px;color:var(--text2);margin-top:10px;">Your Case Manager is reviewing your documents and will be in touch shortly.</div>'
-      +cmHtml
-      +'</div>');
-  } else {
-    // Tally per-profile submission progress
-    var submittedCount=profiles.filter(function(p){return !!p.submitted;}).length;
-    var allReady=allSubmitted||(profiles.length===limit&&submittedCount===limit);
-    var hint='';
-    if(!allReady){
-      var remaining=[];
-      if(profiles.length<limit) remaining.push('add all '+(limit-profiles.length)+' remaining profile'+(limit-profiles.length>1?'s':''));
-      var needSubmit=profiles.filter(function(p){return !p.submitted;});
-      if(needSubmit.length>0) remaining.push('submit '+needSubmit.map(function(p){return p.name;}).join(', '));
-      hint='<p style="font-size:12px;color:var(--text3);margin-top:8px;">To unlock: '+remaining.join(' & ')+'.</p>';
-    }
-    setHTML('cu-doc-submit-wrap',
-      '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">'
-      +'<div><div style="font-size:12px;color:var(--text3);margin-bottom:4px;">Profiles submitted: <strong>'+submittedCount+'/'+limit+'</strong></div>'
-      +'<div style="height:6px;width:220px;background:var(--border);border-radius:3px;"><div style="height:6px;background:var(--brand);border-radius:3px;transition:width 0.3s;width:'+(limit>0?Math.round(submittedCount/limit*100):0)+'%;"></div></div></div>'
-      +'<button class="p-btn p-btn-primary" style="'+(allReady?'':'opacity:0.45;cursor:not-allowed;')+'" '+(allReady?'onclick="pCompleteSubmission()"':'disabled')+'>🏁 Complete Submission</button>'
-      +'</div>'+hint);
-  }
-}
-function pRenderProfileDocs(app){
-  var profiles=pGetOrInitProfiles(app);
+  if(!pActiveProfileId||!profiles.find(function(p){return p.id===pActiveProfileId;}))pActiveProfileId=profiles[0].id;
   var prof=profiles.find(function(p){return p.id===pActiveProfileId;})||profiles[0];
-  if(!prof){setHTML('cu-profile-docs','');return;}
   var prog=pGetProfileProgress(app,prof.id);
-  var checklist=PROFILE_CHECKLISTS[prof.type]||[];
-  var globalSubmitted=app.docsSubmitted;
   var profSubmitted=!!prof.submitted;
-  var locked=profSubmitted||!!globalSubmitted;
-
-  /* Count rejected docs across ALL profiles so we can show a banner */
-  var allRejected=[];
-  (app.profiles||[]).forEach(function(p){
+  var globalSubmitted=!!app.docsSubmitted;
+  /* ── Profile Tabs ── */
+  var tabsHtml='<div class="dvlt-tabs-wrap">';
+  profiles.forEach(function(p){
+    var pg=pGetProfileProgress(app,p.id);
+    var isAct=p.id===pActiveProfileId;
+    var isSub=!!p.submitted;
+    var pctCls=isSub?'done':pg.pct===100?'done':'';
+    var hasRej=false;
     var cl=PROFILE_CHECKLISTS[p.type]||[];
-    cl.forEach(function(cat){cat.docs.forEach(function(d){
-      if((p.docs[d.key]||'missing')==='rejected') allRejected.push({profId:p.id,key:d.key,name:d.name});
-    });});
+    cl.forEach(function(cat){cat.docs.forEach(function(d){if((p.docs[d.key]||'missing')==='rejected')hasRej=true;});});
+    if(hasRej)pctCls='warn';
+    var pctLbl=isSub?'✅ Submitted':hasRej?'⚠ Action needed':pg.pct+'% · '+pg.done+'/'+pg.total;
+    tabsHtml+='<button class="dvlt-tab'+(isAct?' active':'')+'" onclick="pSelectProfile(\''+p.id+'\')">'
+      +'<span class="dvlt-tab-name">'+escHtml(PROFILE_TYPE_LABELS[p.type]||p.name)+'</span>'
+      +'<span class="dvlt-tab-pct '+pctCls+'">'+pctLbl+'</span>'
+      +'</button>';
   });
-  /* Count rejected in THIS profile */
-  var profRejected=[];
-  checklist.forEach(function(cat){cat.docs.forEach(function(d){
-    if((prof.docs[d.key]||'missing')==='rejected') profRejected.push(d.key);
-  });});
-  /* Count re-uploaded (was rejected → now uploaded) — user replaced the file after rejection */
-  var profReUploaded=[];
+  if(isFamily&&!globalSubmitted){
+    if(!hasSpouse&&!atLimit)tabsHtml+='<button class="dvlt-tab-add" onclick="pAddProfile(\'spouse\')">＋ Spouse</button>';
+    if(!atLimit)tabsHtml+='<button class="dvlt-tab-add" onclick="pShowAddDependent()">＋ Child</button>';
+  }
+  tabsHtml+='</div>';
+  /* ── Completion Ring ── */
+  var checklist=PROFILE_CHECKLISTS[prof.type]||[];
+  var rejCount=0,missingCount=0,uploadedCount=0,verifiedCount=0,pendingCount=0;
   checklist.forEach(function(cat){cat.docs.forEach(function(d){
     var s=prof.docs[d.key]||'missing';
-    /* A doc is "re-uploaded" if it has a file + was previously rejected (rejection record exists) */
-    if((s==='uploaded'||s==='pending')&&prof.docRejections&&prof.docRejections[d.key]){
-      profReUploaded.push(d.key);
-    }
+    if(s==='rejected')rejCount++;
+    else if(s==='missing')missingCount++;
+    else if(s==='uploaded')uploadedCount++;
+    else if(s==='verified')verifiedCount++;
+    else if(s==='pending')pendingCount++;
   });});
-
-  var html='';
-
-  /* ── Rejection banner (shown when there are rejected docs) ── */
-  if(allRejected.length>0){
-    html+='<div style="margin-bottom:14px;padding:16px 18px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;">'
-      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
-      +'<span style="font-size:18px;">❌</span>'
-      +'<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:14px;font-weight:800;color:#991b1b;">Action Required — Documents Rejected</div>'
+  var ringPct=prog.total>0?Math.round(prog.done/prog.total*100):0;
+  var ringCls=rejCount>0?'error':ringPct===100?'':'';
+  var circumference=188.5;
+  var ringOffset=circumference-(ringPct/100)*circumference;
+  var progHtml='<div class="dvlt-prog-hd">'
+    +'<div class="dvlt-ring-wrap">'
+      +'<svg viewBox="0 0 72 72" width="72" height="72">'
+        +'<circle class="dvlt-ring-bg" cx="36" cy="36" r="30"/>'
+        +'<circle class="dvlt-ring-fg'+(ringCls?' '+ringCls:'')+'" id="dvlt-ring-fg" cx="36" cy="36" r="30" style="stroke-dashoffset:'+ringOffset+'"/>'
+      +'</svg>'
+      +'<div class="dvlt-ring-center"><div class="dvlt-ring-num">'+prog.done+'/'+prog.total+'</div><div class="dvlt-ring-label">Docs</div></div>'
+    +'</div>'
+    +'<div class="dvlt-prog-info">'
+      +'<div class="dvlt-prog-name">'+escHtml(prof.name)+(profSubmitted?' <span style="font-size:12px;color:#10B981;font-weight:700;">✅</span>':'')+'</div>'
+      +'<div class="dvlt-prog-chips">'
+        +(verifiedCount>0?'<span class="dvlt-prog-chip green">✓ '+verifiedCount+' Verified</span>':'')
+        +(uploadedCount>0?'<span class="dvlt-prog-chip blue">● '+uploadedCount+' Uploaded</span>':'')
+        +(pendingCount>0?'<span class="dvlt-prog-chip amber">⏳ '+pendingCount+' Under Review</span>':'')
+        +(rejCount>0?'<span class="dvlt-prog-chip red">✗ '+rejCount+' Rejected</span>':'')
+        +(missingCount>0?'<span class="dvlt-prog-chip grey">○ '+missingCount+' Missing</span>':'')
       +'</div>'
-      +'<p style="font-size:13px;color:#7f1d1d;line-height:1.6;margin:0 0 10px;">Your case manager has rejected '+(allRejected.length)+' document'+(allRejected.length>1?'s':'')+'. Please re-upload the corrected version'+(allRejected.length>1?'s':'')+' and resubmit your application.</p>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
-      +allRejected.map(function(r){return '<span style="font-size:11px;font-weight:700;background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:50px;">✗ '+escHtml(r.name)+'</span>';}).join('')
-      +'</div></div>';
-  }
-
-  html+='<div class="p-vault-progress">'
-    +'<div style="flex-shrink:0;font-size:13px;font-weight:700;">'+escHtml(prof.name)+'</div>'
-    +(profSubmitted&&!profRejected.length
-      ?'<div style="flex:1;font-size:12px;color:#10B981;font-weight:700;">✅ Files submitted on '+fmtDateTime(prof.submitted)+'</div>'
-      :'<div class="p-vault-prog-bar"><div class="p-vault-prog-fill" style="width:'+prog.pct+'%"></div></div>'
-       +'<div style="flex-shrink:0;font-size:13px;font-weight:700;color:var(--brand);">'+prog.pct+'%</div>'
-       +'<div style="flex-shrink:0;font-size:12px;color:var(--text3);">'+prog.done+'/'+prog.total+' docs</div>'
-    )
-    +'</div>';
-  html+='<div class="p-card">';
+    +'</div>'
+    +'<div class="dvlt-filter-row">'
+      +'<button class="dvlt-fpill active" onclick="pVaultFilter(\'all\',this)">All</button>'
+      +'<button class="dvlt-fpill" onclick="pVaultFilter(\'missing\',this)">Missing</button>'
+      +'<button class="dvlt-fpill" onclick="pVaultFilter(\'action\',this)">Action Required</button>'
+    +'</div>'
+  +'</div>';
+  /* ── Accordions ── */
+  var accordionsHtml=pRenderVaultAccordions(app,prof,globalSubmitted);
+  /* ── Submit Bar ── */
+  var submitBarHtml=pRenderVaultSubmitBar(app,prof,prog,profSubmitted,globalSubmitted);
+  panel.innerHTML='<input type="file" id="cu-doc-file-input" style="display:none;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="pHandleFileUpload(this)">'
+    +'<div class="p-page-hd"><div class="p-page-title">Document Vault</div><div class="p-page-sub">Manage your visa application documents.</div></div>'
+    +tabsHtml+progHtml+accordionsHtml+submitBarHtml;
+}
+function pRenderProfileDocs(app){
+  pRenderCuDocuments();
+}
+function pRenderVaultAccordions(app,prof,globalSubmitted){
+  var checklist=PROFILE_CHECKLISTS[prof.type]||[];
+  var locked=!!prof.submitted||!!globalSubmitted;
+  var html='';
   checklist.forEach(function(section){
-    html+='<div class="p-doc-cat">'+escHtml(section.cat)+'</div>';
+    var sDone=0,sTotal=0,sRej=0,sMiss=0;
     section.docs.forEach(function(d){
-      var status=prof.docs[d.key]||'missing';
-      var fname=(prof.docFiles&&prof.docFiles[d.key])||'';
-      /* Allow re-upload of rejected docs even when globally submitted */
-      var canReupload=(status==='rejected');
-      var clickable=(!locked&&status!=='pending'&&status!=='verified')||canReupload;
-      var badgeClass=status==='verified'?'verified':status==='uploaded'?'ok':status==='pending'?'pend':status==='rejected'?'rejected':'miss';
-      var badgeLabel=status==='verified'?'✓ Verified':status==='uploaded'?'✓ Uploaded':status==='pending'?'⏳ Under Review':status==='rejected'?'✗ Rejected':'+ Upload';
-      html+='<div class="p-doc-row'+(clickable?'':' locked')+'"'+(clickable?' onclick="pUploadDoc(\''+d.key+'\')"':'')+' style="'+(status==='uploaded'||status==='verified'?'border-left:3px solid #10B981;padding-left:13px;':status==='rejected'?'border-left:3px solid #dc2626;padding-left:13px;':'')+'">'
-        +'<div class="p-doc-row-icon">'+d.icon+'</div>'
-        +'<div class="p-doc-row-body"><div class="p-doc-row-name">'+escHtml(d.name)+'</div><div class="p-doc-row-sub">'+escHtml(d.sub)+'</div>';
-      /* Rejection callout */
-      if(status==='rejected'){
-        var rej=pGetDocRejection(app.id,d.key);
-        if(!rej&&prof.docRejections&&prof.docRejections[d.key]){
-          rej={reason:prof.docRejections[d.key].reason};
-        }
-        var rejReason=rej?rej.reason:'Document did not meet requirements. Please re-upload.';
-        html+='<div class="doc-rejection-callout"><span class="doc-rejection-icon">⚠</span><div class="doc-rejection-text"><strong>Rejected:</strong> '+escHtml(rejReason)+'</div></div>';
-        html+='<div class="doc-reupload-notice"><button class="p-btn p-btn-primary p-btn-sm" onclick="event.stopPropagation();pUploadDoc(\''+d.key+'\')">📤 Re-upload Document</button>'
-          +'<span>Upload a corrected version.</span></div>';
-      }
-      /* Translation toggle */
-      var translation=pGetDocTranslation(app.id,d.key);
-      if(translation){
-        html+='<div class="doc-translation-row"><span class="doc-translation-badge">📜 Sworn Translation: '+escHtml(translation.fileName)+'</span></div>';
-      } else if(status==='uploaded'||status==='pending'||status==='verified'){
-        html+='<div class="doc-translation-row"><span class="doc-translation-upload" onclick="event.stopPropagation();pUploadTranslation(\''+d.key+'\')">+ Upload Sworn Translation</span></div>';
-      }
-      html+='</div>'
-        +'<div class="p-doc-row-status">'
-        +'<span class="p-doc-badge '+badgeClass+'">'+badgeLabel+'</span>'
-        +(fname?'<span class="p-doc-fname">'+escHtml(fname)+'</span>':'');
-      /* Preview + Remove buttons */
-      if(status==='uploaded'||status==='pending'){
-        html+='<div class="p-doc-actions">'
-          +'<button class="p-btn p-btn-ghost p-btn-xs" onclick="event.stopPropagation();pPreviewDoc(\''+d.key+'\')" title="Preview file">\uD83D\uDC41 Preview</button>';
-        if(status==='uploaded'&&!globalSubmitted){
-          html+='<button class="p-btn p-btn-ghost p-btn-xs p-btn-danger" onclick="event.stopPropagation();pCancelDoc(\''+d.key+'\')" title="Remove file">\u2715 Remove</button>';
-        }
-        html+='</div>';
-      }
-      if(status==='verified'){
-        html+='<div class="p-doc-actions">'
-          +'<button class="p-btn p-btn-ghost p-btn-xs" onclick="event.stopPropagation();pPreviewDoc(\''+d.key+'\')" title="Preview file">\uD83D\uDC41 Preview</button>'
-          +'</div>';
-      }
-      html+='</div>'
-        +'</div>';
+      sTotal++;
+      var s=prof.docs[d.key]||'missing';
+      if(s==='verified'||s==='uploaded'||s==='pending')sDone++;
+      if(s==='rejected')sRej++;
+      if(s==='missing')sMiss++;
     });
+    var allDone=sDone===sTotal&&sTotal>0;
+    var open=!allDone||sRej>0;
+    var countCls=sRej>0?'has-action':allDone?'all-done':sDone>0?'in-progress':'empty';
+    var countLbl=sRej>0?sRej+' rejected':allDone?sDone+'/'+sTotal+' ✓':sDone+'/'+sTotal;
+    html+='<div class="dvlt-acc">'
+      +'<div class="dvlt-acc-hd" onclick="pToggleAcc(this)">'
+        +'<div class="dvlt-acc-hd-left">'
+          +'<span class="dvlt-acc-chevron">'+(open?'▾':'▸')+'</span>'
+          +'<span class="dvlt-acc-cat">'+escHtml(section.cat)+'</span>'
+          +'<span class="dvlt-acc-count '+countCls+'">'+escHtml(countLbl)+'</span>'
+        +'</div>'
+      +'</div>'
+      +'<div class="dvlt-acc-body"'+(open?'':' style="display:none;"')+'>'
+        +(sTotal===0
+          ?'<div class="dvlt-empty"><div class="dvlt-empty-icon">📂</div><div class="dvlt-empty-lbl">No documents in this category</div></div>'
+          :section.docs.map(function(d){return pRenderVaultRow(app,prof,d,locked,globalSubmitted);}).join('')
+        )
+      +'</div>'
+    +'</div>';
   });
-  html+='</div>';
-
-  /* ── Footer action area ── */
-  if(profRejected.length>0){
-    /* Some docs still rejected — tell user which ones remain */
-    html+='<div style="margin-top:14px;padding:14px 16px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;font-size:13px;color:#991b1b;">'
-      +'<strong>'+profRejected.length+' document'+(profRejected.length>1?'s':'')+' still need'+(profRejected.length===1?'s':'')+' to be re-uploaded</strong> before you can resubmit.'
+  return html;
+}
+function pRenderVaultRow(app,prof,d,locked,globalSubmitted){
+  var status=prof.docs[d.key]||'missing';
+  var fname=(prof.docFiles&&prof.docFiles[d.key])||'';
+  var canReupload=status==='rejected';
+  var clickable=(!locked&&status!=='pending'&&status!=='verified')||canReupload;
+  var needsTrans=!!(DOCS_NEED_TRANSLATION&&DOCS_NEED_TRANSLATION[d.key]);
+  var chipText={verified:'✓ Verified',uploaded:'✓ Uploaded',pending:'⏳ Under Review',rejected:'✗ Rejected',missing:'+ Upload'}[status]||'+ Upload';
+  var html='<div class="dvlt-row status-'+status+(clickable?'':' no-click')+'" data-status="'+status+'" data-key="'+escHtml(d.key)+'"'
+    +(clickable?' onclick="pUploadDoc(\''+d.key+'\')"':'')+' style="display:flex;">'
+    +'<div class="dvlt-row-icon '+status+'">'+d.icon+'</div>'
+    +'<div class="dvlt-row-body">'
+      +'<div class="dvlt-row-title-line">'
+        +'<span class="dvlt-row-name'+(status==='missing'?' missing':'')+'">'+escHtml(d.name)+'</span>'
+        +'<span class="dvlt-req-badge">Required</span>'
+      +'</div>'
+      +'<div class="dvlt-row-sub">'+escHtml(d.sub)+'</div>'
+      +'<div class="dvlt-row-meta">'
+        +'<span class="dvlt-status-chip '+status+'">'+chipText+'</span>'
+        +(fname?'<span class="dvlt-fname">'+escHtml(fname)+'</span>':'')
       +'</div>';
-  } else if(globalSubmitted&&profReUploaded.length>0){
-    /* All previously rejected docs have been re-uploaded — show Resubmit button */
-    html+='<div style="margin-top:14px;padding:16px 18px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:12px;">'
-      +'<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:14px;font-weight:800;color:#92400e;margin-bottom:6px;">✅ Documents re-uploaded — ready to resubmit</div>'
-      +'<p style="font-size:12px;color:#78350f;margin:0 0 12px;line-height:1.6;">You\'ve replaced all rejected documents. Resubmit your application so your case manager can continue the review.</p>'
-      +'<button class="p-btn p-btn-primary" onclick="pResubmitApplication()" style="border-radius:50px;padding:10px 24px;">🔄 Resubmit Application</button>'
+  /* Rejection sticky note */
+  if(status==='rejected'){
+    var rej=pGetDocRejection(app.id,d.key);
+    if(!rej&&prof.docRejections&&prof.docRejections[d.key])rej={reason:prof.docRejections[d.key].reason};
+    var reason=rej?rej.reason:'Document did not meet requirements. Please re-upload.';
+    html+='<div class="dvlt-rej-wrap">'
+      +'<div class="dvlt-rej-hd"><span style="font-size:14px;">📌</span><span class="dvlt-rej-label">Manager Feedback</span></div>'
+      +'<div class="dvlt-rej-reason">'+escHtml(reason)+'</div>'
+      +'<div class="dvlt-rej-cta"><button class="dvlt-act-btn upload" onclick="event.stopPropagation();pUploadDoc(\''+d.key+'\')">📤 Re-upload</button></div>'
+    +'</div>';
+  }
+  /* Translation dual-slot */
+  if(needsTrans){
+    var trans=pGetDocTranslation(app.id,d.key);
+    var transFile=trans?trans.fileName:'';
+    if(status==='uploaded'||status==='pending'||status==='verified'||status==='rejected'){
+      html+='<div class="dvlt-trans-wrap">'
+        +'<div class="dvlt-trans-slots">'
+          +'<div class="dvlt-tslot has-file">'
+            +'<div class="dvlt-tslot-lbl">Original</div>'
+            +'<div class="dvlt-tslot-file">'+escHtml(fname||'—')+'</div>'
+          +'</div>'
+          +'<div class="dvlt-tslot'+(transFile?' has-file':'')+'">'
+            +'<div class="dvlt-tslot-lbl">Sworn Translation</div>'
+            +(transFile
+              ?'<div class="dvlt-tslot-file">'+escHtml(transFile)+'</div>'
+              :'<div class="dvlt-tslot-action" onclick="event.stopPropagation();pUploadTranslation(\''+d.key+'\')">+ Attach translation</div>'
+            )
+          +'</div>'
+        +'</div>'
+        +'<div class="dvlt-trans-footer">'
+          +'<span class="dvlt-trans-hint">📜 Sworn translation required by Spanish consulate</span>'
+          +'<span class="dvlt-trans-cta" onclick="event.stopPropagation();pNav(\'cu\',\'translators\',null)">Need a translator? →</span>'
+        +'</div>'
       +'</div>';
-  } else if(!globalSubmitted){
-    if(profSubmitted){
-      html+='<div style="margin-top:14px;padding:12px 16px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;font-size:13px;color:#15803d;font-weight:600;">✅ Files for <strong>'+escHtml(prof.name)+'</strong> submitted — awaiting global completion.</div>';
     } else {
-      var canSubmit=prog.pct===100;
-      html+='<div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
-        +'<button class="p-btn p-btn-secondary" style="'+(canSubmit?'':'opacity:0.45;cursor:not-allowed;')+'" '+(canSubmit?'onclick="pSubmitProfile(\''+prof.id+'\')"':'disabled')+'>'
-        +'📤 Submit Files for '+escHtml(prof.name)+'</button>'
-        +(canSubmit?'':'<span style="font-size:12px;color:var(--text3);">Upload all '+(prog.total-prog.done)+' remaining doc'+(prog.total-prog.done===1?'':'s')+' to enable.</span>')
-        +'</div>';
+      html+='<div style="margin-top:5px;font-size:11.5px;color:var(--text3);">📜 Translation required · <span style="color:var(--brand);cursor:pointer;font-weight:700;" onclick="event.stopPropagation();pNav(\'cu\',\'translators\',null)">Find a translator →</span></div>';
     }
   }
-  setHTML('cu-profile-docs',html);
+  html+='</div>'; /* /dvlt-row-body */
+  /* Trailing actions */
+  html+='<div class="dvlt-row-actions">';
+  if(status==='uploaded'||status==='pending'){
+    html+='<button class="dvlt-act-btn" onclick="event.stopPropagation();pPreviewDoc(\''+d.key+'\')">👁</button>';
+    if(status==='uploaded'&&!globalSubmitted)html+='<button class="dvlt-act-btn danger" onclick="event.stopPropagation();pCancelDoc(\''+d.key+'\')">✕</button>';
+  }
+  if(status==='verified')html+='<button class="dvlt-act-btn" onclick="event.stopPropagation();pPreviewDoc(\''+d.key+'\')">👁</button>';
+  if(status==='missing'&&!locked)html+='<button class="dvlt-act-btn upload" onclick="event.stopPropagation();pUploadDoc(\''+d.key+'\')">Upload</button>';
+  html+='</div>'+'</div>';
+  return html;
+}
+function pRenderVaultSubmitBar(app,prof,prog,profSubmitted,globalSubmitted){
+  var reUploaded=[];
+  var cl=PROFILE_CHECKLISTS[prof.type]||[];
+  cl.forEach(function(cat){cat.docs.forEach(function(d){
+    var s=prof.docs[d.key]||'missing';
+    if((s==='uploaded'||s==='pending')&&prof.docRejections&&prof.docRejections[d.key])reUploaded.push(d.key);
+  });});
+  if(globalSubmitted){
+    if(reUploaded.length>0){
+      return '<div class="dvlt-submit-bar" style="background:linear-gradient(135deg,#92400E,#B45309);">'
+        +'<div class="dvlt-submit-info">'
+          +'<div class="dvlt-submit-title">'+reUploaded.length+' corrected doc'+(reUploaded.length>1?'s':'')+' re-uploaded</div>'
+          +'<div class="dvlt-submit-sub">Ready to resubmit for review.</div>'
+        +'</div>'
+        +'<button class="dvlt-submit-btn" onclick="pResubmitApplication()">🔄 Resubmit Application</button>'
+      +'</div>';
+    }
+    return '<div class="dvlt-submit-bar complete">'
+      +'<div class="dvlt-submit-info">'
+        +'<div class="dvlt-submit-title">✅ Submission Complete</div>'
+        +'<div class="dvlt-submit-sub">Submitted '+fmtDateTime(globalSubmitted)+'. Your Case Manager is reviewing.</div>'
+      +'</div>'
+      +'<button class="dvlt-submit-btn" onclick="pNav(\'cu\',\'support\',null)" style="background:#fff;color:#065F46;">💬 Message CM</button>'
+    +'</div>';
+  }
+  if(profSubmitted){
+    return '<div style="margin-top:14px;padding:14px 16px;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:12px;font-size:13px;color:#15803D;font-weight:600;">✅ Files for <strong>'+escHtml(prof.name)+'</strong> submitted — awaiting global completion.</div>';
+  }
+  var canSubmit=prog.pct===100;
+  var remaining=prog.total-prog.done;
+  return '<div class="dvlt-submit-bar">'
+    +'<div class="dvlt-submit-info">'
+      +'<div class="dvlt-submit-title">'+(canSubmit?'All documents uploaded — ready!':'Upload '+remaining+' more doc'+(remaining===1?'':'s')+' to enable submit')+'</div>'
+      +'<div class="dvlt-submit-sub">'+prog.done+'/'+prog.total+' documents uploaded for '+escHtml(prof.name)+'</div>'
+    +'</div>'
+    +'<button class="dvlt-submit-btn"'+(canSubmit?' onclick="pSubmitProfile(\''+prof.id+'\')"':' disabled')+'>'+
+    (canSubmit?'📤 Submit Files':'🔒 Incomplete')+'</button>'
+  +'</div>';
+}
+function pToggleAcc(headEl){
+  var body=headEl.nextElementSibling;
+  if(!body)return;
+  var open=body.style.display==='none';
+  body.style.display=open?'':'none';
+  var ch=headEl.querySelector('.dvlt-acc-chevron');
+  if(ch)ch.textContent=open?'▾':'▸';
+}
+function pVaultFilter(filter,el){
+  var rows=document.querySelectorAll('.dvlt-row');
+  rows.forEach(function(r){
+    var s=r.dataset.status;
+    var show=filter==='all'?true:filter==='missing'?(s==='missing'):filter==='action'?(s==='rejected'||s==='missing'):true;
+    r.style.display=show?'flex':'none';
+  });
+  var pills=el.closest('.dvlt-filter-row').querySelectorAll('.dvlt-fpill');
+  pills.forEach(function(p){p.classList.remove('active');});
+  el.classList.add('active');
+  if(filter!=='all'){
+    document.querySelectorAll('.dvlt-acc').forEach(function(acc){
+      var body=acc.querySelector('.dvlt-acc-body');
+      if(!body)return;
+      var vis=Array.from(body.querySelectorAll('.dvlt-row')).filter(function(r){return r.style.display!=='none';});
+      body.style.display=vis.length>0?'':'none';
+      var ch=acc.querySelector('.dvlt-acc-chevron');
+      if(ch)ch.textContent=vis.length>0?'▾':'▸';
+    });
+  } else {
+    document.querySelectorAll('.dvlt-acc-body').forEach(function(b){b.style.display='';});
+    document.querySelectorAll('.dvlt-acc-chevron').forEach(function(c){c.textContent='▾';});
+  }
 }
 var pActiveProfileId=null;
 function pGetOrInitProfiles(app){

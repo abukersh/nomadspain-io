@@ -1748,6 +1748,144 @@ body.portal-active nav{display:none!important;}
 /* ── Status Page Responsive ── */
 @media(max-width:960px){.cst-wrap{grid-template-columns:1fr;}.cst-right-col{display:grid;grid-template-columns:1fr 1fr;}}
 @media(max-width:640px){.cst-right-col{display:flex;flex-direction:column;}.cst-cm-btns{grid-template-columns:1fr;}.cst-cm-btn.primary-cm{grid-column:auto;}}
+
+/* ══════════════════════════════════════════════════════════════
+   DOCUMENT VAULT  .dvlt-*
+══════════════════════════════════════════════════════════════ */
+
+/* ── Profile Tabs (segmented control) ── */
+.dvlt-tabs-wrap{display:flex;gap:6px;padding:4px 6px;background:#F1F5F9;border-radius:14px;overflow-x:auto;margin-bottom:14px;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;}
+.dvlt-tabs-wrap::-webkit-scrollbar{height:0;}
+.dvlt-tab{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 14px;border-radius:10px;border:none;background:transparent;cursor:pointer;transition:all 0.18s;white-space:nowrap;flex-shrink:0;}
+.dvlt-tab.active{background:#fff;box-shadow:0 1px 6px rgba(0,0,0,0.10);}
+.dvlt-tab-name{font-size:13px;font-weight:700;color:var(--text1);}
+.dvlt-tab:not(.active) .dvlt-tab-name{color:var(--text2);}
+.dvlt-tab-pct{font-size:11px;color:var(--text3);}
+.dvlt-tab-pct.done{color:#10B981;font-weight:700;}
+.dvlt-tab-pct.warn{color:#EF4444;font-weight:700;}
+.dvlt-tab-add{padding:8px 14px;border-radius:10px;border:1.5px dashed #CBD5E1;background:transparent;cursor:pointer;font-size:12px;font-weight:700;color:var(--text2);transition:all 0.18s;flex-shrink:0;}
+.dvlt-tab-add:hover{border-color:var(--brand);color:var(--brand);background:#FFF5F3;}
+
+/* ── Progress Header ── */
+.dvlt-prog-hd{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;background:#fff;border-radius:14px;border:1.5px solid var(--border);margin-bottom:14px;flex-wrap:wrap;}
+.dvlt-ring-wrap{position:relative;width:72px;height:72px;flex-shrink:0;}
+.dvlt-ring-wrap svg{transform:rotate(-90deg);}
+.dvlt-ring-bg{fill:none;stroke:#E2E8F0;stroke-width:6;}
+.dvlt-ring-fg{fill:none;stroke:#10B981;stroke-width:6;stroke-linecap:round;stroke-dasharray:188.5;transition:stroke-dashoffset 0.6s ease,stroke 0.3s;}
+.dvlt-ring-fg.warn{stroke:#F59E0B;}
+.dvlt-ring-fg.error{stroke:#EF4444;}
+.dvlt-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;}
+.dvlt-ring-num{font-size:15px;font-weight:800;color:var(--text1);line-height:1.1;}
+.dvlt-ring-label{font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);font-weight:600;}
+.dvlt-prog-info{flex:1;min-width:160px;display:flex;flex-direction:column;gap:6px;}
+.dvlt-prog-name{font-size:15px;font-weight:800;color:var(--text1);}
+.dvlt-prog-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.dvlt-prog-chip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:50px;font-size:11px;font-weight:700;}
+.dvlt-prog-chip.green{background:#DCFCE7;color:#166534;}
+.dvlt-prog-chip.blue{background:#DBEAFE;color:#1E40AF;}
+.dvlt-prog-chip.amber{background:#FEF9C3;color:#92400E;}
+.dvlt-prog-chip.red{background:#FEE2E2;color:#991B1B;}
+.dvlt-prog-chip.grey{background:#F1F5F9;color:var(--text3);}
+.dvlt-filter-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto;}
+.dvlt-fpill{padding:5px 12px;border-radius:50px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:11.5px;font-weight:600;color:var(--text2);transition:all 0.18s;}
+.dvlt-fpill:hover{border-color:var(--text2);}
+.dvlt-fpill.active{background:#0F172A;border-color:#0F172A;color:#fff;}
+
+/* ── Accordion ── */
+.dvlt-acc{background:#fff;border:1.5px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+.dvlt-acc-hd{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;cursor:pointer;user-select:none;}
+.dvlt-acc-hd:hover{background:#FAFAFA;}
+.dvlt-acc-hd-left{display:flex;align-items:center;gap:8px;}
+.dvlt-acc-chevron{font-size:12px;color:var(--text3);width:14px;display:inline-block;}
+.dvlt-acc-cat{font-size:13.5px;font-weight:700;color:var(--text1);}
+.dvlt-acc-count{display:inline-flex;align-items:center;padding:2px 9px;border-radius:50px;font-size:11px;font-weight:700;}
+.dvlt-acc-count.all-done{background:#DCFCE7;color:#166534;}
+.dvlt-acc-count.has-action{background:#FEE2E2;color:#991B1B;}
+.dvlt-acc-count.in-progress{background:#DBEAFE;color:#1E40AF;}
+.dvlt-acc-count.empty{background:#F1F5F9;color:var(--text3);}
+.dvlt-acc-body{padding:0 14px 12px;border-top:1.5px solid var(--border);}
+
+/* ── Document Row ── */
+.dvlt-row{display:flex;align-items:flex-start;padding:13px 4px;border-radius:10px;border-left:3px solid transparent;margin-bottom:2px;cursor:pointer;transition:all 0.2s;}
+.dvlt-row:hover:not(.no-click){background:#F8FAFC;}
+.dvlt-row.status-verified{background:#F0FDF4;border-left-color:#10B981;}
+.dvlt-row.status-uploaded{background:#EFF6FF;border-left-color:#3B82F6;}
+.dvlt-row.status-pending{background:#FFFBEB;border-left-color:#F59E0B;}
+.dvlt-row.status-rejected{background:#FEF2F2;border:1px solid #FECACA;border-left:3px solid #EF4444;}
+.dvlt-row.status-missing{background:#FAFAFA;border-left-color:#E2E8F0;}
+.dvlt-row.no-click{cursor:default;}
+.dvlt-row-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-right:10px;}
+.dvlt-row-icon.verified{background:#DCFCE7;}
+.dvlt-row-icon.uploaded{background:#DBEAFE;}
+.dvlt-row-icon.pending{background:#FEF9C3;}
+.dvlt-row-icon.rejected{background:#FEE2E2;}
+.dvlt-row-icon.missing{background:#F1F5F9;}
+.dvlt-row-body{flex:1;min-width:0;}
+.dvlt-row-title-line{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:2px;}
+.dvlt-row-name{font-size:13.5px;font-weight:700;color:var(--text1);}
+.dvlt-row-name.missing{color:var(--text3);}
+.dvlt-req-badge{display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;background:#EFF6FF;color:#1E40AF;font-size:9.5px;font-weight:700;letter-spacing:0.03em;flex-shrink:0;}
+.dvlt-row-sub{font-size:11.5px;color:var(--text3);}
+.dvlt-row-meta{display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap;}
+.dvlt-status-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700;}
+.dvlt-status-chip.verified{background:#DCFCE7;color:#166534;}
+.dvlt-status-chip.uploaded{background:#DBEAFE;color:#1E40AF;}
+.dvlt-status-chip.pending{background:#FEF9C3;color:#92400E;}
+.dvlt-status-chip.rejected{background:#FEE2E2;color:#991B1B;}
+.dvlt-status-chip.missing{background:#F1F5F9;color:var(--text3);}
+.dvlt-fname{font-family:monospace;font-size:10.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+.dvlt-row-actions{display:flex;gap:4px;flex-shrink:0;align-items:flex-start;margin-top:2px;margin-left:6px;}
+.dvlt-act-btn{padding:4px 9px;border-radius:7px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:11.5px;font-weight:700;color:var(--text2);transition:all 0.18s;line-height:1.4;}
+.dvlt-act-btn:hover{border-color:var(--text2);}
+.dvlt-act-btn.upload{background:#0F172A;border-color:#0F172A;color:#fff;}
+.dvlt-act-btn.upload:hover{background:#1E293B;}
+.dvlt-act-btn.danger:hover{border-color:#EF4444;color:#EF4444;background:#FEF2F2;}
+
+/* ── Rejection Note (Sticky Note style) ── */
+.dvlt-rej-wrap{background:#FEF2F2;border:1.5px solid #FECACA;border-radius:8px;padding:10px 13px;margin-top:8px;}
+.dvlt-rej-hd{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.dvlt-rej-label{font-size:12px;font-weight:700;color:#991B1B;}
+.dvlt-rej-reason{font-size:12px;color:#7F1D1D;line-height:1.5;margin-bottom:8px;}
+.dvlt-rej-cta{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ── Translation Dual-Slot ── */
+.dvlt-trans-wrap{background:#F8FAFC;border:1.5px dashed #CBD5E1;border-radius:8px;padding:8px 12px;margin-top:8px;}
+.dvlt-trans-slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dvlt-tslot{border:1px solid var(--border);border-radius:7px;padding:8px 11px;background:#fff;display:flex;flex-direction:column;gap:3px;}
+.dvlt-tslot.has-file{background:#F0FDF4;border-color:#86EFAC;}
+.dvlt-tslot-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text3);font-weight:700;}
+.dvlt-tslot-file{font-size:11.5px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dvlt-tslot-action{font-size:11.5px;color:#3B82F6;font-weight:700;cursor:pointer;}
+.dvlt-tslot-action:hover{text-decoration:underline;}
+.dvlt-trans-footer{display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:4px;}
+.dvlt-trans-hint{font-size:11px;color:var(--text3);}
+.dvlt-trans-cta{font-size:11.5px;color:var(--brand);font-weight:700;cursor:pointer;}
+.dvlt-trans-cta:hover{text-decoration:underline;}
+
+/* ── Empty State ── */
+.dvlt-empty{display:flex;flex-direction:column;align-items:center;padding:24px 16px;gap:8px;}
+.dvlt-empty-icon{font-size:32px;opacity:0.3;}
+.dvlt-empty-lbl{font-size:13px;color:var(--text3);font-weight:600;}
+
+/* ── Submit Bar ── */
+.dvlt-submit-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;padding:18px 22px;background:linear-gradient(135deg,#0F172A,#1E3A5F);border-radius:14px;margin-top:18px;}
+.dvlt-submit-bar.complete{background:linear-gradient(135deg,#065F46,#10B981);}
+.dvlt-submit-info{flex:1;min-width:180px;}
+.dvlt-submit-title{font-size:15px;font-weight:800;color:#fff;}
+.dvlt-submit-sub{font-size:12px;color:rgba(255,255,255,0.6);margin-top:3px;}
+.dvlt-submit-btn{padding:12px 24px;border-radius:50px;border:none;background:#F5A623;color:#0F172A;font-size:12px;font-weight:800;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.dvlt-submit-btn:hover:not(:disabled){background:#E89A1A;transform:translateY(-1px);}
+.dvlt-submit-btn:disabled{background:rgba(255,255,255,0.2);color:rgba(255,255,255,0.5);cursor:not-allowed;}
+
+/* ── Document Vault Responsive ── */
+@media(max-width:640px){
+  .dvlt-trans-slots{grid-template-columns:1fr;}
+  .dvlt-prog-hd{flex-direction:column;}
+  .dvlt-filter-row{margin-left:0;width:100%;}
+  .dvlt-tabs-wrap{padding:4px;}
+  .dvlt-submit-bar{flex-direction:column;align-items:flex-start;}
+  .dvlt-submit-btn{width:100%;text-align:center;}
+}
 </style>
 </head>
 <body>
@@ -3436,14 +3574,7 @@ body.portal-active nav{display:none!important;}
       <div id="cu-status" class="p-panel"></div>
       <!-- Documents -->
       <div id="cu-documents" class="p-panel">
-        <div class="p-page-hd"><div class="p-page-title">Document Vault</div><div class="p-page-sub">Upload and manage documents for each applicant profile.</div></div>
         <input type="file" id="cu-doc-file-input" style="display:none;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="pHandleFileUpload(this)">
-        <!-- Profile Cards -->
-        <div class="p-profile-row" id="cu-profile-row"></div>
-        <!-- Active Profile Docs -->
-        <div id="cu-profile-docs"></div>
-        <!-- Submit All -->
-        <div id="cu-doc-submit-wrap" style="margin-top:24px;"></div>
       </div>
       <!-- Support -->
       <div id="cu-support" class="p-panel">
