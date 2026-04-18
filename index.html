@@ -839,6 +839,7 @@ body.portal-active nav{display:none!important;}
 .p-bubble.sent .p-bubble-text{background:var(--grad);color:#fff;border-bottom-right-radius:3px;}
 .p-bubble.recv .p-bubble-text{background:var(--bg2);color:var(--text);border-bottom-left-radius:3px;}
 .p-bubble-meta{font-size:10px;color:var(--text3);margin-top:3px;}
+.p-bubble-system{align-self:center;width:90%;max-width:400px;background:#fff5f5;border:1.5px solid #fca5a5;border-radius:12px;padding:14px 16px;margin:8px auto;}
 .p-bubble.sent .p-bubble-meta{text-align:right;}
 .p-msg-footer{padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;}
 .p-msg-input{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:9px 13px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;outline:none;background:var(--bg2);color:var(--text);transition:border-color 0.2s;}
@@ -3122,7 +3123,7 @@ body.portal-active nav{display:none!important;}
       <!-- Settings -->
       <div id="cu-settings" class="p-panel">
         <div class="p-page-hd"><div class="p-page-title">Settings</div><div class="p-page-sub">Manage your account details and password.</div></div>
-        <div class="p-card" style="max-width:480px;">
+        <div class="p-card" style="max-width:480px;margin-bottom:20px;">
           <div class="p-card-title" style="margin-bottom:18px;">⚙️ Account Settings</div>
           <div class="p-field"><label>First Name</label><input type="text" id="cu-set-first"></div>
           <div class="p-field"><label>Last Name</label><input type="text" id="cu-set-last"></div>
@@ -3130,6 +3131,15 @@ body.portal-active nav{display:none!important;}
           <div class="p-field"><label>Phone</label><input type="tel" id="cu-set-phone" placeholder="+44 7700 900000"></div>
           <div class="p-field"><label>New Password</label><input type="password" id="cu-set-pass" placeholder="Leave blank to keep current"></div>
           <button class="p-btn p-btn-primary" onclick="pSaveSettings()">Save Changes</button>
+        </div>
+        <div class="p-card" style="max-width:480px;">
+          <div class="p-card-title" style="margin-bottom:6px;">🔒 Privacy &amp; Data (GDPR)</div>
+          <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px;">Under GDPR (EU 2016/679), you have the right to access and export all personal data we hold on you, including your chat history, document log, and application records.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="p-btn p-btn-secondary" onclick="pGDPRExportCSV()">📄 Export as CSV</button>
+            <button class="p-btn p-btn-ghost" onclick="pGDPRExportJSON()">⬇ Export as JSON</button>
+          </div>
+          <p style="font-size:11px;color:var(--text3);margin-top:12px;">Your export will include: messages, document history, application status log, and account data. No payment card details are stored.</p>
         </div>
       </div>
     </div>
@@ -3453,15 +3463,55 @@ body.portal-active nav{display:none!important;}
       </div>
       <!-- CM Support -->
       <div id="cm-support" class="p-panel">
-        <div class="p-page-hd"><div class="p-page-title">Support</div><div class="p-page-sub">Messages from your assigned clients.</div></div>
-        <div class="p-msg-wrap" style="height:520px;">
-          <div class="p-msg-list" id="cm-msg-list"></div>
-          <div class="p-msg-main">
-            <div class="p-msg-header" id="cm-msg-header">Select a client</div>
-            <div class="p-msg-body" id="cm-msg-body"></div>
-            <div class="p-msg-footer">
-              <input class="p-msg-input" id="cm-msg-input" placeholder="Reply to client…" onkeydown="if(event.key==='Enter')pSendMsg('cm')">
-              <button class="p-btn p-btn-primary" onclick="pSendMsg('cm')">Send</button>
+        <div class="p-page-hd" style="display:flex;align-items:center;justify-content:space-between;">
+          <div><div class="p-page-title">Support</div><div class="p-page-sub">Messages from your assigned clients.</div></div>
+          <button class="p-btn p-btn-ghost" onclick="pToggleAIAssistant()" id="cm-ai-toggle-btn" style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;border:1.5px solid var(--border);border-radius:50px;padding:8px 16px;">
+            <span>✨</span> AI Assistant
+          </button>
+        </div>
+        <div style="display:flex;gap:16px;align-items:flex-start;">
+          <div class="p-msg-wrap" style="height:520px;flex:1;min-width:0;">
+            <div class="p-msg-list" id="cm-msg-list"></div>
+            <div class="p-msg-main">
+              <div class="p-msg-header" id="cm-msg-header">Select a client</div>
+              <div class="p-msg-body" id="cm-msg-body"></div>
+              <div class="p-msg-footer">
+                <input class="p-msg-input" id="cm-msg-input" placeholder="Reply to client…" onkeydown="if(event.key==='Enter')pSendMsg('cm')">
+                <button class="p-btn p-btn-primary" onclick="pSendMsg('cm')">Send</button>
+              </div>
+            </div>
+          </div>
+          <!-- AI Assistant Panel -->
+          <div id="cm-ai-panel" style="display:none;width:320px;flex-shrink:0;border:1.5px solid var(--border);border-radius:14px;background:var(--white);overflow:hidden;">
+            <div style="padding:14px 16px;background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;display:flex;align-items:center;gap:8px;">
+              <span style="font-size:18px;">✨</span>
+              <div style="flex:1;">
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;">AI Assistant</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.6);">Summarise & draft responses</div>
+              </div>
+            </div>
+            <div style="padding:12px 14px;border-bottom:1px solid var(--border);">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px;">Quick Actions</div>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <button onclick="pAISummarize()" class="p-btn p-btn-ghost" style="justify-content:flex-start;font-size:12px;padding:8px 12px;text-align:left;">📋 Summarise conversation</button>
+                <button onclick="pAIDraft()" class="p-btn p-btn-ghost" style="justify-content:flex-start;font-size:12px;padding:8px 12px;text-align:left;">✍️ Draft a reply</button>
+                <button onclick="pAIDocStatus()" class="p-btn p-btn-ghost" style="justify-content:flex-start;font-size:12px;padding:8px 12px;text-align:left;">📂 Document status brief</button>
+              </div>
+            </div>
+            <div style="padding:12px 14px;border-bottom:1px solid var(--border);">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px;">Knowledge Base</div>
+              <div id="cm-ai-kb-list" style="font-size:12px;color:var(--text2);margin-bottom:8px;min-height:24px;"></div>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--brand);font-weight:700;cursor:pointer;">
+                <input type="file" accept=".pdf,.txt" style="display:none;" onchange="pAIUploadKB(this)"> + Upload PDF / Guide
+              </label>
+            </div>
+            <div style="padding:12px 14px;">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px;">Response</div>
+              <div id="cm-ai-output" style="min-height:80px;font-size:12px;color:var(--text2);line-height:1.65;background:var(--bg2);border-radius:8px;padding:10px 12px;max-height:200px;overflow-y:auto;">Select a quick action above to get started.</div>
+              <div style="display:flex;gap:6px;margin-top:8px;">
+                <button onclick="pAIInsertDraft()" class="p-btn p-btn-primary p-btn-sm" style="flex:1;justify-content:center;font-size:11px;">↗ Use as Reply</button>
+                <button onclick="pAICopy()" class="p-btn p-btn-ghost p-btn-sm" style="font-size:11px;">📋 Copy</button>
+              </div>
             </div>
           </div>
         </div>

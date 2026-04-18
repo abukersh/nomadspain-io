@@ -628,6 +628,7 @@ function toggleFaq(id){
 /* GUIDED SERVICES / PERMITS */
 var SERVICES_DATA=[
   {id:'consultation',cat:'core',name:'360\u00b0 Strategy Session',desc:'60-minute deep-dive with a residency specialist covering your optimal visa route, Beckham Law tax eligibility, and a personalised Plan B.',price:50,note:'/session',icon:'\uD83C\uDFAF'},
+  {id:'solo',cat:'core',featured:true,badge:'Most Popular',name:'The Nomad Solo',desc:'Full A-Z Digital Nomad Visa application management \u2014 document prep, legal representation, embassy liaison, and post-approval NIE support. Handled end-to-end until approval.',price:2500,note:'one-time',icon:'\uD83C\uDFC6'},
   {id:'nlv',cat:'core',name:'Non-Lucrative Visa (NLV)',desc:'Full NLV application for retirees and passive income earners \u2014 proof of funds structuring, compliant health insurance, and consulate submission.',price:2500,note:'one-time',icon:'\u2728'},
   {id:'concierge',cat:'core',name:'Post-Arrival Concierge',desc:'Soft landing support \u2014 bank account opening, TIE card appointment, NIE registration, rental contract review, and local setup.',price:500,note:'one-time',icon:'\uD83D\uDD50'},
   {id:'regularization2026',cat:'permit',name:'Immigration Regularization 2026',desc:'Extraordinary regularization procedure for foreign nationals already residing in Spain before December 31, 2025.',price:600,note:'one-time',icon:'\uD83D\uDCDC'},
@@ -667,6 +668,23 @@ function renderServicesPage(){
 }
 function renderSvcCards(items){
   return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;">'+items.map(function(s){
+    if(s.featured){
+      return '<div class="svc-card" onclick="goHome(\'checker-section\')" style="border:2px solid transparent;border-radius:16px;padding:22px 20px;cursor:pointer;transition:all 0.2s;background:linear-gradient(145deg,#0f172a 0%,#1e3a5f 100%);color:#fff;box-shadow:0 8px 32px rgba(15,23,42,0.28);display:flex;flex-direction:column;gap:10px;position:relative;">'
+        +(s.badge?'<div style="position:absolute;top:-1px;left:50%;transform:translateX(-50%);background:var(--brand);color:#fff;font-family:\'Bricolage Grotesque\',sans-serif;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:4px 12px;border-radius:0 0 8px 8px;">'+s.badge+'</div>':'')
+        +'<div style="display:flex;align-items:center;gap:10px;margin-top:'+(s.badge?'14px':'0')+';">'
+        +'<span style="font-size:24px;">'+s.icon+'</span>'
+        +'<div style="flex:1;font-family:\'Bricolage Grotesque\',sans-serif;font-size:14px;font-weight:800;color:#fff;">'+s.name+'</div></div>'
+        +'<p style="font-size:12px;color:rgba(255,255,255,0.75);line-height:1.6;margin:0;flex:1;">'+s.desc+'</p>'
+        +'<ul style="list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;">'
+        +'<li style="font-size:11px;color:rgba(255,255,255,0.85);display:flex;gap:6px;"><span style="color:#fff;font-weight:800;">\u2713</span>Full Application Management</li>'
+        +'<li style="font-size:11px;color:rgba(255,255,255,0.85);display:flex;gap:6px;"><span style="color:#fff;font-weight:800;">\u2713</span>White-Glove Document Prep</li>'
+        +'<li style="font-size:11px;color:rgba(255,255,255,0.85);display:flex;gap:6px;"><span style="color:#fff;font-weight:800;">\u2713</span>Direct Embassy Liaison</li>'
+        +'<li style="font-size:11px;color:rgba(255,255,255,0.85);display:flex;gap:6px;"><span style="color:#fff;font-weight:800;">\u2713</span>Approval Guarantee</li>'
+        +'</ul>'
+        +'<div style="display:flex;align-items:baseline;gap:4px;margin-top:6px;"><span style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:22px;font-weight:800;color:#fff;">\u20ac'+s.price.toLocaleString()+'</span><span style="font-size:11px;color:rgba(255,255,255,0.55);">'+s.note+'</span></div>'
+        +'<div style="font-size:12px;font-weight:700;color:var(--brand);background:rgba(255,255,255,0.95);border-radius:50px;padding:7px 14px;text-align:center;margin-top:4px;">Get Started \u2192</div>'
+        +'</div>';
+    }
     return '<div class="svc-card" onclick="goHome(\'checker-section\')" style="border:2px solid var(--border);border-radius:16px;padding:22px 20px;cursor:pointer;transition:all 0.2s;background:var(--white);display:flex;flex-direction:column;gap:10px;">'
       +'<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:24px;">'+s.icon+'</span><div style="flex:1;font-family:\'Bricolage Grotesque\',sans-serif;font-size:14px;font-weight:800;">'+s.name+'</div></div>'
       +'<p style="font-size:12px;color:var(--text2);line-height:1.6;margin:0;flex:1;">'+s.desc+'</p>'
@@ -3273,9 +3291,48 @@ function pRenderProfileDocs(app){
   var globalSubmitted=app.docsSubmitted;
   var profSubmitted=!!prof.submitted;
   var locked=profSubmitted||!!globalSubmitted;
-  var html='<div class="p-vault-progress">'
+
+  /* Count rejected docs across ALL profiles so we can show a banner */
+  var allRejected=[];
+  (app.profiles||[]).forEach(function(p){
+    var cl=PROFILE_CHECKLISTS[p.type]||[];
+    cl.forEach(function(cat){cat.docs.forEach(function(d){
+      if((p.docs[d.key]||'missing')==='rejected') allRejected.push({profId:p.id,key:d.key,name:d.name});
+    });});
+  });
+  /* Count rejected in THIS profile */
+  var profRejected=[];
+  checklist.forEach(function(cat){cat.docs.forEach(function(d){
+    if((prof.docs[d.key]||'missing')==='rejected') profRejected.push(d.key);
+  });});
+  /* Count re-uploaded (was rejected → now uploaded) — user replaced the file after rejection */
+  var profReUploaded=[];
+  checklist.forEach(function(cat){cat.docs.forEach(function(d){
+    var s=prof.docs[d.key]||'missing';
+    /* A doc is "re-uploaded" if it has a file + was previously rejected (rejection record exists) */
+    if((s==='uploaded'||s==='pending')&&prof.docRejections&&prof.docRejections[d.key]){
+      profReUploaded.push(d.key);
+    }
+  });});
+
+  var html='';
+
+  /* ── Rejection banner (shown when there are rejected docs) ── */
+  if(allRejected.length>0){
+    html+='<div style="margin-bottom:14px;padding:16px 18px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+      +'<span style="font-size:18px;">❌</span>'
+      +'<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:14px;font-weight:800;color:#991b1b;">Action Required — Documents Rejected</div>'
+      +'</div>'
+      +'<p style="font-size:13px;color:#7f1d1d;line-height:1.6;margin:0 0 10px;">Your case manager has rejected '+(allRejected.length)+' document'+(allRejected.length>1?'s':'')+'. Please re-upload the corrected version'+(allRejected.length>1?'s':'')+' and resubmit your application.</p>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+      +allRejected.map(function(r){return '<span style="font-size:11px;font-weight:700;background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:50px;">✗ '+escHtml(r.name)+'</span>';}).join('')
+      +'</div></div>';
+  }
+
+  html+='<div class="p-vault-progress">'
     +'<div style="flex-shrink:0;font-size:13px;font-weight:700;">'+escHtml(prof.name)+'</div>'
-    +(profSubmitted
+    +(profSubmitted&&!profRejected.length
       ?'<div style="flex:1;font-size:12px;color:#10B981;font-weight:700;">✅ Files submitted on '+fmtDateTime(prof.submitted)+'</div>'
       :'<div class="p-vault-prog-bar"><div class="p-vault-prog-fill" style="width:'+prog.pct+'%"></div></div>'
        +'<div style="flex-shrink:0;font-size:13px;font-weight:700;color:var(--brand);">'+prog.pct+'%</div>'
@@ -3288,8 +3345,9 @@ function pRenderProfileDocs(app){
     section.docs.forEach(function(d){
       var status=prof.docs[d.key]||'missing';
       var fname=(prof.docFiles&&prof.docFiles[d.key])||'';
-      var canReuploadRejected=(status==='rejected'&&!globalSubmitted);
-      var clickable=(!locked&&status!=='pending'&&status!=='verified')||canReuploadRejected;
+      /* Allow re-upload of rejected docs even when globally submitted */
+      var canReupload=(status==='rejected');
+      var clickable=(!locked&&status!=='pending'&&status!=='verified')||canReupload;
       var badgeClass=status==='verified'?'verified':status==='uploaded'?'ok':status==='pending'?'pend':status==='rejected'?'rejected':'miss';
       var badgeLabel=status==='verified'?'✓ Verified':status==='uploaded'?'✓ Uploaded':status==='pending'?'⏳ Under Review':status==='rejected'?'✗ Rejected':'+ Upload';
       html+='<div class="p-doc-row'+(clickable?'':' locked')+'"'+(clickable?' onclick="pUploadDoc(\''+d.key+'\')"':'')+' style="'+(status==='uploaded'||status==='verified'?'border-left:3px solid #10B981;padding-left:13px;':status==='rejected'?'border-left:3px solid #dc2626;padding-left:13px;':'')+'">'
@@ -3298,16 +3356,13 @@ function pRenderProfileDocs(app){
       /* Rejection callout */
       if(status==='rejected'){
         var rej=pGetDocRejection(app.id,d.key);
-        /* Also check profile-level docRejections (set by CM doc action) */
         if(!rej&&prof.docRejections&&prof.docRejections[d.key]){
           rej={reason:prof.docRejections[d.key].reason};
         }
         var rejReason=rej?rej.reason:'Document did not meet requirements. Please re-upload.';
         html+='<div class="doc-rejection-callout"><span class="doc-rejection-icon">⚠</span><div class="doc-rejection-text"><strong>Rejected:</strong> '+escHtml(rejReason)+'</div></div>';
-        if(canReuploadRejected){
-          html+='<div class="doc-reupload-notice"><button class="p-btn p-btn-primary p-btn-sm" onclick="event.stopPropagation();pUploadDoc(\''+d.key+'\')">📤 Re-upload Document</button>'
-            +'<span>Upload a corrected version to resubmit for review.</span></div>';
-        }
+        html+='<div class="doc-reupload-notice"><button class="p-btn p-btn-primary p-btn-sm" onclick="event.stopPropagation();pUploadDoc(\''+d.key+'\')">📤 Re-upload Document</button>'
+          +'<span>Upload a corrected version.</span></div>';
       }
       /* Translation toggle */
       var translation=pGetDocTranslation(app.id,d.key);
@@ -3320,19 +3375,18 @@ function pRenderProfileDocs(app){
         +'<div class="p-doc-row-status">'
         +'<span class="p-doc-badge '+badgeClass+'">'+badgeLabel+'</span>'
         +(fname?'<span class="p-doc-fname">'+escHtml(fname)+'</span>':'');
-      /* Preview + Cancel buttons for uploaded/pending files (not when globally submitted) */
-      if((status==='uploaded'||status==='pending')&&!globalSubmitted){
+      /* Preview + Remove buttons */
+      if(status==='uploaded'||status==='pending'){
         html+='<div class="p-doc-actions">'
-          +'<button class="p-btn p-btn-ghost p-btn-xs" onclick="event.stopPropagation();pPreviewDoc(\''+d.key+'\')" title="Preview file">\u{1F441} Preview</button>';
-        if(status==='uploaded'){
+          +'<button class="p-btn p-btn-ghost p-btn-xs" onclick="event.stopPropagation();pPreviewDoc(\''+d.key+'\')" title="Preview file">\uD83D\uDC41 Preview</button>';
+        if(status==='uploaded'&&!globalSubmitted){
           html+='<button class="p-btn p-btn-ghost p-btn-xs p-btn-danger" onclick="event.stopPropagation();pCancelDoc(\''+d.key+'\')" title="Remove file">\u2715 Remove</button>';
         }
         html+='</div>';
       }
-      /* Preview only for verified docs */
       if(status==='verified'){
         html+='<div class="p-doc-actions">'
-          +'<button class="p-btn p-btn-ghost p-btn-xs" onclick="event.stopPropagation();pPreviewDoc(\''+d.key+'\')" title="Preview file">\u{1F441} Preview</button>'
+          +'<button class="p-btn p-btn-ghost p-btn-xs" onclick="event.stopPropagation();pPreviewDoc(\''+d.key+'\')" title="Preview file">\uD83D\uDC41 Preview</button>'
           +'</div>';
       }
       html+='</div>'
@@ -3340,16 +3394,28 @@ function pRenderProfileDocs(app){
     });
   });
   html+='</div>';
-  // Per-profile Submit Files button
-  if(!globalSubmitted){
+
+  /* ── Footer action area ── */
+  if(profRejected.length>0){
+    /* Some docs still rejected — tell user which ones remain */
+    html+='<div style="margin-top:14px;padding:14px 16px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;font-size:13px;color:#991b1b;">'
+      +'<strong>'+profRejected.length+' document'+(profRejected.length>1?'s':'')+' still need'+(profRejected.length===1?'s':'')+' to be re-uploaded</strong> before you can resubmit.'
+      +'</div>';
+  } else if(globalSubmitted&&profReUploaded.length>0){
+    /* All previously rejected docs have been re-uploaded — show Resubmit button */
+    html+='<div style="margin-top:14px;padding:16px 18px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:12px;">'
+      +'<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:14px;font-weight:800;color:#92400e;margin-bottom:6px;">✅ Documents re-uploaded — ready to resubmit</div>'
+      +'<p style="font-size:12px;color:#78350f;margin:0 0 12px;line-height:1.6;">You\'ve replaced all rejected documents. Resubmit your application so your case manager can continue the review.</p>'
+      +'<button class="p-btn p-btn-primary" onclick="pResubmitApplication()" style="border-radius:50px;padding:10px 24px;">🔄 Resubmit Application</button>'
+      +'</div>';
+  } else if(!globalSubmitted){
     if(profSubmitted){
       html+='<div style="margin-top:14px;padding:12px 16px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;font-size:13px;color:#15803d;font-weight:600;">✅ Files for <strong>'+escHtml(prof.name)+'</strong> submitted — awaiting global completion.</div>';
     } else {
       var canSubmit=prog.pct===100;
       html+='<div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
         +'<button class="p-btn p-btn-secondary" style="'+(canSubmit?'':'opacity:0.45;cursor:not-allowed;')+'" '+(canSubmit?'onclick="pSubmitProfile(\''+prof.id+'\')"':'disabled')+'>'
-        +'📤 Submit Files for '+escHtml(prof.name)
-        +'</button>'
+        +'📤 Submit Files for '+escHtml(prof.name)+'</button>'
         +(canSubmit?'':'<span style="font-size:12px;color:var(--text3);">Upload all '+(prog.total-prog.done)+' remaining doc'+(prog.total-prog.done===1?'':'s')+' to enable.</span>')
         +'</div>';
     }
@@ -3608,6 +3674,51 @@ function pCompleteSubmission(){
   });
   pSaveApps(apps);pRenderCuDocuments();showToast('🏁 Submission complete! Your Case Manager will be in touch.');
 }
+/* Resubmit after fixing rejected documents */
+function pResubmitApplication(){
+  var app=pGetMyApp();if(!app){return;}
+  var ts=new Date().toISOString();
+  var apps=pGetApps();
+  apps=apps.map(function(a){
+    if(a.id===app.id){
+      /* Clear global submission lock so CM can re-review */
+      a.docsSubmitted=ts;
+      a.resubmittedAt=ts;
+      a.updated=ts;
+      /* Move any re-uploaded docs (uploaded status with rejection record) to pending */
+      if(a.profiles){
+        a.profiles=a.profiles.map(function(p){
+          var cl=PROFILE_CHECKLISTS[p.type]||[];
+          cl.forEach(function(cat){cat.docs.forEach(function(d){
+            if(p.docs[d.key]==='uploaded'&&p.docRejections&&p.docRejections[d.key]){
+              p.docs[d.key]='pending';
+              /* Clear the rejection record now that it's been resubmitted */
+              delete p.docRejections[d.key];
+            }
+          });});
+          return p;
+        });
+      }
+      /* Log activity */
+      if(!a.activityLog)a.activityLog=[];
+      a.activityLog.push({ts:ts,icon:'\uD83D\uDD04',type:'action',text:'Application resubmitted by client after document corrections',detail:null});
+    }
+    return a;
+  });
+  pSaveApps(apps);
+  /* Notify CM */
+  var theApp=apps.find(function(a){return a.id===app.id;});
+  if(theApp&&theApp.cmId){
+    pCreateNotification(theApp.cmId,'doc_resubmitted','\uD83D\uDD04 Application Resubmitted','Client has corrected and resubmitted their documents for review.',theApp.id);
+  }
+  /* Also notify all admins */
+  pGetUsers().filter(function(u){return u.role==='admin';}).forEach(function(u){
+    pCreateNotification(u.id,'doc_resubmitted','\uD83D\uDD04 Application Resubmitted','Client resubmitted application '+app.id+' after document corrections.',app.id);
+  });
+  pRenderCuDocuments();
+  showToast('\uD83D\uDD04 Application resubmitted — your case manager has been notified.');
+}
+
 /* Upload sworn translation for a document */
 var pPendingTranslationKey=null;
 function pUploadTranslation(docKey){
@@ -3808,9 +3919,31 @@ function pRenderThread(prefix){
   var bodyEl=document.getElementById(prefix+'-msg-body');if(!bodyEl)return;
   if(!pActiveThread){bodyEl.innerHTML='<p style="color:var(--text3);font-size:13px;text-align:center;margin-top:40px;">Select a conversation</p>';return;}
   var msgs=pGetMsgs().filter(function(m){
-    return (m.fromId===pUser.id&&m.toId===pActiveThread)||(m.fromId===pActiveThread&&m.toId===pUser.id);
+    /* Regular messages in thread */
+    if((m.fromId===pUser.id&&m.toId===pActiveThread)||(m.fromId===pActiveThread&&m.toId===pUser.id)) return true;
+    /* System messages addressed to either party in this thread */
+    if(m.type==='system'&&(m.toId===pUser.id||m.toId===pActiveThread)) return true;
+    return false;
   }).sort(function(a,b){return new Date(a.ts)-new Date(b.ts);});
   bodyEl.innerHTML=msgs.length?msgs.map(function(m){
+    /* ── System message bubble (doc rejection) ── */
+    if(m.type==='system'&&m.subtype==='doc_rejected'){
+      var meta=m.meta||{};
+      var isCustomer=pUser&&pUser.role==='customer';
+      return '<div class="p-bubble-system" id="pmsg-'+m.id+'">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        +'<span style="font-size:16px;">❌</span>'
+        +'<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:13px;font-weight:800;color:#991b1b;">Document Rejected</div>'
+        +'</div>'
+        +'<div style="font-size:13px;font-weight:700;color:#1a1916;margin-bottom:4px;">'+escHtml(meta.docName||'Document')+'</div>'
+        +'<div style="font-size:12px;color:#7f1d1d;background:#fef2f2;border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.6;">'
+        +'<strong>Reason:</strong> '+escHtml(meta.reason||'Did not meet requirements.')+'</div>'
+        +(isCustomer
+          ?'<button class="p-btn p-btn-primary p-btn-sm" onclick="pNav(\'customer\',\'documents\',null)" style="font-size:12px;">📤 Re-upload Document</button>'
+          :'<span style="font-size:11px;color:var(--text3);">Client has been notified.</span>')
+        +'<div style="font-size:10px;color:var(--text3);margin-top:8px;">'+fmtDateTime(m.ts)+' · System</div>'
+        +'</div>';
+    }
     var sent=m.fromId===pUser.id;
     var attachHtml='';
     if(m.attachment){
@@ -4779,6 +4912,231 @@ function pRenderCMSupport(){
 function pLoadCMSettings(){var el=document.getElementById('cm-set-first');if(el)el.value=pUser.first;el=document.getElementById('cm-set-last');if(el)el.value=pUser.last;el=document.getElementById('cm-set-email');if(el)el.value=pUser.email;}
 function pSaveCMSettings(){var first=(document.getElementById('cm-set-first')||{}).value||pUser.first;var last=(document.getElementById('cm-set-last')||{}).value||pUser.last;var pass=(document.getElementById('cm-set-pass')||{}).value||'';var users=pGetUsers();users=users.map(function(u){if(u.id===pUser.id){u.first=first;u.last=last;if(pass&&pass.length>=8)u.pass=pass;return u;}return u;});pSaveUsers(users);pUser=users.find(function(u){return u.id===pUser.id;});localStorage.setItem('ns_portal_session',JSON.stringify(pUser));setText('cm-name',pUser.first+' '+pUser.last);showToast('\u2713 Settings saved');}
 
+/* ══════════════════════════════════════
+   AI ASSISTANT (CM Support Chat)
+══════════════════════════════════════ */
+var pAIKnowledgeBase=JSON.parse(localStorage.getItem('ns_ai_kb')||'[]');
+function pToggleAIAssistant(){
+  var panel=document.getElementById('cm-ai-panel');
+  var btn=document.getElementById('cm-ai-toggle-btn');
+  if(!panel)return;
+  var visible=panel.style.display!=='none';
+  panel.style.display=visible?'none':'block';
+  if(btn){btn.style.borderColor=visible?'var(--border)':'var(--brand)';btn.style.color=visible?'':'var(--brand)';}
+  if(!visible) pAIRenderKB();
+}
+function pAIRenderKB(){
+  var el=document.getElementById('cm-ai-kb-list');if(!el)return;
+  if(!pAIKnowledgeBase.length){el.innerHTML='<span style="color:var(--text3);font-style:italic;">No documents uploaded yet.</span>';return;}
+  el.innerHTML=pAIKnowledgeBase.map(function(kb,i){
+    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+      +'<span style="font-size:14px;">📄</span>'
+      +'<span style="flex:1;font-size:11px;color:var(--text1);font-weight:600;">'+escHtml(kb.name)+'</span>'
+      +'<button onclick="pAIRemoveKB('+i+')" style="border:none;background:none;color:var(--text3);cursor:pointer;font-size:11px;" title="Remove">✕</button>'
+      +'</div>';
+  }).join('');
+}
+function pAIUploadKB(input){
+  if(!input.files||!input.files[0])return;
+  var file=input.files[0];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    pAIKnowledgeBase.push({name:file.name,content:e.target.result.substring(0,8000),uploadedAt:new Date().toISOString()});
+    localStorage.setItem('ns_ai_kb',JSON.stringify(pAIKnowledgeBase));
+    pAIRenderKB();
+    showToast('\u2713 '+file.name+' added to knowledge base');
+  };
+  reader.readAsText(file);
+  input.value='';
+}
+function pAIRemoveKB(i){
+  pAIKnowledgeBase.splice(i,1);
+  localStorage.setItem('ns_ai_kb',JSON.stringify(pAIKnowledgeBase));
+  pAIRenderKB();
+}
+function pAIGetThreadMsgs(){
+  if(!pActiveThread||!pUser) return [];
+  return pGetMsgs().filter(function(m){
+    return (m.fromId===pUser.id&&m.toId===pActiveThread)||(m.fromId===pActiveThread&&m.toId===pUser.id);
+  }).sort(function(a,b){return new Date(a.ts)-new Date(b.ts);});
+}
+function pAIGetClientName(){
+  var u=pGetUsers().find(function(u){return u.id===pActiveThread;});
+  return u?(u.first+' '+u.last):'the client';
+}
+function pAISetOutput(html,isLoading){
+  var el=document.getElementById('cm-ai-output');if(!el)return;
+  if(isLoading){el.innerHTML='<div style="display:flex;align-items:center;gap:8px;color:var(--text3);"><span class="p-spinner" style="width:14px;height:14px;border-width:2px;"></span>Thinking…</div>';return;}
+  el.innerHTML=html;
+}
+function pAISummarize(){
+  if(!pActiveThread){showToast('Open a conversation first.');return;}
+  pAISetOutput('',true);
+  setTimeout(function(){
+    var msgs=pAIGetThreadMsgs().filter(function(m){return m.body&&m.type!=='system';});
+    if(!msgs.length){pAISetOutput('<em>No messages to summarise yet.</em>');return;}
+    var clientName=pAIGetClientName();
+    var clientMsgs=msgs.filter(function(m){return m.fromId===pActiveThread;});
+    var cmMsgs=msgs.filter(function(m){return m.fromId===pUser.id;});
+    var lastClient=clientMsgs.length?clientMsgs[clientMsgs.length-1].body:'(none)';
+    /* Find document-related keywords */
+    var allText=msgs.map(function(m){return m.body||'';}).join(' ').toLowerCase();
+    var topics=[];
+    if(allText.includes('passport'))topics.push('passport');
+    if(allText.includes('income')||allText.includes('bank'))topics.push('income proof');
+    if(allText.includes('criminal'))topics.push('criminal record');
+    if(allText.includes('insurance'))topics.push('health insurance');
+    if(allText.includes('apostill'))topics.push('apostille');
+    if(allText.includes('translat'))topics.push('translation');
+    var appData='';
+    var app=pGetApps().find(function(a){return a.userId===pActiveThread;});
+    if(app){appData='Package: '+escHtml(P_PKG_NAMES[app.pkg]||app.pkg)+'. Stage: '+escHtml(P_STAGES[app.stage]||''+app.stage)+'.';}
+    var summary='<strong>Conversation Summary — '+escHtml(clientName)+'</strong><br><br>'
+      +(appData?'<span style="color:var(--brand);">'+appData+'</span><br><br>':'')
+      +'<strong>Volume:</strong> '+msgs.length+' messages ('+clientMsgs.length+' from client, '+cmMsgs.length+' from you).<br><br>'
+      +(topics.length?'<strong>Topics discussed:</strong> '+topics.join(', ')+'.<br><br>':'')
+      +'<strong>Last client message:</strong> "'+escHtml(lastClient.substring(0,120))+(lastClient.length>120?'…':'')+'"';
+    pAISetOutput(summary);
+  },600);
+}
+function pAIDraft(){
+  if(!pActiveThread){showToast('Open a conversation first.');return;}
+  pAISetOutput('',true);
+  setTimeout(function(){
+    var msgs=pAIGetThreadMsgs().filter(function(m){return m.body&&m.type!=='system';});
+    var clientName=pAIGetClientName().split(' ')[0];
+    var lastClientMsg=msgs.filter(function(m){return m.fromId===pActiveThread&&m.body;}).pop();
+    var body=lastClientMsg?lastClientMsg.body.toLowerCase():'';
+    var draft='';
+    if(!lastClientMsg){
+      draft='Hi '+escHtml(clientName)+',\n\nJust checking in on your application. Please let me know if you have any questions or need guidance on your documents.\n\nBest regards,\n'+pUser.first;
+    } else if(body.includes('reject')||body.includes('wrong')||body.includes('why')){
+      draft='Hi '+escHtml(clientName)+',\n\nThank you for your message. I understand your concern regarding the rejected document. Please re-upload the corrected version at your earliest convenience — if you need clarification on the exact requirements, I\'m happy to help.\n\nBest regards,\n'+pUser.first;
+    } else if(body.includes('upload')||body.includes('submit')||body.includes('sent')){
+      draft='Hi '+escHtml(clientName)+',\n\nThank you for uploading your documents. I\'ll review them shortly and update you on the status. If everything is in order, we\'ll proceed to the next stage.\n\nBest regards,\n'+pUser.first;
+    } else if(body.includes('when')||body.includes('how long')||body.includes('timeline')){
+      draft='Hi '+escHtml(clientName)+',\n\nTimeline depends on the consulate workload, but typically once all documents are verified, we submit within 1–2 weeks. Consulate processing then takes 4–10 weeks. I\'ll keep you updated at every step.\n\nBest regards,\n'+pUser.first;
+    } else if(body.includes('apostill')||body.includes('translat')){
+      draft='Hi '+escHtml(clientName)+',\n\nFor the apostille, you\'ll need to obtain it from the competent authority in your country (usually a government office or notary). For the sworn translation, please use a certified translator — our Knowledge Hub has a list of recommended providers.\n\nBest regards,\n'+pUser.first;
+    } else {
+      draft='Hi '+escHtml(clientName)+',\n\nThank you for getting in touch. I\'ve reviewed your message and will follow up shortly with the information you need.\n\nBest regards,\n'+pUser.first;
+    }
+    pAISetOutput('<div style="white-space:pre-line;font-size:12px;">'+escHtml(draft)+'</div>');
+    document.getElementById('cm-ai-panel')._draft=draft;
+  },600);
+}
+function pAIDocStatus(){
+  if(!pActiveThread){showToast('Open a conversation first.');return;}
+  pAISetOutput('',true);
+  setTimeout(function(){
+    var app=pGetApps().find(function(a){return a.userId===pActiveThread;});
+    if(!app){pAISetOutput('<em>No application found for this client.</em>');return;}
+    var profiles=app.profiles||[];
+    var lines=['<strong>Document Status Brief</strong><br>'];
+    lines.push('<span style="color:var(--brand);">'+escHtml(P_PKG_NAMES[app.pkg]||app.pkg)+' — Stage: '+escHtml(P_STAGES[app.stage]||''+app.stage)+'</span><br>');
+    profiles.forEach(function(prof){
+      var cl=PROFILE_CHECKLISTS[prof.type]||[];
+      var v=0,p=0,r=0,m=0;
+      cl.forEach(function(cat){cat.docs.forEach(function(d){
+        var s=prof.docs[d.key]||'missing';
+        if(s==='verified')v++;else if(s==='pending'||s==='uploaded')p++;else if(s==='rejected')r++;else m++;
+      });});
+      lines.push('<br><strong>'+escHtml(prof.name)+'</strong>: ✅ '+v+' approved · ⏳ '+p+' pending · ❌ '+r+' rejected · ⬜ '+m+' missing');
+    });
+    if(app.docsSubmitted) lines.push('<br><br>✅ Submitted on '+fmtDate(app.docsSubmitted));
+    else lines.push('<br><br>⚠️ Not yet fully submitted.');
+    pAISetOutput(lines.join(''));
+  },400);
+}
+function pAIInsertDraft(){
+  var panel=document.getElementById('cm-ai-panel');
+  var draft=panel?panel._draft:'';
+  var output=document.getElementById('cm-ai-output');
+  if(!draft&&output) draft=output.innerText;
+  if(!draft){showToast('No draft to insert.');return;}
+  var inp=document.getElementById('cm-msg-input');
+  if(inp){inp.value=draft;inp.focus();}
+}
+function pAICopy(){
+  var output=document.getElementById('cm-ai-output');
+  if(!output||!output.innerText){showToast('Nothing to copy.');return;}
+  navigator.clipboard.writeText(output.innerText).then(function(){showToast('\u2713 Copied to clipboard');}).catch(function(){showToast('Copy failed');});
+}
+
+/* ══════════════════════════════════════
+   SYSTEM MESSAGES (Rejection bubbles)
+══════════════════════════════════════ */
+function pInjectRejectionSystemMsg(appId,clientUserId,docName,reason){
+  if(!clientUserId)return;
+  var msgs=pGetMsgs();
+  msgs.push({
+    id:'sys_rej_'+Date.now(),
+    fromId:'__system__',
+    toId:clientUserId,
+    appId:appId,
+    type:'system',
+    subtype:'doc_rejected',
+    docKey:docName,
+    body:null,
+    ts:new Date().toISOString(),
+    read:false,
+    reactions:{},
+    meta:{docName:docName,reason:reason}
+  });
+  pSaveMsgs(msgs);
+}
+
+/* ══════════════════════════════════════
+   GDPR DATA EXPORT
+══════════════════════════════════════ */
+function pGDPRBuildData(){
+  var app=pGetMyApp();
+  var msgs=pGetMsgs().filter(function(m){return m.fromId===pUser.id||m.toId===pUser.id;});
+  var notifs=JSON.parse(localStorage.getItem('ns_notifications')||'[]').filter(function(n){return n.userId===pUser.id;});
+  return {user:pUser,app:app||null,messages:msgs,notifications:notifs,exportedAt:new Date().toISOString()};
+}
+function pGDPRExportCSV(){
+  var data=pGDPRBuildData();
+  var rows=[['Type','Date','From','To','Content','Status']];
+  /* Messages */
+  data.messages.forEach(function(m){
+    var fromName=m.fromId==='__system__'?'System':(m.fromId===pUser.id?pUser.first+' '+pUser.last:'Case Manager');
+    var toName=m.toId===pUser.id?pUser.first+' '+pUser.last:'Case Manager';
+    rows.push(['Message',m.ts,fromName,toName,(m.body||m.meta&&m.meta.reason||'').replace(/"/g,"'"),'']);
+  });
+  /* Document history */
+  if(data.app&&data.app.profiles){
+    data.app.profiles.forEach(function(prof){
+      Object.keys(prof.docs||{}).forEach(function(key){
+        rows.push(['Document Status',data.app.updated||'',prof.name,'',key.replace(/_/g,' '),prof.docs[key]]);
+      });
+    });
+  }
+  /* Activity log */
+  if(data.app&&data.app.activityLog){
+    data.app.activityLog.forEach(function(entry){
+      rows.push(['Activity',entry.ts,'System','',entry.text,'']);
+    });
+  }
+  var csv=rows.map(function(r){return r.map(function(c){return '"'+(c||'')+'"';}).join(',');}).join('\n');
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='NomadSpain_DataExport_'+pUser.first+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('\u2713 CSV export downloaded');
+}
+function pGDPRExportJSON(){
+  var data=pGDPRBuildData();
+  /* Remove sensitive pass field */
+  var safe=JSON.parse(JSON.stringify(data));
+  if(safe.user)delete safe.user.pass;
+  var blob=new Blob([JSON.stringify(safe,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='NomadSpain_DataExport_'+pUser.first+'_'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('\u2713 JSON export downloaded');
+}
+
 /* ══ CM MANAGE APP — KANBAN VIEW ══ */
 var cmManageAppId=null;
 var cmManageTab='kanban';
@@ -5199,7 +5557,7 @@ function pCMDocAction(appId,profileId,docKey,action,rejectionReason){
     }
     return a;
   });
-  /* Notify user about doc action */
+  /* Notify user about doc action + inject system chat message on rejection */
   var theApp=apps.find(function(a){return a.id===appId;});
   if(theApp){
     var docLabel=docKey.replace(/_/g,' ');
@@ -5210,6 +5568,8 @@ function pCMDocAction(appId,profileId,docKey,action,rejectionReason){
       if(rejectionReason) body+='\n\nReason: '+rejectionReason+'\n\nPlease re-upload a corrected version.';
       else body+=' Please review the feedback and re-upload.';
       pCreateNotification(theApp.userId,'doc_rejected','\u274C Document Rejected',body,appId);
+      /* Inject system message bubble into chat thread */
+      pInjectRejectionSystemMsg(appId,theApp.userId,docLabel,rejectionReason||'Document did not meet requirements.');
     }
   }
   pSaveApps(apps);pRenderCMManage();
