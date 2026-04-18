@@ -6634,18 +6634,18 @@ function stijCheckApostille(){
   }
   var isMember=!!APOSTILLE_MEMBERS[country.toLowerCase()];
   res.style.display='block';
-  if(isMember){
+  if(!isMember){
     res.innerHTML=
       '<div style="background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:12px;padding:20px 22px;">'
         +'<div style="font-size:16px;font-weight:800;font-family:\'Bricolage Grotesque\',sans-serif;color:#92400E;margin-bottom:10px;">⚠️ Yes — Apostille Required</div>'
         +'<p style="font-size:13.5px;color:#78350F;line-height:1.65;margin-bottom:10px;">'
-          +'<strong>'+country+'</strong> is a signatory of the Hague Apostille Convention (1961). This means your official documents (criminal record, birth certificate, civil status documents, etc.) must carry a <strong>Hague Apostille stamp</strong> from your country\'s designated authority before Spanish authorities will accept them.'
+          +'<strong>'+country+'</strong> is not a party to the Hague Apostille Convention (1961). This means your official documents (criminal record, birth certificate, civil status documents, etc.) will require <strong>additional authentication or apostille</strong> before Spanish authorities will accept them.'
         +'</p>'
         +'<div style="display:flex;align-items:center;gap:8px;background:rgba(245,158,11,0.12);border-radius:8px;padding:10px 14px;margin-bottom:14px;">'
           +'<span style="font-size:18px;">⏱️</span>'
-          +'<span style="font-size:13px;color:#92400E;font-weight:600;">This typically adds <strong>1–2 working weeks</strong> to your timeline, depending on your country\'s apostille office wait times.</span>'
+          +'<span style="font-size:13px;color:#92400E;font-weight:600;">This typically adds <strong>1–2 working weeks</strong> to your timeline, depending on processing times.</span>'
         +'</div>'
-        +'<div style="font-size:13.5px;color:#78350F;margin-bottom:14px;">Feeling overwhelmed managing apostilles, sworn translations, and Spanish paperwork all at once? <strong>That\'s exactly what we\'re here for.</strong> We coordinate the entire process so you don\'t have to chase government offices in two countries.</div>'
+        +'<div style="font-size:13.5px;color:#78350F;margin-bottom:14px;">Feeling overwhelmed managing document authentication, sworn translations, and Spanish paperwork all at once? <strong>That\'s exactly what we\'re here for.</strong> We coordinate the entire process so you don\'t have to chase government offices in two countries.</div>'
         +'<button onclick="pNav(\'customer\',\'marketplace\',null)" style="padding:10px 24px;background:linear-gradient(135deg,#E8422A,#F5A623);color:#fff;border:none;border-radius:50px;font-family:\'Bricolage Grotesque\',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(232,66,42,0.28);">Contact Us — We\'ll Handle It →</button>'
       +'</div>';
   } else {
@@ -6653,11 +6653,11 @@ function stijCheckApostille(){
       '<div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:12px;padding:20px 22px;">'
         +'<div style="font-size:16px;font-weight:800;font-family:\'Bricolage Grotesque\',sans-serif;color:#166534;margin-bottom:10px;">🎉 You\'re in luck!</div>'
         +'<p style="font-size:13.5px;color:#14532D;line-height:1.65;margin-bottom:10px;">'
-          +'<strong>'+country+'</strong> is not a party to the Hague Apostille Convention, which means your documents <strong>do not require a specific apostille stamp</strong> for use in Spain — one less bureaucratic hurdle for you!'
+          +'<strong>'+country+'</strong> is a signatory of the Hague Apostille Convention (1961), which means your documents <strong>do not require a separate apostille</strong> for use in Spain — one less bureaucratic hurdle for you!'
         +'</p>'
         +'<div style="display:flex;align-items:flex-start;gap:8px;background:rgba(134,239,172,0.2);border-radius:8px;padding:10px 14px;">'
           +'<span style="font-size:16px;flex-shrink:0;">💡</span>'
-          +'<span style="font-size:12.5px;color:#166534;line-height:1.6;">Keep in mind: your documents may still need an <strong>official sworn translation</strong> (traductor jurado) into Spanish, and possibly verification through the Spanish consulate in your country. Our team can advise you on the exact requirements.</span>'
+          +'<span style="font-size:12.5px;color:#166534;line-height:1.6;">Keep in mind: your documents may still need an <strong>official sworn translation</strong> (traductor jurado) into Spanish. Our team can advise you on the exact requirements for your application.</span>'
         +'</div>'
       +'</div>';
   }
