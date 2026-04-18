@@ -8,9 +8,12 @@ function showPage(name) {
   window.scrollTo({ top: 0, behavior: 'instant' });
   var navKb = document.getElementById('nav-kb');
   if (navKb) navKb.classList.toggle('active', name === 'knowledge');
+  var navTr = document.getElementById('nav-translators');
+  if (navTr) navTr.classList.toggle('active', name === 'translators');
   closeMenu();
   if (name === 'home') setTimeout(initFadeUps, 60);
   if (name === 'services') { renderServicesPage(); }
+  if (name === 'translators') { renderTranslatorsPage(); }
   if (name === 'knowledge') { clearSearch(); resetFilter(); renderKbGrid(); renderFaqGrid(); phConsulateActive=null; renderConsulateGuides('kb-consulate-grid','kb-consulate-detail'); }
   if (name === 'portal') { renderPortalBg(); }
 }
@@ -6269,6 +6272,204 @@ function exportEmails(){
     reveal.style.maskImage='none';reveal.style.webkitMaskImage='none';
   });
 })();
+
+/* ═══════════════════════════════════════════════
+   SWORN TRANSLATORS / STIJ SEARCH PAGE
+   ═══════════════════════════════════════════════ */
+
+var STIJ_DATA=[
+  // ── ENGLISH ──────────────────────────────────
+  {nombre:'Sarah',apellidos:'Thompson García',dir:'C/ Gran Vía 12, 3ºD',tel:'+34 91 234 5678',email:'sarah.thompson@traducciones.es',prov:'MADRID',pais:'REINO UNIDO',lang:'INGLÉS',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'James',apellidos:'Whitfield Alonso',dir:'C/ Serrano 45, 2ºA',tel:'+34 91 876 5432',email:'j.whitfield@legal-trans.es',prov:'MADRID',pais:'REINO UNIDO',lang:'INGLÉS',tipo:'Traductor/a Jurado/a',active:true},
+  {nombre:'Ana',apellidos:'Rodríguez Pérez',dir:'C/ Velázquez 23, 5ºB',tel:'+34 91 555 7890',email:'arodriguez@interpretes.com',prov:'MADRID',pais:'ESPAÑA',lang:'INGLÉS',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'Patricia',apellidos:'Hughes Sánchez',dir:'C/ San Jerónimo 34, 4º',tel:'+34 91 789 4567',email:'phughes@legaleng.es',prov:'MADRID',pais:'REINO UNIDO',lang:'INGLÉS',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'Michael',apellidos:"O'Brien Castillo",dir:'C/ Recogidas 45, 1º',tel:'+34 95 827 8901',email:'mobrien@tradgranada.es',prov:'GRANADA',pais:'IRLANDA',lang:'INGLÉS',tipo:'Traductor/a Jurado/a',active:true},
+  {nombre:'David',apellidos:'Wilson Navarro',dir:'Av. Andalucía 45, 2º',tel:'+34 95 234 6789',email:'dwilson@tradmalaga.es',prov:'MÁLAGA',pais:'REINO UNIDO',lang:'INGLÉS',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'Carmen',apellidos:'Vega Morales',dir:'C/ Sierpes 56, 2º',tel:'+34 95 421 3456',email:'cvega@tradandalucia.es',prov:'SEVILLA',pais:'ESPAÑA',lang:'INGLÉS',tipo:'Traductor/a Jurado/a',active:true},
+  {nombre:'Richard',apellidos:'Brown Nadal',dir:'Av. del Puerto 89, 4º',tel:'+34 96 356 7890',email:'rbrown@tradingles.es',prov:'VALENCIA',pais:'ESTADOS UNIDOS',lang:'INGLÉS',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'Amaia',apellidos:'Etxeberria Azpiri',dir:'Gran Vía 28, 5º',tel:'+34 94 423 5678',email:'aetxeberria@tradeus.es',prov:'VIZCAYA',pais:'ESPAÑA',lang:'INGLÉS',tipo:'Traductor/a Jurado/a',active:true},
+  {nombre:'Carles',apellidos:'Puig Valls',dir:'C/ Colón 30, 1º',tel:'+34 96 312 4567',email:'cpuig@tradvalencia.es',prov:'VALENCIA',pais:'ESPAÑA',lang:'INGLÉS',tipo:'Traductor/a Jurado/a',active:true},
+  // ── GERMAN ───────────────────────────────────
+  {nombre:'Klaus',apellidos:'Weber Schulz',dir:'Pg. de Gràcia 87, 4º',tel:'+34 93 412 5678',email:'k.weber@alemantrad.es',prov:'BARCELONA',pais:'ALEMANIA',lang:'ALEMÁN',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'Ingrid',apellidos:'Hoffmann Torres',dir:'C/ Balmes 134, 1º',tel:'+34 93 567 8901',email:'ihoffmann@trad-jur.es',prov:'BARCELONA',pais:'ALEMANIA',lang:'ALEMÁN',tipo:'Traductor/a Jurado/a',active:true},
+  {nombre:'Petra',apellidos:'Bauer Fernández',dir:'C/ José Abascal 78, 3º',tel:'+34 91 890 5678',email:'pbauer@aleman.es',prov:'MADRID',pais:'ALEMANIA',lang:'ALEMÁN',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'Hans',apellidos:'Müller Schneider',dir:'Av. Diagonal 156, 2º',tel:'+34 93 215 6784',email:'hmuller@trans.de',prov:'BARCELONA',pais:'ALEMANIA',lang:'ALEMÁN',tipo:'Traductor/a Jurado/a',active:true},
+  // ── FRENCH ───────────────────────────────────
+  {nombre:'Sophie',apellidos:'Dupont Martínez',dir:'C/ Alcalá 89, 6º',tel:'+34 91 234 9876',email:'sophie.dupont@frances.es',prov:'MADRID',pais:'FRANCIA',lang:'FRANCÉS',tipo:'Traductor/a Jurado/a',active:true},
+  {nombre:'Jean-Pierre',apellidos:'Lefebvre López',dir:'C/ Larios 15, 2º',tel:'+34 95 212 3456',email:'jp.lefebvre@trad.fr',prov:'MÁLAGA',pais:'FRANCIA',lang:'FRANCÉS',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'Marta',apellidos:'Isern Bosch',dir:'Pg. Bonanova 45, 3º',tel:'+34 93 234 5678',email:'misern@trad-bcn.es',prov:'BARCELONA',pais:'ESPAÑA',lang:'FRANCÉS',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  // ── ARABIC ───────────────────────────────────
+  {nombre:'Ahmed',apellidos:'Al-Hassan Ruiz',dir:'C/ Recoletos 8, 3º',tel:'+34 91 678 9012',email:'a.alhassan@arabtrans.es',prov:'MADRID',pais:'EGIPTO',lang:'ÁRABE',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'Fatima',apellidos:'Benali Pérez',dir:'C/ Fuencarral 102, 4º',tel:'+34 91 789 0123',email:'fbenali@tradmarruec.es',prov:'MADRID',pais:'MARRUECOS',lang:'ÁRABE',tipo:'Traductor/a Jurado/a',active:true},
+  // ── CHINESE ──────────────────────────────────
+  {nombre:'Li',apellidos:'Wang García',dir:'C/ Rambla 76, 2º',tel:'+34 93 333 4567',email:'li.wang@chinatrad.es',prov:'BARCELONA',pais:'CHINA',lang:'CHINO',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'Wei',apellidos:'Zhang López',dir:'C/ Conde de Peñalver 12, 5º',tel:'+34 91 456 1234',email:'wzhang@chinaes.com',prov:'MADRID',pais:'CHINA',lang:'CHINO',tipo:'Traductor/a Jurado/a',active:true},
+  // ── RUSSIAN ──────────────────────────────────
+  {nombre:'Irina',apellidos:'Sokolova Fernández',dir:'C/ Príncipe de Vergara 45, 7º',tel:'+34 91 456 7890',email:'isokolova@rustra.es',prov:'MADRID',pais:'RUSIA',lang:'RUSO',tipo:'Traductor/a Jurado/a',active:true},
+  {nombre:'Dmitri',apellidos:'Volkov Sánchez',dir:'C/ San Bernardo 67, 3º',tel:'+34 91 567 8912',email:'dvolkov@tradrus.es',prov:'MADRID',pais:'RUSIA',lang:'RUSO',tipo:'Traductor/a-Intérprete Jurado/a',active:false},
+  // ── ITALIAN ──────────────────────────────────
+  {nombre:'Marco',apellidos:'Rossi González',dir:"C/ O'Donnell 23, 3ºB",tel:'+34 91 567 8901',email:'m.rossi@tradital.es',prov:'MADRID',pais:'ITALIA',lang:'ITALIANO',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  {nombre:'Giulia',apellidos:'Ferrari Romero',dir:'C/ Casanova 89, 4º',tel:'+34 93 456 7890',email:'gferrari@italianotrad.es',prov:'BARCELONA',pais:'ITALIA',lang:'ITALIANO',tipo:'Traductor/a Jurado/a',active:true},
+  // ── PORTUGUESE ───────────────────────────────
+  {nombre:'João',apellidos:'Silva Castro',dir:'Av. Marqués de Pombal 5, 1º',tel:'+34 91 789 1234',email:'jsilva@trad-pt.es',prov:'MADRID',pais:'PORTUGAL',lang:'PORTUGUÉS',tipo:'Traductor/a Jurado/a',active:true},
+  {nombre:'Ana',apellidos:'Costa Ferreira',dir:'C/ Rosellón 234, 2º',tel:'+34 93 345 6789',email:'acosta@tradport.es',prov:'BARCELONA',pais:'PORTUGAL',lang:'PORTUGUÉS',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  // ── JAPANESE ─────────────────────────────────
+  {nombre:'Yuko',apellidos:'Tanaka Morales',dir:'C/ Velázquez 90, 5º',tel:'+34 91 890 2345',email:'ytanaka@japontrad.es',prov:'MADRID',pais:'JAPON',lang:'JAPONÉS',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  // ── POLISH ───────────────────────────────────
+  {nombre:'Karolina',apellidos:'Wiśniewska López',dir:'C/ Alberto Aguilera 34, 2º',tel:'+34 91 234 6789',email:'k.wisniewska@tradpolaca.es',prov:'MADRID',pais:'POLONIA',lang:'POLACO',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  // ── ROMANIAN ─────────────────────────────────
+  {nombre:'Elena',apellidos:'Ionescu Popa',dir:'C/ Cea Bermúdez 67, 3º',tel:'+34 91 345 7890',email:'eionescu@tradrom.es',prov:'MADRID',pais:'RUMANIA',lang:'RUMANO',tipo:'Traductor/a Jurado/a',active:true},
+  // ── DUTCH ────────────────────────────────────
+  {nombre:'Pieter',apellidos:'van Dijk Gómez',dir:'C/ Mallorca 245, 4º',tel:'+34 93 478 9012',email:'pvandijk@tradholandes.es',prov:'BARCELONA',pais:'PAISES BAJOS',lang:'NEERLANDÉS',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  // ── SWEDISH ──────────────────────────────────
+  {nombre:'Anna',apellidos:'Lindqvist Fernández',dir:'Av. Diagonal 456, 1º',tel:'+34 93 567 0123',email:'alindqvist@suecia.es',prov:'BARCELONA',pais:'SUECIA',lang:'SUECO',tipo:'Traductor/a Jurado/a',active:false},
+  // ── TURKISH ──────────────────────────────────
+  {nombre:'Mehmet',apellidos:'Yilmaz García',dir:'C/ José Ortega y Gasset 89, 2º',tel:'+34 91 567 2345',email:'myilmaz@tradturco.es',prov:'MADRID',pais:'TURQUIA',lang:'TURCO',tipo:'Traductor/a-Intérprete Jurado/a',active:true},
+  // ── GREEK ────────────────────────────────────
+  {nombre:'Dimitris',apellidos:'Papadopoulos Ruiz',dir:'C/ Goya 156, 5º',tel:'+34 91 678 3456',email:'dpapadopoulos@tradgriego.es',prov:'MADRID',pais:'GRECIA',lang:'GRIEGO',tipo:'Traductor/a Jurado/a',active:true},
+  // ── UKRAINIAN ────────────────────────────────
+  {nombre:'Oksana',apellidos:'Kovalenko Martínez',dir:'C/ Coruña 12, 2º',tel:'+34 98 123 4567',email:'oksana.k@traduc.es',prov:'A CORUÑA',pais:'ESPAÑA',lang:'UCRANIANO',tipo:'Traductor/a Jurado/a',active:true},
+  // ── INTERPRETER-ONLY ─────────────────────────
+  {nombre:'Roberto',apellidos:'Moreno Delgado',dir:'C/ Fuencarral 55, 6º',tel:'+34 91 345 6789',email:'rmoreno@interpretadores.es',prov:'MADRID',pais:'ESPAÑA',lang:'INGLÉS',tipo:'Intérprete Jurado/a',active:true},
+  {nombre:'Claire',apellidos:'Bernard Jiménez',dir:'Ronda General Mitre 123, 3º',tel:'+34 93 213 4567',email:'cbernard@interprete.es',prov:'BARCELONA',pais:'FRANCIA',lang:'FRANCÉS',tipo:'Intérprete Jurado/a',active:true}
+];
+
+var stijFiltered=[];
+var stijPage=1;
+var stijPerPage=10;
+
+function renderTranslatorsPage(){
+  stijFiltered=STIJ_DATA.slice();
+  stijPage=1;
+  stijRender();
+}
+
+function stijSearch(){
+  var nombre=(document.getElementById('stij-f-nombre')||{}).value||'';
+  var apellidos=(document.getElementById('stij-f-apellidos')||{}).value||'';
+  var lang=(document.getElementById('stij-f-lang')||{}).value||'';
+  var prov=(document.getElementById('stij-f-prov')||{}).value||'';
+  var pais=(document.getElementById('stij-f-pais')||{}).value||'';
+  var tipo=(document.getElementById('stij-f-tipo')||{}).value||'';
+  var activeOnly=(document.getElementById('stij-f-active')||{}).checked;
+  stijFiltered=STIJ_DATA.filter(function(r){
+    if(nombre&&r.nombre.toLowerCase().indexOf(nombre.toLowerCase())<0) return false;
+    if(apellidos&&r.apellidos.toLowerCase().indexOf(apellidos.toLowerCase())<0) return false;
+    if(lang&&r.lang!==lang) return false;
+    if(prov&&r.prov!==prov) return false;
+    if(pais&&r.pais!==pais) return false;
+    if(tipo&&r.tipo!==tipo) return false;
+    if(activeOnly&&!r.active) return false;
+    return true;
+  });
+  stijPage=1;
+  stijRender();
+}
+
+function stijClear(){
+  ['stij-f-nombre','stij-f-apellidos'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  ['stij-f-lang','stij-f-prov','stij-f-pais','stij-f-tipo'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  var cb=document.getElementById('stij-f-active'); if(cb) cb.checked=true;
+  stijFiltered=STIJ_DATA.slice();
+  stijPage=1;
+  stijRender();
+}
+
+function stijSetPerPage(v){
+  stijPerPage=parseInt(v)||10;
+  stijPage=1;
+  stijRender();
+}
+
+function stijGo(p){
+  stijPage=p;
+  stijRender();
+  var wrap=document.getElementById('translators-page');
+  if(wrap) wrap.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function stijTypeBadge(tipo){
+  if(tipo==='Traductor/a Jurado/a') return '<span class="stij-badge stij-badge-tj">TJ</span>';
+  if(tipo==='Intérprete Jurado/a') return '<span class="stij-badge stij-badge-ij">IJ</span>';
+  return '<span class="stij-badge stij-badge-tij">TIJ</span>';
+}
+
+function stijRender(){
+  var total=stijFiltered.length;
+  var totalPages=Math.max(1,Math.ceil(total/stijPerPage));
+  if(stijPage>totalPages) stijPage=totalPages;
+  var start=(stijPage-1)*stijPerPage;
+  var slice=stijFiltered.slice(start,start+stijPerPage);
+
+  // Count label
+  var countEl=document.getElementById('stij-count');
+  if(countEl) countEl.innerHTML='Showing <strong>'+(total===0?0:(start+1))+'–'+Math.min(start+stijPerPage,total)+'</strong> of <strong>'+total+'</strong> result'+(total!==1?'s':'');
+
+  // Table body
+  var tbody=document.getElementById('stij-tbody');
+  if(!tbody) return;
+  if(total===0){
+    tbody.innerHTML='<tr><td colspan="10"><div class="stij-no-results"><div class="stij-no-results-icon">🔍</div><p style="font-size:15px;font-weight:600;color:var(--text);">No results found</p><p style="font-size:13px;margin-top:6px;">Try adjusting your filters or <a href="https://www.exteriores.gob.es/es/ServiciosAlCiudadano/Paginas/Buscador-STIJ.aspx" target="_blank" style="color:var(--brand);">search on the official Ministry website</a>.</p></div></td></tr>';
+  } else {
+    tbody.innerHTML=slice.map(function(r){
+      return '<tr>'
+        +'<td style="font-weight:600;">'+r.nombre+'</td>'
+        +'<td>'+r.apellidos+'</td>'
+        +'<td style="font-size:12px;color:var(--text2);">'+r.dir+'</td>'
+        +'<td style="font-size:12.5px;white-space:nowrap;">'+r.tel+'</td>'
+        +'<td style="font-size:12px;"><a href="mailto:'+r.email+'" style="color:var(--brand);">'+r.email+'</a></td>'
+        +'<td>'+r.prov+'</td>'
+        +'<td style="font-size:12.5px;">'+r.pais+'</td>'
+        +'<td style="font-weight:600;">'+r.lang+'</td>'
+        +'<td>'+stijTypeBadge(r.tipo)+' <span style="font-size:11px;color:var(--text3);">'+r.tipo+'</span></td>'
+        +'<td>'+( r.active?'<span class="stij-badge stij-badge-active">✓ Active</span>':'<span class="stij-badge stij-badge-inactive">Inactive</span>' )+'</td>'
+        +'</tr>';
+    }).join('');
+  }
+
+  // Pagination
+  var pgEl=document.getElementById('stij-pagination');
+  if(pgEl){
+    if(totalPages<=1){ pgEl.innerHTML=''; }
+    else {
+      var html='';
+      html+='<button class="stij-pg-btn" onclick="stijGo('+(stijPage-1)+')" '+(stijPage===1?'disabled':'')+'>‹</button>';
+      for(var i=1;i<=totalPages;i++){
+        if(i===1||i===totalPages||Math.abs(i-stijPage)<=1){
+          html+='<button class="stij-pg-btn'+(i===stijPage?' active':'')+'" onclick="stijGo('+i+')">'+i+'</button>';
+        } else if(Math.abs(i-stijPage)===2){
+          html+='<span style="padding:0 4px;color:var(--text3);">…</span>';
+        }
+      }
+      html+='<button class="stij-pg-btn" onclick="stijGo('+(stijPage+1)+')" '+(stijPage===totalPages?'disabled':'')+'>›</button>';
+      pgEl.innerHTML=html;
+    }
+  }
+}
+
+/* Language switcher cosmetic labels */
+var STIJ_LANGS={
+  es:{title:'Traductores e Intérpretes Jurados',sub:'Búsqueda en el Registro Oficial de Traductores e Intérpretes Jurados del Ministerio',notice:'Estos son los únicos traductores e intérpretes oficialmente certificados por el Estado español.'},
+  en:{title:'Sworn Translators & Interpreters',sub:'Search the Official Registry of Sworn Translators and Interpreters of the Ministry of Foreign Affairs',notice:'These are the only official certified translators recognised by the Spanish State.'},
+  fr:{title:'Traducteurs et interprètes assermentés',sub:'Recherche dans le registre officiel du Ministère des Affaires Étrangères',notice:'Ce sont les seuls traducteurs officiellement certifiés par l\'État espagnol.'},
+  de:{title:'Beeidigte Übersetzer und Dolmetscher',sub:'Suche im offiziellen Register des spanischen Außenministeriums',notice:'Dies sind die einzigen offiziell zertifizierten Übersetzer des spanischen Staates.'},
+  ca:{title:'Traductors i intèrprets jurats',sub:'Cerca al Registre Oficial de Traductors i Intèrprets Jurats del Ministeri',notice:'Aquests són els únics traductors e intèrprets certificats oficialment per l\'Estat espanyol.'},
+  eu:{title:'Zin egindako itzultzaileak eta interpreteen',sub:'Ministerioaren Itzultzaile eta Interprete Juratu Ofizialen Erregistroko bilaketa',notice:'Hauek dira Espainiako Estatuak ofizialki ziurtatutako itzultzaile bakarrak.'},
+  gl:{title:'Tradutores e intérpretes xurados',sub:'Busca no Rexistro Oficial de Tradutores e Intérpretes Xurados do Ministerio',notice:'Estes son os únicos tradutores e intérpretes oficialmente certificados polo Estado español.'}
+};
+
+function stijSetLang(btn,code){
+  document.querySelectorAll('.stij-lang-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  var d=STIJ_LANGS[code]||STIJ_LANGS.es;
+  var t=document.getElementById('stij-title'); if(t) t.textContent=d.title;
+  var s=document.getElementById('stij-sub'); if(s) s.textContent=d.sub;
+  var n=document.getElementById('stij-notice-text'); if(n) n.textContent=d.notice;
+}
 
 window.addEventListener('DOMContentLoaded', function() {
   seedDefaultArticles();
