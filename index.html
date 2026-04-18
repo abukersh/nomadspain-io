@@ -1591,7 +1591,6 @@ body.portal-active nav{display:none!important;}
     <li><a onclick="showPage('services')">Services</a></li>
     <li><a onclick="goHome('process-section')">How it works</a></li>
     <li><a onclick="showPage('knowledge')" id="nav-kb">Knowledge Hub</a></li>
-    <li><a onclick="showPage('translators')" id="nav-translators">Find Translator</a></li>
     <li><a onclick="goHome('pricing-section')">Pricing</a></li>
   </ul>
   <div class="nav-cta">
@@ -1609,7 +1608,6 @@ body.portal-active nav{display:none!important;}
   <a onclick="goHome('services-section');closeMenu()">Services</a>
   <a onclick="goHome('process-section');closeMenu()">How it works</a>
   <a onclick="showPage('knowledge');closeMenu()">Knowledge Hub</a>
-  <a onclick="showPage('translators');closeMenu()">Find Translator</a>
   <a onclick="goHome('pricing-section');closeMenu()">Pricing</a>
   <a onclick="goHome('checker-section');closeMenu()">Check Eligibility</a>
   <a onclick="showPage('portal');closeMenu()" class="btn-nav-cta" style="justify-content:center;width:100%;margin-top:16px;">
@@ -2320,9 +2318,9 @@ body.portal-active nav{display:none!important;}
       </div>
     </div>
     <div class="stij-lang-switcher">
-      <button class="stij-lang-btn active" onclick="stijSetLang(this,'es')">ES</button>
+      <button class="stij-lang-btn" onclick="stijSetLang(this,'es')">ES</button>
       <button class="stij-lang-btn" onclick="stijSetLang(this,'ca')">CA</button>
-      <button class="stij-lang-btn" onclick="stijSetLang(this,'en')">EN</button>
+      <button class="stij-lang-btn active" onclick="stijSetLang(this,'en')">EN</button>
       <button class="stij-lang-btn" onclick="stijSetLang(this,'eu')">EU</button>
       <button class="stij-lang-btn" onclick="stijSetLang(this,'fr')">FR</button>
       <button class="stij-lang-btn" onclick="stijSetLang(this,'gl')">GL</button>
@@ -2332,13 +2330,13 @@ body.portal-active nav{display:none!important;}
   <!-- Page content -->
   <div class="stij-page-wrap">
 
-    <h1 class="stij-page-title" id="stij-title">Traductores e Intérpretes Jurados</h1>
-    <p class="stij-page-sub" id="stij-sub">Búsqueda en el Registro Oficial de Traductores e Intérpretes Jurados del Ministerio</p>
+    <h1 class="stij-page-title" id="stij-title">Sworn Translators &amp; Interpreters</h1>
+    <p class="stij-page-sub" id="stij-sub">Search the Official Registry of Sworn Translators and Interpreters of the Ministry of Foreign Affairs</p>
 
     <!-- Official notice -->
     <div class="stij-official-notice">
       <span class="stij-notice-icon">🏛️</span>
-      <span id="stij-notice-text">Estos son los únicos traductores e intérpretes oficialmente certificados por el Estado español. — <strong>These are the only official certified translators recognised by the Spanish State.</strong></span>
+      <span id="stij-notice-text">These are the only official certified translators recognised by the Spanish State.</span>
     </div>
 
     <!-- Info box -->
@@ -3127,6 +3125,7 @@ body.portal-active nav{display:none!important;}
       <div class="p-nav-section">Account</div>
       <div class="p-nav-item" id="cu-nav-finance" onclick="pNav('cu','finance',this)"><span class="p-nav-icon">💳</span> Finance <span class="p-nav-lock" id="cu-lock-finance">🔒</span></div>
       <div class="p-nav-item" onclick="pNav('cu','hub',this)"><span class="p-nav-icon">📚</span> Knowledge Hub</div>
+      <div class="p-nav-item" onclick="pNav('cu','translators',this)"><span class="p-nav-icon">🔤</span> Find Translator</div>
       <div class="p-nav-item" onclick="pNav('cu','settings',this)"><span class="p-nav-icon">⚙️</span> Settings</div>
       <div class="p-nav-logout"><button onclick="pLogout()">↩ Sign Out</button></div>
     </aside>
@@ -3420,6 +3419,9 @@ body.portal-active nav{display:none!important;}
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;" id="ph-consulate-grid"></div>
         <div class="p-card" style="margin-bottom:40px;" id="ph-consulate-detail"></div>
       </div>
+      <!-- Find Translator (STIJ) -->
+      <div id="cu-translators" class="p-panel"></div>
+
       <!-- Settings -->
       <div id="cu-settings" class="p-panel">
         <div class="p-page-hd"><div class="p-page-title">Settings</div><div class="p-page-sub">Manage your account details and password.</div></div>

@@ -3020,6 +3020,7 @@ function pNav(role,panel,el){
     else if(panel==='support')pRenderCuSupport();
     else if(panel==='finance')pRenderCuFinance();
     else if(panel==='hub')pRenderCuHub();
+    else if(panel==='translators')stijRenderCuPanel();
     else if(panel==='settings')pLoadCuSettings();
   }
 }
@@ -6338,6 +6339,82 @@ var stijFiltered=[];
 var stijPage=1;
 var stijPerPage=10;
 
+/* Render STIJ search inside the customer portal panel */
+function stijRenderCuPanel(){
+  var wrap=document.getElementById('cu-translators');
+  if(!wrap) return;
+  wrap.innerHTML=
+    '<div class="p-page-hd" style="margin-bottom:0;">'
+      +'<div class="p-page-title">🔤 Find a Sworn Translator</div>'
+      +'<div class="p-page-sub">Search the official Spanish Ministry register of certified sworn translators & interpreters (STIJ).</div>'
+    +'</div>'
+    // Ministry attribution bar
+    +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin:16px 0;">'
+      +'<div style="display:flex;align-items:center;gap:12px;">'
+        +'<svg width="40" height="40" viewBox="0 0 52 52" fill="none"><rect width="52" height="52" rx="4" fill="#F8F7F5"/><rect x="2" y="8" width="48" height="9" fill="#C60B1E"/><rect x="2" y="17" width="48" height="18" fill="#FFC400"/><rect x="2" y="35" width="48" height="9" fill="#C60B1E"/><polygon points="20,8 26,4 32,8" fill="#C60B1E" opacity="0.9"/><rect x="22" y="8" width="8" height="3" rx="1" fill="#C60B1E" opacity="0.8"/><path d="M14 20 L14 33 Q14 40 26 44 Q38 40 38 33 L38 20 Z" fill="none" stroke="#8B0000" stroke-width="1.5"/><rect x="9" y="20" width="3" height="14" rx="1.5" fill="#AA0010" opacity="0.7"/><rect x="40" y="20" width="3" height="14" rx="1.5" fill="#AA0010" opacity="0.7"/></svg>'
+        +'<div><div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#AA0010;">Gobierno de España</div>'
+        +'<div style="font-size:11.5px;font-weight:600;color:var(--text);">Ministerio de Asuntos Exteriores, Unión Europea y Cooperación</div></div>'
+      +'</div>'
+      +'<a href="https://www.exteriores.gob.es/es/ServiciosAlCiudadano/Paginas/Buscador-STIJ.aspx" target="_blank" rel="noopener" style="font-size:12px;color:var(--brand);text-decoration:underline;">Official website ↗</a>'
+    +'</div>'
+    // Official notice
+    +'<div style="background:#EFF6FF;border:1px solid #93C5FD;border-radius:10px;padding:11px 16px;margin-bottom:16px;font-size:13px;color:#1E40AF;font-weight:600;">🏛️ These are the only official certified translators recognised by the Spanish State.</div>'
+    // Info box
+    +'<div style="background:#FFFBEA;border:1px solid #FDE68A;border-left:4px solid #F5A623;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:12.5px;color:#78350F;line-height:1.65;">'
+      +'<strong>Credential types:</strong> <strong>Traductor/a Jurado/a</strong> — official written translation · <strong>Intérprete Jurado/a</strong> — official oral interpretation · <strong>Traductor/a-Intérprete Jurado/a</strong> — both services.'
+    +'</div>'
+    // Filter card
+    +'<div class="p-card" style="margin-bottom:18px;">'
+      +'<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:16px;">🔍 Search Filters</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:16px;">'
+        +'<div class="stij-filter-group"><label class="stij-filter-label">First Name</label><input type="text" id="stij-f-nombre" class="stij-filter-input" placeholder="e.g. María"></div>'
+        +'<div class="stij-filter-group"><label class="stij-filter-label">Last Name</label><input type="text" id="stij-f-apellidos" class="stij-filter-input" placeholder="e.g. García López"></div>'
+        +'<div class="stij-filter-group"><label class="stij-filter-label">Language / Idioma</label><select id="stij-f-lang" class="stij-filter-select"><option value="">All Languages</option>'
+          +'<option>ALEMÁN</option><option>ÁRABE</option><option>BENGALÍ</option><option>BIELORRUSO</option><option>BÚLGARO</option><option>CATALÁN</option><option>CHECO</option><option>CHINO</option><option>CROATA</option><option>DANÉS</option><option>ESLOVACO</option><option>ESLOVENO</option><option>ESTONIO</option><option>EUSKERA</option><option>FINÉS</option><option>FRANCÉS</option><option>GALLEGO</option><option>GRIEGO</option><option>HEBREO</option><option>HÚNGARO</option><option>INGLÉS</option><option>ISLANDÉS</option><option>ITALIANO</option><option>JAPONÉS</option><option>LATÍN</option><option>LETÓN</option><option>LITUANO</option><option>MACEDONIO</option><option>NEERLANDÉS</option><option>NORUEGO</option><option>PERSA</option><option>POLACO</option><option>PORTUGUÉS</option><option>RUMANO</option><option>RUSO</option><option>SERBIO</option><option>SUECO</option><option>TURCO</option><option>UCRANIANO</option><option>URDÚ</option>'
+        +'</select></div>'
+        +'<div class="stij-filter-group"><label class="stij-filter-label">Province / Provincia</label><select id="stij-f-prov" class="stij-filter-select"><option value="">All Provinces</option>'
+          +'<option>A CORUÑA</option><option>ÁLAVA</option><option>ALBACETE</option><option>ALICANTE</option><option>ALMERÍA</option><option>ASTURIAS</option><option>ÁVILA</option><option>BADAJOZ</option><option>BALEARES</option><option>BARCELONA</option><option>BURGOS</option><option>CÁCERES</option><option>CÁDIZ</option><option>CANTABRIA</option><option>CASTELLÓN</option><option>CEUTA</option><option>CIUDAD REAL</option><option>CÓRDOBA</option><option>CUENCA</option><option>GIRONA</option><option>GRANADA</option><option>GUADALAJARA</option><option>GUIPUZCOA</option><option>HUELVA</option><option>HUESCA</option><option>JAÉN</option><option>LA RIOJA</option><option>LAS PALMAS</option><option>LEÓN</option><option>LLEIDA</option><option>LUGO</option><option>MADRID</option><option>MÁLAGA</option><option>MELILLA</option><option>MURCIA</option><option>NAVARRA</option><option>OURENSE</option><option>PALENCIA</option><option>PONTEVEDRA</option><option>SALAMANCA</option><option>SEGOVIA</option><option>SEVILLA</option><option>SORIA</option><option>TARRAGONA</option><option>TENERIFE</option><option>TERUEL</option><option>TOLEDO</option><option>VALENCIA</option><option>VALLADOLID</option><option>VIZCAYA</option><option>ZAMORA</option><option>ZARAGOZA</option>'
+        +'</select></div>'
+        +'<div class="stij-filter-group"><label class="stij-filter-label">Country / País</label><select id="stij-f-pais" class="stij-filter-select"><option value="">All Countries</option>'
+          +'<option>ALEMANIA</option><option>ANDORRA</option><option>ARGENTINA</option><option>AUSTRALIA</option><option>AUSTRIA</option><option>BELGICA</option><option>BRASIL</option><option>CANADA</option><option>CHILE</option><option>CHINA</option><option>COLOMBIA</option><option>CROACIA</option><option>DINAMARCA</option><option>ECUADOR</option><option>EGIPTO</option><option>EMIRATOS ARABES UNIDOS</option><option>ESLOVAQUIA</option><option>ESPAÑA</option><option>ESTADOS UNIDOS</option><option>ESTONIA</option><option>FRANCIA</option><option>GRECIA</option><option>HUNGRIA</option><option>IRLANDA</option><option>ISRAEL</option><option>ITALIA</option><option>JAPON</option><option>LETONIA</option><option>LUXEMBURGO</option><option>MARRUECOS</option><option>MEXICO</option><option>NORUEGA</option><option>PAISES BAJOS</option><option>PERU</option><option>POLONIA</option><option>PORTUGAL</option><option>REINO UNIDO</option><option>REPUBLICA CHECA</option><option>RUMANIA</option><option>RUSIA</option><option>SINGAPUR</option><option>SUECIA</option><option>SUIZA</option><option>TURQUIA</option>'
+        +'</select></div>'
+        +'<div class="stij-filter-group"><label class="stij-filter-label">Credential Type</label><select id="stij-f-tipo" class="stij-filter-select"><option value="">All Types</option><option>Intérprete Jurado/a</option><option>Traductor/a Jurado/a</option><option>Traductor/a-Intérprete Jurado/a</option></select></div>'
+        +'<div class="stij-filter-group"><div class="stij-checkbox-row" style="padding-top:22px;"><input type="checkbox" id="stij-f-active" checked><label for="stij-f-active" style="font-size:13px;font-weight:500;cursor:pointer;">Active only</label></div></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'
+        +'<button class="stij-btn-search" onclick="stijSearch()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Search</button>'
+        +'<button class="stij-btn-clear" onclick="stijClear()">✕ Clear</button>'
+      +'</div>'
+    +'</div>'
+    // Results bar
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">'
+      +'<div class="stij-results-count" id="stij-count"></div>'
+      +'<div class="stij-per-page-wrap">Show <select class="stij-per-page-sel" id="stij-per-page" onchange="stijSetPerPage(this.value)"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select> per page</div>'
+    +'</div>'
+    // Table
+    +'<div class="stij-table-wrap">'
+      +'<table class="stij-table">'
+        +'<thead><tr>'
+          +'<th>Nombre</th><th>Apellidos</th><th>Dirección</th><th>Teléfonos</th><th>Email</th><th>Provincia</th><th>País</th><th>Idioma</th><th>Tipo</th><th>Activo</th>'
+        +'</tr></thead>'
+        +'<tbody id="stij-tbody"></tbody>'
+      +'</table>'
+    +'</div>'
+    +'<div class="stij-pagination" id="stij-pagination"></div>'
+    // CTA
+    +'<div class="stij-cta-banner">'
+      +'<div class="stij-cta-left"><div class="stij-cta-q">😅 Confused? We can handle the sworn translations for you.</div><div class="stij-cta-sub">We work with certified jurados — fully certified, fast, and stress-free.</div></div>'
+      +'<button class="stij-cta-btn" onclick="pNav(\'customer\',\'marketplace\',null)">See Our Packages →</button>'
+    +'</div>'
+    // Disclaimer
+    +'<div class="stij-disclaimer"><strong>⚠️ Disclaimer:</strong> NomadSpain.io is <strong>not affiliated with, nor does it represent</strong> the Spanish Ministry of Foreign Affairs or the certified translators listed above. Data is sourced from the Ministry\'s official public register for informational convenience. Always verify on the <a href="https://www.exteriores.gob.es/es/ServiciosAlCiudadano/Paginas/Buscador-STIJ.aspx" target="_blank" rel="noopener" style="color:var(--brand);">official Ministry website</a>.</div>';
+
+  // Populate with all results
+  stijFiltered=STIJ_DATA.slice();
+  stijPage=1;
+  stijRender();
+}
+
 function renderTranslatorsPage(){
   stijFiltered=STIJ_DATA.slice();
   stijPage=1;
@@ -6345,13 +6422,13 @@ function renderTranslatorsPage(){
 }
 
 function stijSearch(){
-  var nombre=(document.getElementById('stij-f-nombre')||{}).value||'';
-  var apellidos=(document.getElementById('stij-f-apellidos')||{}).value||'';
-  var lang=(document.getElementById('stij-f-lang')||{}).value||'';
-  var prov=(document.getElementById('stij-f-prov')||{}).value||'';
-  var pais=(document.getElementById('stij-f-pais')||{}).value||'';
-  var tipo=(document.getElementById('stij-f-tipo')||{}).value||'';
-  var activeOnly=(document.getElementById('stij-f-active')||{}).checked;
+  var nombre=(stijEl('stij-f-nombre')||{}).value||'';
+  var apellidos=(stijEl('stij-f-apellidos')||{}).value||'';
+  var lang=(stijEl('stij-f-lang')||{}).value||'';
+  var prov=(stijEl('stij-f-prov')||{}).value||'';
+  var pais=(stijEl('stij-f-pais')||{}).value||'';
+  var tipo=(stijEl('stij-f-tipo')||{}).value||'';
+  var activeOnly=(stijEl('stij-f-active')||{}).checked;
   stijFiltered=STIJ_DATA.filter(function(r){
     if(nombre&&r.nombre.toLowerCase().indexOf(nombre.toLowerCase())<0) return false;
     if(apellidos&&r.apellidos.toLowerCase().indexOf(apellidos.toLowerCase())<0) return false;
@@ -6368,12 +6445,12 @@ function stijSearch(){
 
 function stijClear(){
   ['stij-f-nombre','stij-f-apellidos'].forEach(function(id){
-    var el=document.getElementById(id); if(el) el.value='';
+    var el=stijEl(id); if(el) el.value='';
   });
   ['stij-f-lang','stij-f-prov','stij-f-pais','stij-f-tipo'].forEach(function(id){
-    var el=document.getElementById(id); if(el) el.value='';
+    var el=stijEl(id); if(el) el.value='';
   });
-  var cb=document.getElementById('stij-f-active'); if(cb) cb.checked=true;
+  var cb=stijEl('stij-f-active'); if(cb) cb.checked=true;
   stijFiltered=STIJ_DATA.slice();
   stijPage=1;
   stijRender();
@@ -6398,6 +6475,16 @@ function stijTypeBadge(tipo){
   return '<span class="stij-badge stij-badge-tij">TIJ</span>';
 }
 
+function stijEl(id){
+  /* Return the element in whichever STIJ context is currently active */
+  var cuPanel=document.getElementById('cu-translators');
+  if(cuPanel&&cuPanel.classList.contains('active')){
+    var inner=cuPanel.querySelector('[id="'+id+'"]');
+    if(inner) return inner;
+  }
+  return document.getElementById(id);
+}
+
 function stijRender(){
   var total=stijFiltered.length;
   var totalPages=Math.max(1,Math.ceil(total/stijPerPage));
@@ -6406,11 +6493,11 @@ function stijRender(){
   var slice=stijFiltered.slice(start,start+stijPerPage);
 
   // Count label
-  var countEl=document.getElementById('stij-count');
+  var countEl=stijEl('stij-count');
   if(countEl) countEl.innerHTML='Showing <strong>'+(total===0?0:(start+1))+'–'+Math.min(start+stijPerPage,total)+'</strong> of <strong>'+total+'</strong> result'+(total!==1?'s':'');
 
   // Table body
-  var tbody=document.getElementById('stij-tbody');
+  var tbody=stijEl('stij-tbody');
   if(!tbody) return;
   if(total===0){
     tbody.innerHTML='<tr><td colspan="10"><div class="stij-no-results"><div class="stij-no-results-icon">🔍</div><p style="font-size:15px;font-weight:600;color:var(--text);">No results found</p><p style="font-size:13px;margin-top:6px;">Try adjusting your filters or <a href="https://www.exteriores.gob.es/es/ServiciosAlCiudadano/Paginas/Buscador-STIJ.aspx" target="_blank" style="color:var(--brand);">search on the official Ministry website</a>.</p></div></td></tr>';
@@ -6432,7 +6519,7 @@ function stijRender(){
   }
 
   // Pagination
-  var pgEl=document.getElementById('stij-pagination');
+  var pgEl=stijEl('stij-pagination');
   if(pgEl){
     if(totalPages<=1){ pgEl.innerHTML=''; }
     else {
