@@ -1098,6 +1098,51 @@ function pGetPromos(){return JSON.parse(localStorage.getItem('ns_promos')||'[]')
 function pSavePromos(p){localStorage.setItem('ns_promos',JSON.stringify(p));}
 function pGetTemplates(){return JSON.parse(localStorage.getItem('ns_doc_tpls')||'[]');}
 function pSaveTemplates(t){localStorage.setItem('ns_doc_tpls',JSON.stringify(t));}
+/* ─── Action Log Data Layer ────────────────────────────────────────── */
+/* Schema: {id, appId, ts, role, actor, action, detail, visibility, status}
+   role:       'user' | 'cm' | 'admin' | 'system'
+   visibility: 'client' | 'internal'  (conditional — users only see 'client')
+   status:     'success' | 'pending' | 'warning' | 'info' | 'error'          */
+function pGetActionLogs(){try{return JSON.parse(localStorage.getItem('ns_action_logs')||'[]');}catch(e){return[];}}
+function pSaveActionLogs(l){try{localStorage.setItem('ns_action_logs',JSON.stringify(l));}catch(e){}}
+function pLogAction(appId,role,actor,action,detail,visibility,status){
+  var logs=pGetActionLogs();
+  logs.push({
+    id:'log_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    appId:appId,
+    ts:new Date().toISOString(),
+    role:role||'system',
+    actor:actor||'System',
+    action:action,
+    detail:detail||'',
+    visibility:visibility||'client',
+    status:status||'info'
+  });
+  pSaveActionLogs(logs);
+}
+function pSeedActionLogs(app){
+  if(!app)return;
+  var existing=pGetActionLogs().filter(function(l){return l.appId===app.id;});
+  if(existing.length>0)return;
+  var appUsers=pGetUsers();
+  var appUser=appUsers.find(function(u){return u.id===app.userId;})||{first:'Client',last:''};
+  var uName=(appUser.first+' '+appUser.last).trim();
+  var cmUser=app.cmId?appUsers.find(function(u){return u.id===app.cmId;}):appUsers.find(function(u){return u.role==='cm';});
+  var cmName=cmUser?(cmUser.name||(cmUser.first+' '+cmUser.last)).trim():'Case Manager';
+  var sd=app.stageDates||{};
+  var seed=[];
+  var base=new Date(app.created||Date.now());
+  function dOff(ms){return new Date(base.getTime()+ms).toISOString();}
+  seed.push({id:'s1',appId:app.id,ts:base.toISOString(),role:'system',actor:'System',action:'Account created & application initiated',detail:uName+' enrolled in '+P_PKG_NAMES[app.pkg||'solo'],visibility:'client',status:'success'});
+  seed.push({id:'s2',appId:app.id,ts:dOff(30*60*1000),role:'user',actor:uName,action:'Package selected',detail:P_PKG_NAMES[app.pkg||'solo']+' — payment processed',visibility:'client',status:'success'});
+  if(app.stage>=1){var t1=sd[1]||dOff(24*60*60*1000);seed.push({id:'s3',appId:app.id,ts:t1,role:'cm',actor:cmName,action:'Case Manager assigned — Document Prep started',detail:'Document checklist sent to client',visibility:'client',status:'success'});seed.push({id:'s3b',appId:app.id,ts:new Date(new Date(t1).getTime()+5*60*1000).toISOString(),role:'system',actor:'System',action:'Document checklist generated',detail:'6 required documents identified',visibility:'client',status:'info'});}
+  if(app.stage>=2){var t2=sd[2]||dOff(8*24*60*60*1000);seed.push({id:'s4',appId:app.id,ts:t2,role:'user',actor:uName,action:'Documents submitted to Document Vault',detail:'All required files uploaded for review',visibility:'client',status:'success'});seed.push({id:'s5',appId:app.id,ts:new Date(new Date(t2).getTime()+2*60*60*1000).toISOString(),role:'cm',actor:cmName,action:'Application moved to Under Review',detail:'Compliance check initiated',visibility:'client',status:'info'});}
+  if(app.stage>=3){var t3=sd[3]||dOff(22*24*60*60*1000);seed.push({id:'s6',appId:app.id,ts:t3,role:'admin',actor:'NomadSpain Admin',action:'Document package cleared — Embassy Filing initiated',detail:'All documents verified and apostilled',visibility:'client',status:'success'});seed.push({id:'s6b',appId:app.id,ts:new Date(new Date(t3).getTime()+3*60*60*1000).toISOString(),role:'cm',actor:cmName,action:'Application filed at Spanish Consulate',detail:'Physical dossier submitted',visibility:'client',status:'success'});}
+  if(app.stage>=4){var t4=sd[4]||dOff(36*24*60*60*1000);seed.push({id:'s7',appId:app.id,ts:t4,role:'system',actor:'System',action:'Embassy acknowledgement received',detail:'Application under review by the Spanish Embassy',visibility:'client',status:'pending'});}
+  if(app.stage>=5){var t5=sd[5]||dOff(70*24*60*60*1000);seed.push({id:'s8',appId:app.id,ts:t5,role:'admin',actor:'NomadSpain Admin',action:'🎉 Visa Approved — Application Complete',detail:'Congratulations! Your Spain Digital Nomad Visa has been granted.',visibility:'client',status:'success'});}
+  var logs=pGetActionLogs();
+  pSaveActionLogs(logs.concat(seed));
+}
 function pGetPricing(){return JSON.parse(localStorage.getItem('ns_pricing')||'{"consultation":50,"solo":2500,"family":3000,"dep":500}');}
 function pHasPaidApp(){
   var pays=pGetPays().filter(function(p){return p.userId===pUser.id&&p.status==='paid';});
@@ -1456,6 +1501,15 @@ var PROFILE_CHECKLISTS={
 };
 var PROFILE_TYPE_LABELS={main:'Main Applicant',spouse:'Legal Spouse',dependent_minor:'Dependent (Under 18)',dependent_adult:'Dependent (Over 18)'};
 var P_STAGES=['Onboarding','Document Prep','Under Review','Embassy Filing','Pending Decision','Approved'];
+/* Stage meta: emoji, docsRequired[], duration, desc */
+var P_STAGE_META=[
+  {emoji:'👋',docsRequired:['Passport Copy','Signed Application Form'],duration:'1-3 days',desc:'Initial onboarding, consultation, and application setup with your Case Manager.'},
+  {emoji:'📁',docsRequired:['Income Proof','Criminal Record','Degree Certificate','Health Insurance','Sworn Translation','Passport-Size Photos'],duration:'1-2 weeks',desc:'Upload and verify all required documents in your Document Vault.'},
+  {emoji:'🔍',docsRequired:[],duration:'2-4 weeks',desc:'Our team conducts a full compliance and legal review of your document package.'},
+  {emoji:'🏛️',docsRequired:['Apostille Certificates','Sworn Translation'],duration:'4-8 weeks',desc:'Your application is formally submitted to the Spanish Consulate.'},
+  {emoji:'⏳',docsRequired:[],duration:'4-12 weeks',desc:'Awaiting the final decision from the Spanish Embassy.'},
+  {emoji:'🎉',docsRequired:[],duration:'Complete',desc:'Visa granted — welcome to Spain! Your new chapter begins.'},
+];
 var P_PKG_NAMES={consultation:'360\u00b0 Strategy Session',solo:'The Nomad Solo',family:'Family Package'};
 var P_PKG_PRICES={consultation:50,solo:2500,family:2500};
 
@@ -1900,6 +1954,11 @@ function pCMReviewAction(appId,docId,newStatus,rejReason){
       var actionLabel=newStatus==='verified'?'Approved':newStatus==='rejected'?'Rejected':'Updated';
       a.activityLog.push({ts:now,icon:newStatus==='verified'?'✅':'❌',type:'doc',text:actionLabel+': '+(doc?doc.name:'document')+(rejReason?' — '+rejReason:'')});
       a.updated=now;a.last_activity=now;
+      /* ── Audit log: doc verification ── */
+      var cmVerActor=(pUser&&(pUser.first+' '+(pUser.last||'')).trim())||'Case Manager';
+      var docVerName=doc?doc.name:'document';
+      if(newStatus==='verified'){pLogAction(appId,'cm',cmVerActor,'Document verified: '+docVerName,'Cleared for embassy submission','client','success');}
+      else if(newStatus==='rejected'){pLogAction(appId,'cm',cmVerActor,'Document rejected: '+docVerName,rejReason||'Please re-upload.','client','warning');}
 
       /* Update app_status if rejected */
       if(newStatus==='rejected'){
@@ -3252,27 +3311,195 @@ function pBuildStepper(current,showCount){
   }
   return html+'</div>';
 }
+/* ─── Status Command Center ────────────────────────────────────────── */
 function pRenderCuStatus(){
+  var panel=document.getElementById('cu-status');
+  if(!panel)return;
   var app=pGetMyApp();
-  if(!app){setHTML('cu-status-stepper-wrap','<p style="color:var(--text3);font-size:14px;">No active application. <button class="p-btn p-btn-primary p-btn-sm" onclick="pNav(\'cu\',\'marketplace\',null)">Browse packages</button></p>');setHTML('cu-stage-timeline','');return;}
-  setHTML('cu-status-stepper',pBuildStepper(app.stage,6));
-  document.getElementById('cu-status-badge').className='p-badge '+(app.stage===5?'bd-done':'bd-prog');
-  document.getElementById('cu-status-badge').textContent=P_STAGES[app.stage];
-  /* CM info */
-  var cm=app.cmId?pGetUsers().find(function(u){return u.id===app.cmId;}):null;
-  setText('cu-cm-name',cm?cm.first+' '+cm.last:'Not yet assigned');
-  setText('cu-cm-email',cm?cm.email:'');
-  /* timeline */
+  if(!app){
+    panel.innerHTML='<div class="p-page-hd"><div class="p-page-title">Application Status</div><div class="p-page-sub">Your live command center.</div></div>'
+      +'<div class="p-card"><p style="color:var(--text3);font-size:14px;">No active application yet. <button class="p-btn p-btn-primary p-btn-sm" onclick="pNav(\'cu\',\'marketplace\',null)">Browse packages →</button></p></div>';
+    return;
+  }
+  /* Seed audit logs on first view */
+  pSeedActionLogs(app);
+  var stage=app.stage;
   var stageDates=app.stageDates||{};
-  var timeline=P_STAGES.map(function(s,i){
-    var done=i<app.stage,curr=i===app.stage;
-    var timeLabel=done?('Completed'+(stageDates[i]?' · '+fmtDateTime(stageDates[i]):'')):(curr?'In progress'+(stageDates[i]?' · '+fmtDateTime(stageDates[i]):''):'Pending');
-    return '<div class="p-feed-item" style="opacity:'+(done||curr?1:0.4)+'">'
-      +'<div class="p-feed-dot '+(done?'green':curr?'':' grey')+'"></div>'
-      +'<div><div class="p-feed-text"><strong>'+s+'</strong>'+(curr?' <span class="p-badge bd-prog" style="font-size:10px;">Current</span>':'')+'</div>'
-      +'<div class="p-feed-time">'+timeLabel+'</div></div></div>';
+  var allUsers=pGetUsers();
+  var cm=app.cmId?allUsers.find(function(u){return u.id===app.cmId;}):allUsers.find(function(u){return u.role==='cm';});
+  var cmName=cm?(cm.name||(cm.first+' '+cm.last)).trim():'Not yet assigned';
+  var cmEmail=cm?cm.email:'';
+  /* ── Pulse Timeline ── */
+  var tlHtml=P_STAGES.map(function(stageName,i){
+    var meta=P_STAGE_META[i]||{emoji:'📍',docsRequired:[],duration:'',desc:''};
+    var isDone=i<stage, isCurr=i===stage, isTodo=i>stage;
+    var dotCls=isDone?'done':isCurr?'curr':'todo';
+    var cardCls=isDone?'done':isCurr?'curr':'todo';
+    var isLast=i===P_STAGES.length-1;
+    /* Duration in stage */
+    var daysInStage=0;
+    if(stageDates[i]){
+      var stageEnd=isDone&&stageDates[i+1]?new Date(stageDates[i+1]):new Date();
+      daysInStage=Math.max(0,Math.floor((stageEnd-new Date(stageDates[i]))/(1000*60*60*24)));
+    }
+    var dateLabel=isTodo?'Upcoming'
+      :isCurr&&stageDates[i]?'Started '+fmtDate(stageDates[i])
+      :isDone&&stageDates[i]?'Completed '+fmtDate(stageDates[i]):'';
+    var badge=isDone?'<span class="cst-sbadge done">✓ Done</span>'
+      :isCurr?'<span class="cst-sbadge curr">⦿ Active</span>'
+      :'<span class="cst-sbadge todo">🔒 Locked</span>';
+    /* Body (only for done/curr) */
+    var body='';
+    if(!isTodo){
+      body+='<div class="cst-stage-body">';
+      body+='<div class="cst-stage-desc">'+escHtml(meta.desc)+'</div>';
+      body+='<div class="cst-micro-stats">';
+      if(isCurr&&daysInStage>0)body+='<div class="cst-ms-chip blue">📅 Day '+daysInStage+' in stage</div>';
+      if(isDone&&daysInStage>0)body+='<div class="cst-ms-chip green">✓ '+daysInStage+' day'+(daysInStage===1?'':'s')+'</div>';
+      if(meta.duration)body+='<div class="cst-ms-chip gold">⏱ Est: '+escHtml(meta.duration)+'</div>';
+      if(meta.docsRequired.length)body+='<div class="cst-ms-chip">📄 '+meta.docsRequired.length+' doc'+(meta.docsRequired.length===1?'':'s')+'</div>';
+      body+='</div>';
+      if(isCurr&&meta.docsRequired.length){
+        body+='<div class="cst-docs-tags">';
+        meta.docsRequired.forEach(function(d){body+='<span class="cst-doc-tag">'+escHtml(d)+'</span>';});
+        body+='</div>';
+      }
+      body+='</div>';
+    }
+    var connCls=isDone?'done':isCurr?'curr':'todo';
+    return '<div class="cst-stage">'
+      +'<div class="cst-stage-left">'
+        +'<div class="cst-stage-dot '+dotCls+'">'+(isDone?'✓':escHtml(meta.emoji))+'</div>'
+        +(!isLast?'<div class="cst-stage-conn '+connCls+'"></div>':'')
+      +'</div>'
+      +'<div class="cst-stage-content">'
+        +'<div class="cst-stage-card '+cardCls+'">'
+          +'<div class="cst-stage-card-hd">'
+            +'<div class="cst-stage-title-wrap">'
+              +'<div class="cst-stage-title'+(isTodo?' todo':'')+'">'+escHtml(stageName)+'</div>'
+              +(dateLabel?'<div class="cst-stage-date-lbl">'+escHtml(dateLabel)+'</div>':'')
+            +'</div>'
+            +'<div>'+badge+'</div>'
+          +'</div>'
+          +body
+        +'</div>'
+      +'</div>'
+    +'</div>';
   }).join('');
-  setHTML('cu-stage-timeline',timeline);
+  /* ── Audit Log ── (conditional: users see 'client', CMs/admin see all) */
+  var isPrivileged=pUser&&(pUser.role==='cm'||pUser.role==='admin');
+  var allLogs=pGetActionLogs().filter(function(l){return l.appId===app.id;});
+  /* Merge legacy activityLog */
+  var legacy=(app.activityLog||[]).map(function(l,idx){
+    return {id:'leg_'+idx,appId:app.id,ts:l.ts||app.created,role:'system',actor:'System',action:l.text,detail:l.detail||'',visibility:'client',status:'info'};
+  });
+  allLogs=allLogs.concat(legacy).sort(function(a,b){return new Date(b.ts)-new Date(a.ts);});
+  var visibleLogs=isPrivileged?allLogs:allLogs.filter(function(l){return l.visibility==='client'||!l.visibility;});
+  var roleIcons={user:'👤',cm:'🧑‍💼',admin:'🛡️',system:'⚙️'};
+  var roleCls={user:'role-user',cm:'role-cm',admin:'role-admin',system:'role-system'};
+  var auditRowsHtml=visibleLogs.slice(0,25).map(function(l){
+    var icon=roleIcons[l.role]||'⚙️';
+    var cls=roleCls[l.role]||'role-system';
+    var dot=l.status||'info';
+    var fullText=l.action+(l.detail?' — '+l.detail:'');
+    return '<div class="cst-log-row" data-role="'+escHtml(l.role||'system')+'">'
+      +'<div class="cst-log-avatar '+cls+'">'+icon+'</div>'
+      +'<div class="cst-log-body">'
+        +'<div class="cst-log-role-badge">'+escHtml(l.actor||l.role)+'</div>'
+        +'<div class="cst-log-text">'+escHtml(fullText)+'</div>'
+        +'<div class="cst-log-time">'+fmtDateTime(l.ts)+'</div>'
+      +'</div>'
+      +'<div class="cst-log-indicator"><div class="cst-log-dot '+dot+'"></div></div>'
+    +'</div>';
+  }).join('')||'<div class="cst-audit-empty">No activity logged yet.</div>';
+  /* ── CM Time & Status ── */
+  var spainTime=new Date().toLocaleTimeString('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit'});
+  var spainHour=parseInt(new Date().toLocaleTimeString('en-GB',{timeZone:'Europe/Madrid',hour:'2-digit',hour12:false})||'10');
+  var isActive=spainHour>=9&&spainHour<18;
+  var cmNotesText=app.cmNotes||'Your Case Manager will leave notes here as your application progresses.';
+  /* ── Layout ── */
+  var html='<div class="p-page-hd">'
+    +'<div class="p-page-title">Application Status</div>'
+    +'<div class="p-page-sub">Live Command Center — Stage '+(stage+1)+' of '+P_STAGES.length+' · '+escHtml(P_STAGES[stage])+'</div>'
+  +'</div>'
+  +'<div class="cst-wrap">'
+    /* Left: Pulse Timeline */
+    +'<div>'
+      +'<div style="font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:16px;display:flex;align-items:center;gap:8px;">'
+        +'<span>Visa Journey</span>'
+        +'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3B82F6;animation:cst-beat 2s infinite;"></span>'
+        +'<span style="color:#3B82F6;">Live</span>'
+      +'</div>'
+      +'<div class="cst-pulse-timeline">'+tlHtml+'</div>'
+    +'</div>'
+    /* Right: CM Card + Audit Log */
+    +'<div class="cst-right-col">'
+      /* CM Quick-Action Card */
+      +'<div class="cst-cm-card">'
+        +'<div class="cst-cm-hd">'
+          +'<div class="cst-cm-av">👤</div>'
+          +'<div class="cst-cm-info">'
+            +'<div class="cst-cm-name">'+escHtml(cmName)+'</div>'
+            +'<div class="cst-cm-role-lbl">Your Case Manager · NomadSpain Team</div>'
+            +'<div class="cst-cm-online">'+(isActive?'● Active Now (Office Hours)':'○ Out of Office')+'</div>'
+          +'</div>'
+        +'</div>'
+        +'<div class="cst-cm-body">'
+          +'<div class="cst-cm-time-bar">🕐 Spain Time: <strong>'+spainTime+'</strong>&nbsp;·&nbsp;'+(isActive?'<span class="active-hours">09:00–18:00 Active</span>':'<span class="inactive-hours">Outside Office Hours</span>')+'</div>'
+          +'<div class="cst-cm-btns">'
+            +'<button class="cst-cm-btn primary-cm" onclick="pNav(\'cu\',\'support\',null)">💬 Instant Message</button>'
+            +'<button class="cst-cm-btn" onclick="pStatusRequestCall()">📞 Request Call</button>'
+            +'<button class="cst-cm-btn" onclick="pStatusToggleNotes(this)">📝 Manager Notes</button>'
+          +'</div>'
+          +'<div class="cst-cm-notes" id="cst-cm-notes" style="display:none;">'
+            +'<div class="cst-cm-notes-lbl">Case Manager Notes</div>'
+            +'<div class="cst-cm-notes-txt">'+escHtml(cmNotesText)+'</div>'
+            +(cmEmail?'<div style="font-size:11.5px;color:var(--text3);margin-top:8px;">📧 '+escHtml(cmEmail)+'</div>':'')
+          +'</div>'
+        +'</div>'
+      +'</div>'
+      /* Audit Log */
+      +'<div class="cst-audit">'
+        +'<div class="cst-audit-hd">'
+          +'<div class="cst-audit-title">⚡ Audit Log</div>'
+          +'<div class="cst-audit-count">'+visibleLogs.length+' events</div>'
+        +'</div>'
+        +'<div class="cst-audit-tabs">'
+          +'<button class="cst-atab active" onclick="pStatusFilterLog(\'all\',this)">All</button>'
+          +'<button class="cst-atab" onclick="pStatusFilterLog(\'user\',this)">You</button>'
+          +'<button class="cst-atab" onclick="pStatusFilterLog(\'cm\',this)">CM</button>'
+          +'<button class="cst-atab" onclick="pStatusFilterLog(\'admin\',this)">Admin</button>'
+          +'<button class="cst-atab" onclick="pStatusFilterLog(\'system\',this)">System</button>'
+        +'</div>'
+        +'<div class="cst-audit-feed" id="cst-audit-feed">'+auditRowsHtml+'</div>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
+  panel.innerHTML=html;
+}
+function pStatusFilterLog(filter,el){
+  var feed=document.getElementById('cst-audit-feed');
+  if(!feed)return;
+  var rows=feed.querySelectorAll('.cst-log-row');
+  rows.forEach(function(r){r.style.display=(filter==='all'||r.dataset.role===filter)?'flex':'none';});
+  var tabs=el.closest('.cst-audit-tabs').querySelectorAll('.cst-atab');
+  tabs.forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+}
+function pStatusRequestCall(){
+  showToast('📞 Call request sent! Your Case Manager will contact you within office hours (09:00–18:00 Spain time).');
+  var app=pGetMyApp();
+  if(app&&pUser){
+    var uName=(pUser.first+' '+(pUser.last||'')).trim();
+    pLogAction(app.id,'user',uName,'Callback requested','Client requested a phone call with Case Manager.','client','pending');
+  }
+}
+function pStatusToggleNotes(btn){
+  var el=document.getElementById('cst-cm-notes');
+  if(!el)return;
+  var open=el.style.display!=='none';
+  el.style.display=open?'none':'block';
+  if(btn)btn.textContent=open?'📝 Manager Notes':'📝 Hide Notes';
 }
 function pRenderCuDocuments(){
   var app=pGetMyApp();
@@ -3651,7 +3878,15 @@ function pHandleFileUpload(input){
         }
         return a;
       });
-      pSaveApps(apps);pRenderCuDocuments();pRenderCuOverview();
+      pSaveApps(apps);
+      /* ── Audit log: document upload ── */
+      var uName=(pUser.first+' '+(pUser.last||'')).trim();
+      if(wasRejected){
+        pLogAction(app.id,'user',uName,'Re-uploaded rejected document',key.replace(/_/g,' ')+' — '+file.name,'client','info');
+      } else {
+        pLogAction(app.id,'user',uName,'Document uploaded to Vault',key.replace(/_/g,' ')+' — '+file.name,'client','success');
+      }
+      pRenderCuDocuments();pRenderCuOverview();
       showToast(wasRejected?'\u2713 '+file.name+' re-submitted for review':'\u2713 '+file.name+' uploaded');
     });
   };
@@ -4377,6 +4612,11 @@ function pCompleteCheckout(){
     stripe_session_id:'sim_'+Date.now()
   });
   pSavePays(pays);
+  /* ── Audit log: payment ── */
+  if(appForPay){
+    var payActor=(pUser&&(pUser.first+' '+(pUser.last||'')).trim())||'Client';
+    pLogAction(appForPay.id,'user',payActor,'Payment processed','€'+price.toLocaleString()+' — '+P_PKG_NAMES[pSelectedPkg],'client','success');
+  }
   /* Update app_status to document_prep after payment */
   if(appForPay){
     apps=pGetApps();apps=apps.map(function(a){
@@ -5552,6 +5792,9 @@ function pCMMoveStage(appId,dir){
         pGetUsers().filter(function(u){return u.role==='admin';}).forEach(function(u){
           pCreateNotification(u.id,'stage_change','\uD83D\uDD04 Stage Change','App '+a.id+' moved to '+P_STAGES[newStage],a.id);
         });
+        /* ── Audit log: stage change ── */
+        var cmActor=(pUser&&(pUser.first+' '+(pUser.last||'')).trim())||'Case Manager';
+        pLogAction(a.id,'cm',cmActor,'Application moved to '+P_STAGES[newStage],P_STAGES[a.stage]+' → '+P_STAGES[newStage],'client','success');
       }
     }
     return a;
