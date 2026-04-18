@@ -1569,6 +1569,87 @@ body.portal-active nav{display:none!important;}
 @media(max-width:480px){
   .stij-filters-grid{grid-template-columns:1fr;}
 }
+/* ══ Mission Control Overview ══════════════════════════════════════════ */
+@keyframes cu-pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,0.45);}70%{box-shadow:0 0 0 12px rgba(245,166,35,0);}}
+@keyframes cu-glow{0%,100%{opacity:1;}50%{opacity:0.6;}}
+@keyframes cu-slideUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+.cu-ov-wrap{display:flex;flex-direction:column;gap:16px;animation:cu-slideUp 0.35s ease both;}
+/* ── Header ── */
+.cu-ov-header{background:linear-gradient(135deg,#0F172A 0%,#1E3A5F 100%);border-radius:18px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px;position:relative;overflow:hidden;}
+.cu-ov-header::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;pointer-events:none;}
+.cu-ov-hd-left{flex:1;min-width:0;}
+.cu-ov-hd-eyebrow{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,0.45);margin-bottom:7px;}
+.cu-ov-hd-title{font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:6px;}
+.cu-ov-hd-title .cu-ov-pct{color:#F5A623;}
+.cu-ov-hd-sub{font-size:13px;color:rgba(255,255,255,0.5);}
+/* ── Progress Ring ── */
+.cu-ov-ring-wrap{flex-shrink:0;position:relative;width:90px;height:90px;}
+.cu-ov-ring-wrap svg{display:block;transform:rotate(-90deg);}
+.cu-ov-ring-bg{fill:none;stroke:rgba(255,255,255,0.1);stroke-width:7;}
+.cu-ov-ring-fg{fill:none;stroke:#F5A623;stroke-width:7;stroke-linecap:round;stroke-dasharray:282.7;stroke-dashoffset:282.7;transition:stroke-dashoffset 1.3s cubic-bezier(0.4,0,0.2,1);}
+.cu-ov-ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.cu-ov-ring-pct{font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:800;color:#fff;line-height:1;}
+.cu-ov-ring-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.4);}
+/* ── Activity Bar ── */
+.cu-ov-activity-bar{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+.cu-ov-ab-item{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 8px;gap:4px;border-right:1px solid var(--border);cursor:default;transition:background 0.15s;}
+.cu-ov-ab-item:last-child{border-right:none;}
+.cu-ov-ab-item:hover{background:var(--bg2);}
+.cu-ov-ab-val{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;color:var(--text);line-height:1;}
+.cu-ov-ab-val.alert{color:#E8422A;}
+.cu-ov-ab-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);}
+/* ── Hero Card ── */
+.cu-ov-hero{background:linear-gradient(135deg,#0F172A 0%,#1E3A5F 80%);border-radius:16px;padding:22px 26px;display:flex;align-items:center;justify-content:space-between;gap:18px;}
+.cu-ov-hero-left{flex:1;min-width:0;}
+.cu-ov-hero-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(245,166,35,0.18);border:1px solid rgba(245,166,35,0.35);border-radius:50px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#F5A623;margin-bottom:10px;}
+.cu-ov-hero-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:#F5A623;animation:cu-glow 2s ease-in-out infinite;flex-shrink:0;}
+.cu-ov-hero-title{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:5px;line-height:1.3;}
+.cu-ov-hero-sub{font-size:13px;color:rgba(255,255,255,0.58);line-height:1.55;}
+.cu-ov-hero-cta{flex-shrink:0;padding:13px 22px;background:#F5A623;color:#0F172A;border:none;border-radius:50px;font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;transition:all 0.2s;animation:cu-pulse 2.8s ease-in-out infinite;}
+.cu-ov-hero-cta:hover{transform:translateY(-2px);background:#f0b429;box-shadow:0 8px 26px rgba(245,166,35,0.45);animation:none;}
+/* ── 2-col main ── */
+.cu-ov-main{display:grid;grid-template-columns:1fr 330px;gap:16px;align-items:start;}
+/* ── Resource Grid ── */
+.cu-ov-res-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:0;}
+.cu-ov-res-tile{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px;cursor:pointer;transition:all 0.2s;display:block;text-decoration:none;}
+.cu-ov-res-tile:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.1);border-color:var(--brand);}
+.cu-ov-res-icon{font-size:26px;margin-bottom:9px;display:block;}
+.cu-ov-res-title{font-family:'Bricolage Grotesque',sans-serif;font-size:13.5px;font-weight:800;color:var(--text);margin-bottom:3px;}
+.cu-ov-res-sub{font-size:11.5px;color:var(--text3);}
+/* ── CM Panel ── */
+.cu-ov-cm-panel{background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.cu-ov-cm-hd{background:linear-gradient(135deg,#0F172A 0%,#1E3A5F 100%);padding:15px 18px;display:flex;align-items:center;gap:12px;}
+.cu-ov-cm-av{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;border:2px solid rgba(245,166,35,0.5);position:relative;}
+.cu-ov-cm-av::after{content:'';position:absolute;bottom:0;right:0;width:9px;height:9px;border-radius:50%;background:#22C55E;border:2px solid #0F172A;}
+.cu-ov-cm-info{flex:1;min-width:0;}
+.cu-ov-cm-name{font-size:13.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cu-ov-cm-role{font-size:10.5px;color:rgba(255,255,255,0.45);}
+.cu-ov-cm-msgs{background:#F8F9FA;padding:14px 16px;min-height:70px;}
+.cu-ov-cm-bubble{background:#fff;border:1px solid var(--border);border-radius:12px 12px 12px 3px;padding:10px 14px;font-size:13px;color:var(--text);line-height:1.5;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.cu-ov-cm-meta{font-size:11px;color:var(--text3);margin-bottom:6px;}
+.cu-ov-cm-empty{font-size:13px;color:var(--text3);text-align:center;padding:18px 0;}
+.cu-ov-cm-foot{padding:12px 16px;border-top:1px solid var(--border);}
+.cu-ov-cm-reply-btn{width:100%;padding:10px;background:linear-gradient(135deg,#0F172A,#1E3A5F);color:#fff;border:none;border-radius:10px;font-family:'Bricolage Grotesque',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;transition:opacity 0.15s;}
+.cu-ov-cm-reply-btn:hover{opacity:0.85;}
+/* ── Journey Timeline ── */
+.cu-ov-timeline-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px;}
+.cu-ov-tl-hd{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:14px;}
+.cu-ov-tl-step{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
+.cu-ov-tl-step:last-child{margin-bottom:0;}
+.cu-ov-tl-dot{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px;}
+.cu-ov-tl-dot.done{background:#0F172A;color:#fff;}
+.cu-ov-tl-dot.curr{background:#F5A623;color:#0F172A;animation:cu-pulse 2.8s infinite;}
+.cu-ov-tl-dot.todo{background:var(--bg2);color:var(--text3);border:1.5px solid var(--border);}
+.cu-ov-tl-body{flex:1;}
+.cu-ov-tl-name{font-size:13px;font-weight:700;color:var(--text);}
+.cu-ov-tl-name.dim{color:var(--text3);font-weight:600;}
+.cu-ov-tl-desc{font-size:11.5px;color:#F5A623;margin-top:1px;font-weight:600;}
+/* ── Widget spacing ── */
+.cu-ov-left-col{display:flex;flex-direction:column;gap:14px;}
+.cu-ov-right-col{display:flex;flex-direction:column;gap:14px;}
+/* ── Responsive ── */
+@media(max-width:960px){.cu-ov-main{grid-template-columns:1fr;}.cu-ov-right-col{display:grid;grid-template-columns:1fr 1fr;}.cu-ov-timeline-card{grid-column:span 2;}}
+@media(max-width:640px){.cu-ov-activity-bar{grid-template-columns:1fr 1fr;}.cu-ov-ab-item:nth-child(2){border-right:none;}.cu-ov-ab-item:nth-child(3){border-top:1px solid var(--border);border-right:1px solid var(--border);}.cu-ov-ab-item:nth-child(4){border-top:1px solid var(--border);}.cu-ov-hd-title{font-size:20px;}.cu-ov-ring-wrap{width:72px;height:72px;}.cu-ov-ring-pct{font-size:16px;}.cu-ov-hero{flex-direction:column;gap:14px;}.cu-ov-hero-cta{width:100%;text-align:center;}.cu-ov-right-col{display:flex;flex-direction:column;}.cu-ov-timeline-card{grid-column:auto;}}
 </style>
 </head>
 <body>
@@ -3139,46 +3220,7 @@ body.portal-active nav{display:none!important;}
         </div>
       </div>
       <!-- Overview -->
-      <div id="cu-overview" class="p-panel active">
-        <div class="p-page-hd"><div class="p-page-title" id="cu-greeting">Welcome back 👋</div><div class="p-page-sub">Here's your application at a glance.</div></div>
-        <div class="p-stat-grid">
-          <div class="p-stat-card"><div class="p-stat-icon">📋</div><div class="p-stat-label">Applications</div><div class="p-stat-value" id="cu-stat-apps">0</div><div class="p-stat-change">Total filed</div></div>
-          <div class="p-stat-card"><div class="p-stat-icon">📁</div><div class="p-stat-label">Documents</div><div class="p-stat-value" id="cu-stat-docs">0/6</div><div class="p-stat-change">Uploaded</div></div>
-          <div class="p-stat-card"><div class="p-stat-icon">💬</div><div class="p-stat-label">Messages</div><div class="p-stat-value" id="cu-stat-msgs">0</div><div class="p-stat-change">Unread</div></div>
-          <div class="p-stat-card"><div class="p-stat-icon">💳</div><div class="p-stat-label">Balance Due</div><div class="p-stat-value" id="cu-stat-balance">€0</div><div class="p-stat-change">Outstanding</div></div>
-        </div>
-        <div class="p-grid2">
-          <div class="p-card">
-            <div class="p-card-hd"><div class="p-card-title">Application Progress</div><button class="p-btn p-btn-ghost p-btn-sm" onclick="pNav('cu','status',null)">View details</button></div>
-            <div id="cu-overview-stepper"></div>
-            <div style="margin-top:12px;font-size:13px;color:var(--text2);" id="cu-overview-stage"></div>
-          </div>
-          <div class="p-card">
-            <div class="p-card-hd"><div class="p-card-title">Activity Feed</div></div>
-            <div id="cu-activity-feed"></div>
-          </div>
-        </div>
-        <!-- My Progress Stats -->
-        <div class="p-card">
-          <div class="p-card-title" style="margin-bottom:14px;">My Progress</div>
-          <div id="cu-my-progress"></div>
-        </div>
-        <!-- Schengen Clock -->
-        <div id="cu-schengen-clock-wrap"></div>
-        <!-- Cita-Ready Pack -->
-        <div id="cu-cita-ready-wrap"></div>
-        <!-- Document Expiry Alerts -->
-        <div id="cu-expiry-alerts-wrap"></div>
-        <div class="p-card">
-          <div class="p-card-hd"><div class="p-card-title">Quick Actions</div></div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="p-btn p-btn-primary" onclick="pNav('cu','documents',null)">📁 Upload Documents</button>
-            <button class="p-btn p-btn-ghost" onclick="pNav('cu','support',null)">💬 Message Case Manager</button>
-            <button class="p-btn p-btn-ghost" onclick="pNav('cu','finance',null)">💳 View Invoices</button>
-            <button class="p-btn p-btn-ghost" onclick="pNav('cu','marketplace',null)">🛒 Explore Packages</button>
-          </div>
-        </div>
-      </div>
+      <div id="cu-overview" class="p-panel active"></div>
       <!-- Marketplace -->
       <div id="cu-marketplace" class="p-panel">
         <div class="p-page-hd"><div class="p-page-title">Marketplace</div><div class="p-page-sub">Choose your visa package and complete your purchase.</div></div>

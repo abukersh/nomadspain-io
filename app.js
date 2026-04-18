@@ -3045,104 +3045,196 @@ function pGetMyApp(){
   var apps=pGetApps();
   return apps.find(function(a){return a.userId===pUser.id;})||null;
 }
+/* ─── Mission Control helpers ─────────────────────────────────────── */
+function pGetOverallProgress(app,uploaded,totalDocs,pays){
+  if(!app)return 5;
+  var base=15;
+  var payBonus=pays.length>0?15:0;
+  var docBonus=totalDocs>0?Math.round((uploaded/totalDocs)*45):0;
+  var stageBonus=Math.round((app.stage/Math.max(P_STAGES.length-1,1))*25);
+  return Math.min(99,base+payBonus+docBonus+stageBonus);
+}
+function pGetSmartNextStep(app,uploaded,totalDocs,unreadCount,pays,rejected){
+  if(!app)return{title:'Start your Visa journey',sub:'Choose a relocation package to get started with your Spain visa.',cta:'🚀 Choose a Package',panel:'marketplace'};
+  var s=getAppStatus(app);
+  if(s==='registered')return{title:'Complete your payment',sub:'Unlock your dedicated Case Manager and full document checklist.',cta:'💳 Complete Payment',panel:'finance'};
+  if(rejected>0)return{title:'Fix rejected document'+(rejected>1?'s':''),sub:rejected+' document'+(rejected>1?'s have':' has')+' been rejected and need re-uploading.',cta:'📁 Fix Documents',panel:'documents'};
+  if(uploaded<totalDocs)return{title:'Upload your documents',sub:uploaded+' of '+totalDocs+' documents uploaded — keep the momentum going!',cta:'📁 Upload Documents',panel:'documents'};
+  if(unreadCount>0)return{title:'Reply to your Case Manager',sub:'You have '+unreadCount+' unread message'+(unreadCount>1?'s':'')+' waiting for a response.',cta:'💬 Open Messages',panel:'support'};
+  if(app.stage<P_STAGES.length-1)return{title:'Your application is in progress',sub:'Currently at stage: '+P_STAGES[app.stage]+'. We are working hard on it!',cta:'📊 View Status',panel:'status'};
+  return{title:'Your application is complete!',sub:'Congratulations — your visa application has been approved.',cta:'🎉 View Status',panel:'status'};
+}
+/* ─── Dashboard Overview (Mission Control) ────────────────────────── */
 function pRenderCuOverview(){
+  var panel=document.getElementById('cu-overview');
+  if(!panel)return;
   var app=pGetMyApp();
   var apps=pGetApps().filter(function(a){return a.userId===pUser.id;});
   var pays=pGetPays().filter(function(p){return p.userId===pUser.id&&p.status==='paid';});
-  var msgs=pGetMsgs().filter(function(m){return m.toId===pUser.id&&!m.read;});
+  var allMsgs=pGetMsgs().filter(function(m){return m.toId===pUser.id;});
+  var unreadMsgs=allMsgs.filter(function(m){return !m.read;});
+  var lastMsg=allMsgs.sort(function(a,b){return new Date(b.created)-new Date(a.created);})[0]||null;
   var uploaded=app?Object.values(app.docs||{}).filter(function(v){return v==='uploaded'||v==='verified';}).length:0;
+  var rejected=app?Object.values(app.docs||{}).filter(function(v){return v==='rejected';}).length:0;
   var required=app?(app.requiredDocs||['passport','income','criminal','degree','insurance','other']):[];
   var totalDocs=required.length||6;
-  setText('cu-stat-apps',apps.length);setText('cu-stat-docs',uploaded+'/'+totalDocs);
-  setText('cu-stat-msgs',msgs.length);setText('cu-stat-balance',app&&pays.length===0?'\u20AC'+P_PKG_PRICES[app.pkg||'solo'].toLocaleString():'\u20AC0');
-  /* stepper */
   var stage=app?app.stage:0;
-  setHTML('cu-overview-stepper',pBuildStepper(stage,4));
-  setText('cu-overview-stage',app?'Stage '+(stage+1)+'/'+P_STAGES.length+' \u2014 '+P_STAGES[stage]:'No active application');
-  /* feed */
-  var feed=[
-    {dot:'green',text:'<strong>Account created</strong>',time:fmtDate(pUser.created)},
-    app?{dot:'brand',text:'<strong>Application started</strong> \u2014 '+P_PKG_NAMES[app.pkg||'solo'],time:fmtDate(app.created)}:null,
-    app&&app.stage>=1?{dot:'brand',text:'<strong>Document checklist sent</strong>',time:fmtDate(app.updated)}:null,
-    app&&uploaded>0?{dot:'green',text:'<strong>'+uploaded+' document(s) uploaded</strong>',time:'Recently'}:null,
-    app&&app.stage>=2?{dot:'grey',text:'<strong>Application under review</strong>',time:'In progress'}:null
-  ].filter(Boolean);
-  setHTML('cu-activity-feed',feed.map(function(f){
-    return '<div class="p-feed-item"><div class="p-feed-dot '+(f.dot==='brand'?'':f.dot)+(f.dot==='brand'?' ':' ')+'"></div><div><div class="p-feed-text">'+f.text+'</div><div class="p-feed-time">'+f.time+'</div></div></div>';
-  }).join('')||'<p style="font-size:13px;color:var(--text3);">No recent activity.</p>');
-
-  /* ═══ My Progress ═══ */
-  var progressHtml='';
-  if(app){
-    var appStatus=getAppStatus(app);
-    var statusLabel={registered:'Registered',paid:'Payment Complete',app_started:'Application In Progress',submitted:'Submitted for Review'};
-    var docPct=totalDocs?Math.round(uploaded/totalDocs*100):0;
-    var daysInStage=0;
-    if(app.stageDates&&app.stageDates[app.stage]){
-      daysInStage=Math.floor((new Date()-new Date(app.stageDates[app.stage]))/(1000*60*60*24));
-    }
-    progressHtml+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">'
-      +'<div style="background:var(--bg2);border-radius:10px;padding:14px;text-align:center;">'
-      +'<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Status</div>'
-      +'<div style="font-size:14px;font-weight:700;color:#9b2c2c;">'+(statusLabel[appStatus]||'Unknown')+'</div></div>'
-      +'<div style="background:var(--bg2);border-radius:10px;padding:14px;text-align:center;">'
-      +'<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Documents</div>'
-      +pDocProgressBar(app)+'</div>'
-      +'<div style="background:var(--bg2);border-radius:10px;padding:14px;text-align:center;">'
-      +'<div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Days in Stage</div>'
-      +'<div style="font-family:\'Bricolage Grotesque\',sans-serif;font-size:22px;font-weight:800;color:var(--text);">'+daysInStage+'</div></div>'
-      +'</div>';
-  } else {
-    progressHtml='<p style="color:var(--text3);font-size:13px;">No active application. Start by choosing a package.</p>';
+  var pct=pGetOverallProgress(app,uploaded,totalDocs,pays);
+  var next=pGetSmartNextStep(app,uploaded,totalDocs,unreadMsgs.length,pays,rejected);
+  /* CM info */
+  var cmUser=(pGetUsers()||[]).find(function(u){return u.role==='cm';})||null;
+  var cmName=cmUser?(cmUser.name||'Case Manager'):'Your Case Manager';
+  /* Journey timeline */
+  var tlHtml=P_STAGES.map(function(s,i){
+    var dotCls=i<stage?'done':i===stage?'curr':'todo';
+    var nameCls=i>stage?' dim':'';
+    return '<div class="cu-ov-tl-step">'
+      +'<div class="cu-ov-tl-dot '+dotCls+'">'+(i<stage?'✓':(i+1))+'</div>'
+      +'<div class="cu-ov-tl-body">'
+        +'<div class="cu-ov-tl-name'+nameCls+'">'+escHtml(s)+'</div>'
+        +(i===stage?'<div class="cu-ov-tl-desc">In progress</div>':'')
+      +'</div>'
+    +'</div>';
+  }).join('');
+  /* CM message bubble */
+  var cmMsgHtml;
+  if(lastMsg){
+    var preview=(lastMsg.body||'').replace(/<[^>]+>/g,'').substring(0,140);
+    if(preview.length===140)preview+='…';
+    cmMsgHtml='<div class="cu-ov-cm-meta">'+(unreadMsgs.length?'<strong style="color:#E8422A;">'+unreadMsgs.length+' unread</strong> · ':'')+'Last: '+fmtDate(lastMsg.created)+'</div>'
+      +'<div class="cu-ov-cm-bubble">'+escHtml(preview)+'</div>';
+  }else{
+    cmMsgHtml='<div class="cu-ov-cm-empty">💬 No messages yet</div>';
   }
-  setHTML('cu-my-progress',progressHtml);
-
-  /* ═══ Schengen Clock (Customer) ═══ */
+  /* Activity bar — docs-remaining value */
+  var docsLeft=Math.max(0,totalDocs-uploaded);
+  /* Build layout */
+  var html='<div class="cu-ov-wrap">'
+    /* ── Header ── */
+    +'<div class="cu-ov-header">'
+      +'<div class="cu-ov-hd-left">'
+        +'<div class="cu-ov-hd-eyebrow">Your Visa Journey</div>'
+        +'<div class="cu-ov-hd-title">You\'re <span class="cu-ov-pct">'+pct+'%</span> of the way there</div>'
+        +'<div class="cu-ov-hd-sub">'+escHtml(pUser.name||pUser.first||'')
+          +(app?' · '+escHtml(P_PKG_NAMES[app.pkg||'solo'])+' Package':' · No active application')
+        +'</div>'
+      +'</div>'
+      +'<div class="cu-ov-ring-wrap">'
+        +'<svg viewBox="0 0 100 100" width="90" height="90">'
+          +'<circle class="cu-ov-ring-bg" cx="50" cy="50" r="45"/>'
+          +'<circle class="cu-ov-ring-fg" id="cu-ov-ring-fg" cx="50" cy="50" r="45"/>'
+        +'</svg>'
+        +'<div class="cu-ov-ring-inner"><div class="cu-ov-ring-pct">'+pct+'%</div><div class="cu-ov-ring-lbl">Done</div></div>'
+      +'</div>'
+    +'</div>'
+    /* ── Activity Bar ── */
+    +'<div class="cu-ov-activity-bar">'
+      +'<div class="cu-ov-ab-item"><div class="cu-ov-ab-val">'+apps.length+'</div><div class="cu-ov-ab-lbl">Apps</div></div>'
+      +'<div class="cu-ov-ab-item"><div class="cu-ov-ab-val'+(docsLeft>0?' alert':'')+'">'+docsLeft+'</div><div class="cu-ov-ab-lbl">Docs Left</div></div>'
+      +'<div class="cu-ov-ab-item"><div class="cu-ov-ab-val'+(unreadMsgs.length>0?' alert':'')+'">'+unreadMsgs.length+'</div><div class="cu-ov-ab-lbl">Unread</div></div>'
+      +'<div class="cu-ov-ab-item"><div class="cu-ov-ab-val" style="font-size:12px;font-weight:700;line-height:1.2;text-align:center;">'+escHtml(app?P_STAGES[stage]:'—')+'</div><div class="cu-ov-ab-lbl">Status</div></div>'
+    +'</div>'
+    /* ── Hero (Smart Next Step) ── */
+    +'<div class="cu-ov-hero">'
+      +'<div class="cu-ov-hero-left">'
+        +'<div class="cu-ov-hero-tag">Smart Next Step</div>'
+        +'<div class="cu-ov-hero-title">'+escHtml(next.title)+'</div>'
+        +'<div class="cu-ov-hero-sub">'+escHtml(next.sub)+'</div>'
+      +'</div>'
+      +'<button class="cu-ov-hero-cta" onclick="pNav(\'cu\',\''+next.panel+'\',null)">'+next.cta+'</button>'
+    +'</div>'
+    /* ── 2-col main ── */
+    +'<div class="cu-ov-main">'
+      /* Left column */
+      +'<div class="cu-ov-left-col">'
+        +'<div class="cu-ov-res-grid">'
+          +'<div class="cu-ov-res-tile" onclick="pNav(\'cu\',\'translators\',null)">'
+            +'<span class="cu-ov-res-icon">🔤</span>'
+            +'<div class="cu-ov-res-title">Find Translator</div>'
+            +'<div class="cu-ov-res-sub">Certified sworn translators in Spain</div>'
+          +'</div>'
+          +'<div class="cu-ov-res-tile" onclick="pNav(\'cu\',\'hub\',null)">'
+            +'<span class="cu-ov-res-icon">📚</span>'
+            +'<div class="cu-ov-res-title">Knowledge Hub</div>'
+            +'<div class="cu-ov-res-sub">Guides, checklists &amp; resources</div>'
+          +'</div>'
+          +'<div class="cu-ov-res-tile" onclick="pNav(\'cu\',\'documents\',null)">'
+            +'<span class="cu-ov-res-icon">📁</span>'
+            +'<div class="cu-ov-res-title">Documents</div>'
+            +'<div class="cu-ov-res-sub">'+uploaded+' of '+totalDocs+' uploaded</div>'
+          +'</div>'
+          +'<div class="cu-ov-res-tile" onclick="pNav(\'cu\',\'status\',null)">'
+            +'<span class="cu-ov-res-icon">📊</span>'
+            +'<div class="cu-ov-res-title">Application Status</div>'
+            +'<div class="cu-ov-res-sub">'+(app?escHtml(P_STAGES[stage]):'No application yet')+'</div>'
+          +'</div>'
+        +'</div>'
+        /* Dynamic widgets injected below */
+        +'<div id="cu-schengen-clock-wrap"></div>'
+        +'<div id="cu-cita-ready-wrap"></div>'
+        +'<div id="cu-expiry-alerts-wrap"></div>'
+      +'</div>'
+      /* Right column */
+      +'<div class="cu-ov-right-col">'
+        /* CM Preview */
+        +'<div class="cu-ov-cm-panel">'
+          +'<div class="cu-ov-cm-hd">'
+            +'<div class="cu-ov-cm-av">👤</div>'
+            +'<div class="cu-ov-cm-info">'
+              +'<div class="cu-ov-cm-name">'+escHtml(cmName)+'</div>'
+              +'<div class="cu-ov-cm-role">Case Manager · Available</div>'
+            +'</div>'
+          +'</div>'
+          +'<div class="cu-ov-cm-msgs">'+cmMsgHtml+'</div>'
+          +'<div class="cu-ov-cm-foot">'
+            +'<button class="cu-ov-cm-reply-btn" onclick="pNav(\'cu\',\'support\',null)">💬 Open Messages</button>'
+          +'</div>'
+        +'</div>'
+        /* Visa Journey Timeline */
+        +'<div class="cu-ov-timeline-card">'
+          +'<div class="cu-ov-tl-hd">Visa Journey</div>'
+          +tlHtml
+        +'</div>'
+      +'</div>'
+    +'</div>'
+  +'</div>'; /* /cu-ov-wrap */
+  panel.innerHTML=html;
+  /* Animate ring after paint */
+  requestAnimationFrame(function(){
+    var ringEl=document.getElementById('cu-ov-ring-fg');
+    if(ringEl){
+      var offset=282.7-(pct/100)*282.7;
+      setTimeout(function(){ringEl.style.strokeDashoffset=offset;},60);
+    }
+  });
+  /* ═══ Dynamic Widgets ═══ */
   var schengenWrap=document.getElementById('cu-schengen-clock-wrap');
   if(schengenWrap&&app&&app.entry_date){
     schengenWrap.innerHTML='<div class="p-card" style="margin-bottom:0;padding:0;overflow:hidden;">'+pRenderSchengenClock(app)+'</div>';
-    schengenWrap.style.marginBottom='20px';
-  } else if(schengenWrap){
-    schengenWrap.innerHTML='';schengenWrap.style.marginBottom='0';
-  }
-
-  /* ═══ Cita-Ready Pack (Customer) ═══ */
+  }else if(schengenWrap)schengenWrap.innerHTML='';
   var citaWrap=document.getElementById('cu-cita-ready-wrap');
   if(citaWrap&&app){
     var citaHtml=pRenderCitaReadyPack(app,true);
-    if(citaHtml){
-      citaWrap.innerHTML='<div class="p-card" style="margin-bottom:0;padding:14px 18px;">'+citaHtml+'</div>';
-      citaWrap.style.marginBottom='20px';
-    } else {
-      citaWrap.innerHTML='';citaWrap.style.marginBottom='0';
-    }
+    if(citaHtml)citaWrap.innerHTML='<div class="p-card" style="margin-bottom:0;padding:14px 18px;">'+citaHtml+'</div>';
+    else citaWrap.innerHTML='';
   }
-
-  /* ═══ Document Expiry Alerts (Customer) ═══ */
   var expiryWrap=document.getElementById('cu-expiry-alerts-wrap');
   if(expiryWrap&&app){
     var expiries=pGetDocExpiries([app],[pUser]);
     var urgent=expiries.filter(function(e){return e.status==='expired'||e.status==='expiring';});
     if(urgent.length){
-      var alertHtml='<div class="p-card" style="margin-bottom:0;">'
-        +'<div class="p-card-title" style="margin-bottom:10px;">Document Renewal Alerts</div>';
+      var aHtml='<div class="p-card" style="margin-bottom:0;"><div class="p-card-title" style="margin-bottom:10px;">Document Renewal Alerts</div>';
       urgent.forEach(function(e){
-        var isExpired=e.status==='expired';
-        alertHtml+='<div class="expiry-alert-card'+(isExpired?'':' warn')+'">'
-          +'<div class="expiry-alert-icon">'+(isExpired?'\uD83D\uDEA8':'\u23F0')+'</div>'
-          +'<div class="expiry-alert-body">'
-          +'<div class="expiry-alert-title">'+escHtml(e.docKey.replace(/_/g,' '))+'</div>'
-          +'<div class="expiry-alert-sub">'+(isExpired?'This document expired '+Math.abs(e.daysLeft)+' days ago. Please re-upload.':'Expires in '+e.daysLeft+' days. Please renew before expiry.')+'</div>'
-          +'</div>'
-          +'<span class="expiry-badge '+e.status+'">'+(isExpired?'Expired':'Renew Soon')+'</span>'
+        var isExp=e.status==='expired';
+        aHtml+='<div class="expiry-alert-card'+(isExp?'':' warn')+'">'
+          +'<div class="expiry-alert-icon">'+(isExp?'🚨':'⏰')+'</div>'
+          +'<div class="expiry-alert-body"><div class="expiry-alert-title">'+escHtml(e.docKey.replace(/_/g,' '))+'</div>'
+          +'<div class="expiry-alert-sub">'+(isExp?'Expired '+Math.abs(e.daysLeft)+' days ago — re-upload required.':'Expires in '+e.daysLeft+' days. Please renew soon.')+'</div></div>'
+          +'<span class="expiry-badge '+e.status+'">'+(isExp?'Expired':'Renew Soon')+'</span>'
           +'</div>';
       });
-      alertHtml+='</div>';
-      expiryWrap.innerHTML=alertHtml;
-      expiryWrap.style.marginBottom='20px';
-    } else {
-      expiryWrap.innerHTML='';expiryWrap.style.marginBottom='0';
-    }
+      expiryWrap.innerHTML=aHtml+'</div>';
+    }else expiryWrap.innerHTML='';
   }
 }
 function pBuildStepper(current,showCount){
