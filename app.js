@@ -6402,6 +6402,62 @@ function stijRenderCuPanel(){
     +'</div>'
     +'<div class="stij-pagination" id="stij-pagination"></div>'
     // CTA
+    // ── Apostille Checker ──────────────────────────────────
+    +'<div class="p-card" style="margin-bottom:20px;" id="apostille-checker-card">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+        +'<span style="font-size:22px;">🔏</span>'
+        +'<div><div class="p-card-title" style="margin-bottom:0;">Do I Need an Apostille?</div>'
+        +'<div style="font-size:13px;color:var(--text2);margin-top:2px;">Check if your home country requires an apostille stamp under the Hague Convention (1961) for documents used in Spain.</div></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:12px;align-items:flex-end;margin-top:16px;flex-wrap:wrap;">'
+        +'<div style="flex:1;min-width:200px;">'
+          +'<label class="stij-filter-label" style="display:block;margin-bottom:6px;">Your Home Country</label>'
+          +'<select id="apostille-country" class="stij-filter-select" style="width:100%;">'
+            +'<option value="">— Select your country —</option>'
+            +'<option>Afghanistan</option><option>Albania</option><option>Algeria</option><option>Andorra</option><option>Angola</option>'
+            +'<option>Antigua and Barbuda</option><option>Argentina</option><option>Armenia</option><option>Australia</option><option>Austria</option>'
+            +'<option>Azerbaijan</option><option>Bahamas</option><option>Bahrain</option><option>Bangladesh</option><option>Barbados</option>'
+            +'<option>Belarus</option><option>Belgium</option><option>Belize</option><option>Bolivia</option><option>Bosnia and Herzegovina</option>'
+            +'<option>Botswana</option><option>Brazil</option><option>Brunei</option><option>Bulgaria</option><option>Burkina Faso</option>'
+            +'<option>Burundi</option><option>Cabo Verde</option><option>Cambodia</option><option>Cameroon</option><option>Canada</option>'
+            +'<option>Central African Republic</option><option>Chad</option><option>Chile</option><option>China</option><option>Colombia</option>'
+            +'<option>Cook Islands</option><option>Costa Rica</option><option>Croatia</option><option>Cuba</option><option>Cyprus</option>'
+            +'<option>Czech Republic</option><option>Democratic Republic of the Congo</option><option>Denmark</option><option>Dominica</option>'
+            +'<option>Dominican Republic</option><option>Ecuador</option><option>Egypt</option><option>El Salvador</option><option>Eritrea</option>'
+            +'<option>Estonia</option><option>Eswatini</option><option>Ethiopia</option><option>Fiji</option><option>Finland</option>'
+            +'<option>France</option><option>Gabon</option><option>Georgia</option><option>Germany</option><option>Ghana</option>'
+            +'<option>Greece</option><option>Grenada</option><option>Guatemala</option><option>Guinea</option><option>Guyana</option>'
+            +'<option>Haiti</option><option>Honduras</option><option>Hungary</option><option>Iceland</option><option>India</option>'
+            +'<option>Indonesia</option><option>Iran</option><option>Iraq</option><option>Ireland</option><option>Israel</option>'
+            +'<option>Italy</option><option>Ivory Coast</option><option>Jamaica</option><option>Japan</option><option>Jordan</option>'
+            +'<option>Kazakhstan</option><option>Kenya</option><option>Kosovo</option><option>Kuwait</option><option>Kyrgyzstan</option>'
+            +'<option>Laos</option><option>Latvia</option><option>Lebanon</option><option>Lesotho</option><option>Liberia</option>'
+            +'<option>Libya</option><option>Liechtenstein</option><option>Lithuania</option><option>Luxembourg</option><option>Malawi</option>'
+            +'<option>Malaysia</option><option>Maldives</option><option>Mali</option><option>Malta</option><option>Marshall Islands</option>'
+            +'<option>Mauritania</option><option>Mauritius</option><option>Mexico</option><option>Moldova</option><option>Monaco</option>'
+            +'<option>Mongolia</option><option>Montenegro</option><option>Morocco</option><option>Mozambique</option><option>Myanmar</option>'
+            +'<option>Namibia</option><option>Nepal</option><option>Netherlands</option><option>New Zealand</option><option>Nicaragua</option>'
+            +'<option>Niger</option><option>Nigeria</option><option>Niue</option><option>North Korea</option><option>North Macedonia</option>'
+            +'<option>Norway</option><option>Oman</option><option>Pakistan</option><option>Palau</option><option>Panama</option>'
+            +'<option>Paraguay</option><option>Peru</option><option>Philippines</option><option>Poland</option><option>Portugal</option>'
+            +'<option>Qatar</option><option>Romania</option><option>Russia</option><option>Rwanda</option><option>Saint Kitts and Nevis</option>'
+            +'<option>Saint Lucia</option><option>Saint Vincent and the Grenadines</option><option>Samoa</option><option>San Marino</option>'
+            +'<option>São Tomé and Príncipe</option><option>Saudi Arabia</option><option>Senegal</option><option>Serbia</option>'
+            +'<option>Seychelles</option><option>Sierra Leone</option><option>Singapore</option><option>Slovakia</option><option>Slovenia</option>'
+            +'<option>Somalia</option><option>South Africa</option><option>South Korea</option><option>South Sudan</option><option>Sudan</option>'
+            +'<option>Suriname</option><option>Sweden</option><option>Switzerland</option><option>Syria</option><option>Tajikistan</option>'
+            +'<option>Tanzania</option><option>Thailand</option><option>Togo</option><option>Tonga</option><option>Trinidad and Tobago</option>'
+            +'<option>Tunisia</option><option>Turkey</option><option>Turkmenistan</option><option>Uganda</option><option>Ukraine</option>'
+            +'<option>United Arab Emirates</option><option>United Kingdom</option><option>United States</option><option>Uruguay</option>'
+            +'<option>Uzbekistan</option><option>Vanuatu</option><option>Venezuela</option><option>Vietnam</option>'
+            +'<option>Yemen</option><option>Zambia</option><option>Zimbabwe</option>'
+          +'</select>'
+        +'</div>'
+        +'<button class="stij-btn-search" onclick="stijCheckApostille()" style="white-space:nowrap;flex-shrink:0;">Check ↗</button>'
+      +'</div>'
+      +'<div id="apostille-result" style="margin-top:18px;display:none;"></div>'
+    +'</div>'
+    // Translator CTA
     +'<div class="stij-cta-banner">'
       +'<div class="stij-cta-left"><div class="stij-cta-q">😅 Confused? We can handle the sworn translations for you.</div><div class="stij-cta-sub">We work with certified jurados — fully certified, fast, and stress-free.</div></div>'
       +'<button class="stij-cta-btn" onclick="pNav(\'customer\',\'marketplace\',null)">See Our Packages →</button>'
@@ -6535,6 +6591,75 @@ function stijRender(){
       html+='<button class="stij-pg-btn" onclick="stijGo('+(stijPage+1)+')" '+(stijPage===totalPages?'disabled':'')+'>›</button>';
       pgEl.innerHTML=html;
     }
+  }
+}
+
+/* ── Hague Apostille Convention (1961) — 129 contracting states ── */
+var APOSTILLE_MEMBERS=(function(){
+  var m=['Albania','Algeria','Andorra','Antigua and Barbuda','Argentina','Armenia',
+    'Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados',
+    'Belarus','Belgium','Belize','Bolivia','Bosnia and Herzegovina','Botswana',
+    'Brazil','Brunei','Bulgaria','Burundi','Cabo Verde','Canada','Chile','China',
+    'Colombia','Cook Islands','Costa Rica','Croatia','Cyprus','Czech Republic',
+    'Denmark','Dominica','Dominican Republic','Ecuador','El Salvador','Estonia',
+    'Eswatini','Fiji','Finland','France','Georgia','Germany','Greece','Grenada',
+    'Guatemala','Guyana','Honduras','Hungary','Iceland','India','Indonesia',
+    'Ireland','Israel','Italy','Jamaica','Japan','Kazakhstan','Kosovo',
+    'Kyrgyzstan','Latvia','Lesotho','Liberia','Liechtenstein','Lithuania',
+    'Luxembourg','Malawi','Malta','Marshall Islands','Mauritius','Mexico',
+    'Moldova','Monaco','Mongolia','Montenegro','Morocco','Namibia','Netherlands',
+    'New Zealand','Nicaragua','Niue','North Macedonia','Norway','Oman','Pakistan',
+    'Palau','Panama','Paraguay','Peru','Philippines','Poland','Portugal','Romania',
+    'Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia',
+    'Saint Vincent and the Grenadines','Samoa','San Marino','São Tomé and Príncipe',
+    'Saudi Arabia','Senegal','Serbia','Seychelles','Singapore','Slovakia',
+    'Slovenia','South Africa','South Korea','Spain','Suriname','Sweden',
+    'Switzerland','Tajikistan','Tonga','Trinidad and Tobago','Tunisia','Turkey',
+    'Ukraine','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu',
+    'Venezuela','Vietnam'];
+  var s={};
+  m.forEach(function(c){s[c.toLowerCase()]=true;});
+  return s;
+})();
+
+function stijCheckApostille(){
+  var sel=document.getElementById('apostille-country');
+  var res=document.getElementById('apostille-result');
+  if(!sel||!res) return;
+  var country=sel.value;
+  if(!country){
+    res.style.display='block';
+    res.innerHTML='<div style="background:#FFF8E6;border:1px solid #FDE68A;border-radius:10px;padding:14px 16px;font-size:13.5px;color:#78350F;">⚠️ Please select your home country first.</div>';
+    return;
+  }
+  var isMember=!!APOSTILLE_MEMBERS[country.toLowerCase()];
+  res.style.display='block';
+  if(isMember){
+    res.innerHTML=
+      '<div style="background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:12px;padding:20px 22px;">'
+        +'<div style="font-size:16px;font-weight:800;font-family:\'Bricolage Grotesque\',sans-serif;color:#92400E;margin-bottom:10px;">⚠️ Yes — Apostille Required</div>'
+        +'<p style="font-size:13.5px;color:#78350F;line-height:1.65;margin-bottom:10px;">'
+          +'<strong>'+country+'</strong> is a signatory of the Hague Apostille Convention (1961). This means your official documents (criminal record, birth certificate, civil status documents, etc.) must carry a <strong>Hague Apostille stamp</strong> from your country\'s designated authority before Spanish authorities will accept them.'
+        +'</p>'
+        +'<div style="display:flex;align-items:center;gap:8px;background:rgba(245,158,11,0.12);border-radius:8px;padding:10px 14px;margin-bottom:14px;">'
+          +'<span style="font-size:18px;">⏱️</span>'
+          +'<span style="font-size:13px;color:#92400E;font-weight:600;">This typically adds <strong>1–2 working weeks</strong> to your timeline, depending on your country\'s apostille office wait times.</span>'
+        +'</div>'
+        +'<div style="font-size:13.5px;color:#78350F;margin-bottom:14px;">Feeling overwhelmed managing apostilles, sworn translations, and Spanish paperwork all at once? <strong>That\'s exactly what we\'re here for.</strong> We coordinate the entire process so you don\'t have to chase government offices in two countries.</div>'
+        +'<button onclick="pNav(\'customer\',\'marketplace\',null)" style="padding:10px 24px;background:linear-gradient(135deg,#E8422A,#F5A623);color:#fff;border:none;border-radius:50px;font-family:\'Bricolage Grotesque\',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(232,66,42,0.28);">Contact Us — We\'ll Handle It →</button>'
+      +'</div>';
+  } else {
+    res.innerHTML=
+      '<div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:12px;padding:20px 22px;">'
+        +'<div style="font-size:16px;font-weight:800;font-family:\'Bricolage Grotesque\',sans-serif;color:#166534;margin-bottom:10px;">🎉 You\'re in luck!</div>'
+        +'<p style="font-size:13.5px;color:#14532D;line-height:1.65;margin-bottom:10px;">'
+          +'<strong>'+country+'</strong> is not a party to the Hague Apostille Convention, which means your documents <strong>do not require a specific apostille stamp</strong> for use in Spain — one less bureaucratic hurdle for you!'
+        +'</p>'
+        +'<div style="display:flex;align-items:flex-start;gap:8px;background:rgba(134,239,172,0.2);border-radius:8px;padding:10px 14px;">'
+          +'<span style="font-size:16px;flex-shrink:0;">💡</span>'
+          +'<span style="font-size:12.5px;color:#166534;line-height:1.6;">Keep in mind: your documents may still need an <strong>official sworn translation</strong> (traductor jurado) into Spanish, and possibly verification through the Spanish consulate in your country. Our team can advise you on the exact requirements.</span>'
+        +'</div>'
+      +'</div>';
   }
 }
 
