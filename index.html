@@ -1886,6 +1886,89 @@ body.portal-active nav{display:none!important;}
   .dvlt-submit-bar{flex-direction:column;align-items:flex-start;}
   .dvlt-submit-btn{width:100%;text-align:center;}
 }
+/* ── CM Worklist Action Center ── */
+@keyframes cwl-pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.6;transform:scale(1.3);}}
+@keyframes cwl-slideIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.cwl-wrap{display:flex;flex-direction:column;gap:0;animation:cwl-slideIn 0.35s ease both;}
+.cwl-control-bar{background:linear-gradient(135deg,#0F172A 0%,#1E3A5F 100%);border-radius:16px;padding:16px 20px;display:flex;align-items:stretch;gap:0;margin-bottom:16px;overflow-x:auto;}
+.cwl-kpi{flex:1;min-width:80px;padding:8px 16px;border-right:1px solid rgba(255,255,255,0.1);cursor:default;border-radius:8px;transition:background 0.15s;}
+.cwl-kpi:last-child{border-right:none;}
+.cwl-kpi.clickable{cursor:pointer;}
+.cwl-kpi.clickable:hover{background:rgba(255,255,255,0.06);}
+.cwl-kpi.active{background:rgba(245,166,35,0.12);}
+.cwl-kpi-val{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;color:#fff;line-height:1;}
+.cwl-kpi-val.alert{color:#F5A623;}
+.cwl-kpi-val.warn{color:#FBBF24;}
+.cwl-kpi-label{font-size:11px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.8px;margin-top:3px;}
+.cwl-kpi-sub{font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px;}
+.cwl-body{display:grid;grid-template-columns:1fr 270px;gap:16px;align-items:start;}
+.cwl-pq{background:#fff;border:1px solid #E2E8F0;border-radius:16px;overflow:hidden;margin-bottom:16px;}
+.cwl-pq-hd{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #F1F5F9;}
+.cwl-pq-dot{width:9px;height:9px;border-radius:50%;background:#EF4444;animation:cwl-pulse-dot 1.8s ease-in-out infinite;flex-shrink:0;}
+.cwl-pq-title{font-family:'Bricolage Grotesque',sans-serif;font-size:14px;font-weight:800;color:#0F172A;flex:1;}
+.cwl-pq-count{font-size:12px;font-weight:700;color:#fff;background:#EF4444;border-radius:50px;padding:2px 8px;}
+.cwl-pq-empty{padding:20px 18px;text-align:center;color:#94A3B8;font-size:13px;}
+.cwl-pq-card{display:flex;align-items:flex-start;gap:12px;padding:12px 18px;border-bottom:1px solid #F8FAFC;cursor:pointer;transition:background 0.15s;}
+.cwl-pq-card:last-child{border-bottom:none;}
+.cwl-pq-card:hover{background:#F8FAFC;}
+.cwl-pq-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.cwl-pq-icon.expiry{background:#FEE2E2;}
+.cwl-pq-icon.message{background:#DBEAFE;}
+.cwl-pq-icon.submitted{background:#DCFCE7;}
+.cwl-pq-body{flex:1;min-width:0;}
+.cwl-pq-name{font-size:13px;font-weight:700;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cwl-pq-detail{font-size:12px;color:#64748B;margin-top:1px;}
+.cwl-pq-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:50px;white-space:nowrap;flex-shrink:0;margin-top:2px;}
+.cwl-pq-badge.critical{background:#FEE2E2;color:#DC2626;}
+.cwl-pq-badge.warning{background:#FEF3C7;color:#92400E;}
+.cwl-pq-badge.info{background:#DBEAFE;color:#1D4ED8;}
+.cwl-pq-badge.success{background:#DCFCE7;color:#166534;}
+.cwl-portfolio{background:#fff;border:1px solid #E2E8F0;border-radius:16px;overflow:hidden;}
+.cwl-pf-hd{display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 70px;gap:8px;padding:10px 18px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#94A3B8;}
+.cwl-pf-row{display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr 70px;gap:8px;padding:12px 18px;border-bottom:1px solid #F8FAFC;align-items:center;cursor:default;transition:background 0.15s;position:relative;}
+.cwl-pf-row:last-child{border-bottom:none;}
+.cwl-pf-row:hover{background:#F8FAFC;}
+.cwl-pf-row.idle-critical{background:#FFF7F7;}
+.cwl-pf-name{font-size:13px;font-weight:700;color:#0F172A;display:flex;align-items:center;gap:6px;}
+.cwl-pf-pkg{font-size:11px;color:#64748B;margin-top:2px;}
+.cwl-unread-dot{width:7px;height:7px;border-radius:50%;background:#3B82F6;flex-shrink:0;}
+.cwl-pill{display:flex;flex-direction:column;gap:4px;}
+.cwl-pill-label{font-size:11px;font-weight:600;color:#475569;}
+.cwl-pill-track{height:5px;background:#E2E8F0;border-radius:50px;overflow:hidden;}
+.cwl-pill-fill{height:5px;border-radius:50px;background:#10B981;transition:width 0.5s ease;}
+.cwl-pill-fill.mid{background:#F59E0B;}
+.cwl-pill-fill.low{background:#EF4444;}
+.cwl-last-active{font-size:12px;color:#64748B;}
+.cwl-last-active.critical{color:#DC2626;font-weight:700;}
+.cwl-qa-wrap{position:relative;display:flex;justify-content:flex-end;}
+.cwl-qa-btn{width:28px;height:28px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:#64748B;transition:all 0.15s;}
+.cwl-qa-btn:hover{background:#F1F5F9;border-color:#CBD5E1;}
+.cwl-qa-menu{display:none;position:absolute;right:0;top:32px;background:#fff;border:1px solid #E2E8F0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:100;min-width:150px;overflow:hidden;}
+.cwl-qa-menu.open{display:block;}
+.cwl-qa-item{padding:9px 14px;font-size:12px;font-weight:600;color:#334155;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s;}
+.cwl-qa-item:hover{background:#F8FAFC;}
+.cwl-intel{background:rgba(10,18,36,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;position:sticky;top:16px;}
+.cwl-intel-hd{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.1);}
+.cwl-intel-title{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:800;color:#fff;}
+.cwl-intel-sub{font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px;}
+.cwl-intel-section{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.cwl-intel-section:last-child{border-bottom:none;}
+.cwl-intel-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.4);margin-bottom:10px;}
+.cwl-heat-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.cwl-heat-row:last-child{margin-bottom:0;}
+.cwl-heat-name{font-size:12px;color:rgba(255,255,255,0.7);width:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+.cwl-heat-track{flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:50px;overflow:hidden;}
+.cwl-heat-fill{height:6px;border-radius:50px;background:#10B981;transition:width 0.6s ease;}
+.cwl-heat-fill.yellow{background:#F59E0B;}
+.cwl-heat-fill.red{background:#EF4444;}
+.cwl-heat-pct{font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);width:28px;text-align:right;flex-shrink:0;}
+.cwl-intel-stat{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.cwl-intel-stat:last-child{margin-bottom:0;}
+.cwl-intel-stat-label{font-size:12px;color:rgba(255,255,255,0.55);}
+.cwl-intel-stat-val{font-size:12px;font-weight:700;color:#fff;}
+.cwl-intel-tip{background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.2);border-radius:8px;padding:10px 12px;font-size:11px;color:rgba(255,255,255,0.7);line-height:1.5;}
+@media(max-width:900px){.cwl-body{grid-template-columns:1fr;}.cwl-intel{position:relative;top:auto;}}
+@media(max-width:640px){.cwl-pf-hd,.cwl-pf-row{grid-template-columns:2fr 1.4fr 1fr 60px;}.cwl-pf-hd>*:nth-child(4),.cwl-pf-row>*:nth-child(4){display:none;}.cwl-control-bar{flex-wrap:wrap;}.cwl-kpi{border-right:none;flex:1 1 calc(50% - 8px);padding:8px 12px;}}
 </style>
 </head>
 <body>
@@ -3980,33 +4063,6 @@ body.portal-active nav{display:none!important;}
       </div>
       <!-- Worklist -->
       <div id="cm-worklist" class="p-panel active">
-        <div id="cm-worklist-status"></div>
-        <div class="p-page-hd"><div class="p-page-title">Worklist</div><div class="p-page-sub">Your assigned clients, capacity, and priority tasks.</div></div>
-        <div class="p-stat-grid" style="grid-template-columns:repeat(4,1fr);">
-          <div class="p-stat-card"><div class="p-stat-icon">👥</div><div class="p-stat-label">Assigned Clients</div><div class="p-stat-value" id="cm-stat-clients">0</div></div>
-          <div class="p-stat-card"><div class="p-stat-icon">⚠️</div><div class="p-stat-label">Overdue Tasks</div><div class="p-stat-value" id="cm-stat-overdue">0</div></div>
-          <div class="p-stat-card"><div class="p-stat-icon">💬</div><div class="p-stat-label">Unread Messages</div><div class="p-stat-value" id="cm-stat-msgs">0</div></div>
-          <div class="p-stat-card"><div class="p-stat-icon">📊</div><div class="p-stat-label">Capacity</div><div class="p-stat-value" id="cm-stat-cap">0%</div></div>
-        </div>
-        <!-- My Capacity Bar -->
-        <div class="p-card" style="margin-bottom:20px;">
-          <div class="p-card-title" style="margin-bottom:10px;">My Load</div>
-          <div id="cm-my-capacity"></div>
-        </div>
-        <!-- Peer Availability -->
-        <div class="p-card" style="margin-bottom:20px;">
-          <div class="p-card-title" style="margin-bottom:10px;">Team Availability (for transfers)</div>
-          <div id="cm-peer-capacity"></div>
-        </div>
-        <!-- Expiry Alerts for CM -->
-        <div class="p-card" style="margin-bottom:20px;">
-          <div class="p-card-title" style="margin-bottom:10px;">Document Expiry Alerts</div>
-          <div id="cm-expiry-alerts"></div>
-        </div>
-        <div class="p-card">
-          <div class="p-card-title" style="margin-bottom:14px;">My Clients</div>
-          <div class="p-table-wrap"><table class="p-table"><thead><tr><th>Client</th><th>Package</th><th>Stage</th><th>Docs</th><th>Priority</th><th>Urgency</th><th>Actions</th></tr></thead><tbody id="cm-clients-tbody"></tbody></table></div>
-        </div>
       </div>
       <!-- CM Applications -->
       <div id="cm-applications" class="p-panel">

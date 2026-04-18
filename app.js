@@ -5161,92 +5161,259 @@ function pRenderCM(){pRenderCMWorklist();}
 function pGetMyCMApps(){
   return pGetApps().filter(function(a){return a.cmId===pUser.id;});
 }
-function pRenderCMWorklist(){
-  /* System status banner (Efficiency Risk warning) */
-  var sysStatus=pGetSystemStatus();
-  var isCritical=sysStatus.indexOf('Critical')!==-1||sysStatus.indexOf('High')!==-1;
-  if(isCritical){
-    setHTML('cm-worklist-status','<div class="system-status-banner status-critical">'
-      +'<div class="system-status-icon">🔴</div>'
-      +'<div class="system-status-body">'
-      +'<div class="system-status-title">⚠ Efficiency Risk — '+escHtml(sysStatus)+'</div>'
-      +'<div class="system-status-detail">All cases may experience extended processing times. Proactively manage client expectations and consider alternative provinces.</div>'
-      +'</div></div>');
-  } else if(sysStatus!=='Normal'){
-    setHTML('cm-worklist-status','<div class="system-status-banner status-moderate">'
-      +'<div class="system-status-icon">🟡</div>'
-      +'<div class="system-status-body">'
-      +'<div class="system-status-title">System Status: '+escHtml(sysStatus)+'</div>'
-      +'<div class="system-status-detail">Some provinces experiencing delays. Check Province Tracker for details.</div>'
-      +'</div></div>');
-  } else {
-    setHTML('cm-worklist-status','');
+/* ── CM Worklist helpers ── */
+function pGetPriorityQueueItems(myApps,users,allMsgs,expiries){
+  var items=[];
+  /* 1. Expiring docs ≤15 days */
+  expiries.forEach(function(e){
+    if(e.daysLeft<=15){
+      var u=users.find(function(x){return x.id===e.userId;})||{};
+      items.push({
+        type:'expiry',appId:e.appId,userId:e.userId,
+        name:(u.first||'')+' '+(u.last||''),
+        detail:e.docKey.replace(/_/g,' ')+(e.daysLeft<=0?' — Expired '+Math.abs(e.daysLeft)+'d ago':' — '+e.daysLeft+'d left'),
+        urgency:e.daysLeft<=5?'critical':'warning',
+        sortKey:e.daysLeft
+      });
+    }
+  });
+  /* 2. Unread messages grouped by sender */
+  var unreadMap={};
+  allMsgs.forEach(function(m){
+    if(!m.read&&pUser&&m.toId===pUser.id){
+      if(!unreadMap[m.fromId])unreadMap[m.fromId]={count:0,preview:'',ts:''};
+      unreadMap[m.fromId].count++;
+      if(!unreadMap[m.fromId].ts||new Date(m.ts)>new Date(unreadMap[m.fromId].ts)){
+        unreadMap[m.fromId].ts=m.ts;
+        unreadMap[m.fromId].preview=m.body||'';
+      }
+    }
+  });
+  Object.keys(unreadMap).forEach(function(fromId){
+    var u=users.find(function(x){return x.id===fromId;})||{};
+    var entry=unreadMap[fromId];
+    var app=myApps.find(function(a){return a.userId===fromId;});
+    var preview=entry.preview.length>50?entry.preview.substring(0,50)+'\u2026':entry.preview;
+    items.push({
+      type:'message',appId:app?app.id:null,userId:fromId,
+      name:(u.first||'')+' '+(u.last||''),
+      detail:entry.count+' unread \u2014 \u201c'+preview+'\u201d',
+      urgency:'info',sortKey:1000
+    });
+  });
+  /* 3. Docs submitted awaiting review */
+  myApps.forEach(function(a){
+    if(a.docsSubmitted&&a.stage<2){
+      var u=users.find(function(x){return x.id===a.userId;})||{};
+      items.push({
+        type:'submitted',appId:a.id,userId:a.userId,
+        name:(u.first||'')+' '+(u.last||''),
+        detail:'Documents submitted \u2014 awaiting review',
+        urgency:'success',sortKey:2000
+      });
+    }
+  });
+  /* Sort: critical→warning→info→success, then by sortKey */
+  var urgOrder={critical:0,warning:1,info:2,success:3};
+  items.sort(function(a,b){
+    var ud=(urgOrder[a.urgency]||0)-(urgOrder[b.urgency]||0);
+    return ud!==0?ud:a.sortKey-b.sortKey;
+  });
+  return items;
+}
+function pCWLFilter(filter,el){
+  document.querySelectorAll('.cwl-pf-row').forEach(function(r){
+    var tags=(r.dataset.filter||'').split(' ');
+    r.style.display=(filter==='all'||tags.indexOf(filter)!==-1)?'':'none';
+  });
+  document.querySelectorAll('.cwl-kpi.clickable').forEach(function(k){k.classList.remove('active');});
+  if(el)el.classList.add('active');
+}
+function pCWLLogNote(appId){
+  var note=prompt('Add internal note for this case:');
+  if(!note||!note.trim())return;
+  pLogAction(appId,'cm',pUser.first+' '+pUser.last,'\uD83D\uDCDD Note added',note.trim(),'internal','info');
+  showToast('\u2713 Note saved to case log');
+}
+function pCWLToggleQA(btn){
+  var menu=btn.nextElementSibling;
+  if(!menu)return;
+  var wasOpen=menu.classList.contains('open');
+  document.querySelectorAll('.cwl-qa-menu.open').forEach(function(m){m.classList.remove('open');});
+  if(!wasOpen){
+    menu.classList.add('open');
+    setTimeout(function(){
+      document.addEventListener('click',function closeQA(e){
+        if(!e.target.closest('.cwl-qa-wrap')){
+          document.querySelectorAll('.cwl-qa-menu.open').forEach(function(m){m.classList.remove('open');});
+        }
+        document.removeEventListener('click',closeQA);
+      });
+    },0);
   }
-  var myApps=pGetMyCMApps();var users=pGetUsers();var allApps=pGetApps();
-  var msgs=pGetMsgs().filter(function(m){return !m.read&&m.toId===pUser.id;});
+}
+function pRenderCMWorklist(){
+  var panel=document.getElementById('cm-worklist');
+  if(!panel)return;
+  var myApps=pGetMyCMApps();
+  var users=pGetUsers();
+  var allApps=pGetApps();
+  var allMsgs=pGetMsgs();
+  var msgs=allMsgs.filter(function(m){return !m.read&&m.toId===pUser.id;});
   var clients=users.filter(function(u){return u.cmId===pUser.id;});
   var activeCount=myApps.filter(function(a){return a.stage<5;}).length;
   var maxCap=pUser.maxCapacity||CM_MAX_CAPACITY;
-  var capPct=Math.round(activeCount/maxCap*100);
-  setText('cm-stat-clients',clients.length);
-  setText('cm-stat-overdue',myApps.filter(function(a){return a.stage<2&&new Date()-new Date(a.created)>7*24*3600*1000;}).length);
-  setText('cm-stat-msgs',msgs.length);
-  setText('cm-stat-cap',capPct+'%');
-
-  /* My capacity bar */
-  setHTML('cm-my-capacity',pCapacityBar(activeCount,maxCap)
-    +'<div style="font-size:12px;color:var(--text3);margin-top:6px;">'+activeCount+' active cases out of '+maxCap+' maximum capacity</div>');
-
-  /* Peer availability */
-  var otherCMs=users.filter(function(u){return u.role==='case_manager'&&u.id!==pUser.id;});
-  var peerHtml='';
-  if(otherCMs.length){
-    otherCMs.forEach(function(cm){
-      var cmActive=allApps.filter(function(a){return a.cmId===cm.id&&a.stage<5;}).length;
-      var cmMax=cm.maxCapacity||CM_MAX_CAPACITY;
-      peerHtml+='<div style="margin-bottom:10px;"><div style="font-size:13px;font-weight:600;margin-bottom:4px;">'+escHtml(cm.first+' '+cm.last)+'</div>'+pCapacityBar(cmActive,cmMax)+'</div>';
-    });
-  } else {
-    peerHtml='<p style="color:var(--text3);font-size:13px;">No other case managers.</p>';
-  }
-  setHTML('cm-peer-capacity',peerHtml);
-
-  /* Expiry alerts for assigned apps */
+  var capPct=maxCap?Math.round(activeCount/maxCap*100):0;
   var expiries=pGetDocExpiries(myApps,users);
-  var urgentExpiries=expiries.filter(function(e){return e.status==='expired'||e.status==='expiring';}).slice(0,5);
-  var expHtml='';
-  if(urgentExpiries.length){
-    urgentExpiries.forEach(function(e){
-      var isExpired=e.status==='expired';
-      expHtml+='<div class="expiry-alert-card'+(isExpired?'':' warn')+'">'
-        +'<div class="expiry-alert-icon">'+(isExpired?'\uD83D\uDEA8':'\u23F0')+'</div>'
-        +'<div class="expiry-alert-body">'
-        +'<div class="expiry-alert-title">'+escHtml(e.userName)+' — '+escHtml(e.docKey.replace(/_/g,' '))+'</div>'
-        +'<div class="expiry-alert-sub">'+(isExpired?'Expired '+Math.abs(e.daysLeft)+' days ago':'Expires in '+e.daysLeft+' days')+'</div>'
-        +'</div>'
-        +'<span class="expiry-badge '+e.status+'">'+(isExpired?'Expired':'Expiring')+'</span>'
-        +'</div>';
-    });
-  } else {
-    expHtml='<p style="color:var(--text3);font-size:13px;">No expiry alerts for your clients.</p>';
-  }
-  setHTML('cm-expiry-alerts',expHtml);
+  var urgentExpiries=expiries.filter(function(e){return e.daysLeft<=15;});
+  var overdue=myApps.filter(function(a){return a.stage<2&&new Date()-new Date(a.created)>7*24*3600*1000;}).length;
+  var pqItems=pGetPriorityQueueItems(myApps,users,allMsgs,expiries);
 
-  /* Client table with tri-state bars, priority scores & urgency */
-  setHTML('cm-clients-tbody',clients.map(function(u){
+  /* ── System status banner ── */
+  var sysStatus=pGetSystemStatus();
+  var isCritical=sysStatus.indexOf('Critical')!==-1||sysStatus.indexOf('High')!==-1;
+  var statusHtml='';
+  if(isCritical){
+    statusHtml='<div class="system-status-banner status-critical"><div class="system-status-icon">\uD83D\uDD34</div><div class="system-status-body"><div class="system-status-title">\u26A0 Efficiency Risk \u2014 '+escHtml(sysStatus)+'</div><div class="system-status-detail">All cases may experience extended processing times. Proactively manage client expectations and consider alternative provinces.</div></div></div>';
+  }else if(sysStatus!=='Normal'){
+    statusHtml='<div class="system-status-banner status-moderate"><div class="system-status-icon">\uD83D\uDFE1</div><div class="system-status-body"><div class="system-status-title">System Status: '+escHtml(sysStatus)+'</div><div class="system-status-detail">Some provinces experiencing delays. Check Province Tracker for details.</div></div></div>';
+  }
+
+  /* ── Control Bar ── */
+  var capClass=capPct>=90?'alert':capPct>=70?'warn':'';
+  var controlHtml='<div class="cwl-control-bar">'
+    +'<div class="cwl-kpi"><div class="cwl-kpi-val">'+clients.length+'</div><div class="cwl-kpi-label">Clients</div><div class="cwl-kpi-sub">Assigned</div></div>'
+    +'<div class="cwl-kpi clickable" data-filter="overdue" onclick="pCWLFilter(\'overdue\',this)"><div class="cwl-kpi-val'+(overdue>0?' alert':'')+'">'+overdue+'</div><div class="cwl-kpi-label">Overdue</div><div class="cwl-kpi-sub">Click to filter</div></div>'
+    +'<div class="cwl-kpi clickable" data-filter="unread" onclick="pCWLFilter(\'unread\',this)"><div class="cwl-kpi-val'+(msgs.length>0?' warn':'')+'">'+msgs.length+'</div><div class="cwl-kpi-label">Unread</div><div class="cwl-kpi-sub">Click to filter</div></div>'
+    +'<div class="cwl-kpi clickable" data-filter="attn" onclick="pCWLFilter(\'attn\',this)"><div class="cwl-kpi-val'+(pqItems.length>0?' alert':'')+'">'+pqItems.length+'</div><div class="cwl-kpi-label">Alerts</div><div class="cwl-kpi-sub">Click to filter</div></div>'
+    +'<div class="cwl-kpi"><div class="cwl-kpi-val '+capClass+'">'+capPct+'%</div><div class="cwl-kpi-label">Capacity</div><div class="cwl-kpi-sub">'+activeCount+' / '+maxCap+'</div></div>'
+    +'</div>';
+
+  /* ── Priority Queue ── */
+  var pqCardsHtml='';
+  if(pqItems.length){
+    pqCardsHtml=pqItems.slice(0,6).map(function(item){
+      var icon=item.type==='expiry'?'\u23F0':item.type==='message'?'\uD83D\uDCAC':'\uD83D\uDCC4';
+      var action=item.type==='message'
+        ?'pOpenThread(\''+item.userId+'\',\'cm\');pNav(\'cm\',\'support\',null)'
+        :(item.appId?'pCMManageApp(\''+item.appId+'\')':'');
+      return '<div class="cwl-pq-card"'+(action?' onclick="'+action+'"':'')+'>'
+        +'<div class="cwl-pq-icon '+item.type+'">'+icon+'</div>'
+        +'<div class="cwl-pq-body"><div class="cwl-pq-name">'+escHtml(item.name)+'</div>'
+        +'<div class="cwl-pq-detail">'+escHtml(item.detail)+'</div></div>'
+        +'<span class="cwl-pq-badge '+item.urgency+'">'+item.urgency.charAt(0).toUpperCase()+item.urgency.slice(1)+'</span>'
+        +'</div>';
+    }).join('');
+  }else{
+    pqCardsHtml='<div class="cwl-pq-empty">\uD83C\uDF89 No immediate attention required \u2014 all cases on track.</div>';
+  }
+  var pqHtml='<div class="cwl-pq">'
+    +'<div class="cwl-pq-hd"><div class="cwl-pq-dot"></div><div class="cwl-pq-title">Immediate Attention Required</div>'+(pqItems.length?'<div class="cwl-pq-count">'+pqItems.length+'</div>':'')+'</div>'
+    +pqCardsHtml
+    +'</div>';
+
+  /* ── Portfolio View ── */
+  var pfRowsHtml=clients.map(function(u){
     var app=myApps.find(function(a){return a.userId===u.id;});
-    var priScore=app?calculatePriorityScore(app):0;
-    return '<tr><td style="font-weight:600;">'+escHtml(u.first+' '+u.last)+'</td>'
-      +'<td>'+(app?escHtml(P_PKG_NAMES[app.pkg]||app.pkg):'—')+'</td>'
-      +'<td>'+(app?'<span class="p-badge bd-prog">'+P_STAGES[app.stage]+'</span>':'—')+'</td>'
-      +'<td>'+(app?pTriStateBar(app):'—')+'</td>'
-      +'<td>'+(app?pPriorityBadge(priScore):'—')+'</td>'
-      +'<td>'+(app?pUrgencyFlag(app.updated):'—')+'</td>'
-      +'<td><div class="p-tbl-actions">'
-      +'<button class="p-btn p-btn-ghost p-btn-sm" onclick="pOpenThread(\''+u.id+'\',\'cm\');pNav(\'cm\',\'support\',null)">Message</button>'
-      +(app?'<button class="p-btn p-btn-primary p-btn-sm" onclick="pCMManageApp(\''+app.id+'\')">Manage</button>':'')
-      +'</div></td></tr>';
-  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px;">No clients assigned.</td></tr>');
+    if(!app)return '';
+    var unreadCount=allMsgs.filter(function(m){return m.fromId===u.id&&m.toId===pUser.id&&!m.read;}).length;
+    var lastUpdated=app.updated?new Date(app.updated):new Date(app.created);
+    var daysSince=Math.floor((new Date()-lastUpdated)/(1000*60*60*24));
+    var isIdleCritical=daysSince>=7;
+    var isOverdue=app.stage<2&&new Date()-new Date(app.created)>7*24*3600*1000;
+    var hasPqItem=pqItems.some(function(item){return item.userId===u.id;});
+    var filterTags=['all'];
+    if(unreadCount>0)filterTags.push('unread');
+    if(isOverdue)filterTags.push('overdue');
+    if(isIdleCritical||hasPqItem)filterTags.push('attn');
+    var stageMax=P_STAGES.length>1?P_STAGES.length-1:1;
+    var stagePct=Math.round(app.stage/stageMax*100);
+    var pillClass=stagePct>=66?'':stagePct>=33?' mid':' low';
+    var pillHtml='<div class="cwl-pill">'
+      +'<div class="cwl-pill-label">'+escHtml(P_STAGES[app.stage]||'Stage '+app.stage)+'</div>'
+      +'<div class="cwl-pill-track"><div class="cwl-pill-fill'+pillClass+'" data-pct="'+stagePct+'" style="width:0%"></div></div>'
+      +'</div>';
+    var lastLabel=daysSince===0?'Today':daysSince===1?'Yesterday':daysSince+'d ago';
+    var lastHtml='<div class="cwl-last-active'+(isIdleCritical?' critical':'')+'">'+lastLabel+'</div>';
+    var qaHtml='<div class="cwl-qa-wrap">'
+      +'<button class="cwl-qa-btn" onclick="event.stopPropagation();pCWLToggleQA(this)" title="Actions">\u22EE</button>'
+      +'<div class="cwl-qa-menu">'
+      +'<div class="cwl-qa-item" onclick="pCMManageApp(\''+app.id+'\')">\uD83D\uDCC1 Manage Case</div>'
+      +'<div class="cwl-qa-item" onclick="pOpenThread(\''+u.id+'\',\'cm\');pNav(\'cm\',\'support\',null)">\uD83D\uDCAC Message</div>'
+      +'<div class="cwl-qa-item" onclick="pCWLLogNote(\''+app.id+'\')">\uD83D\uDCDD Add Note</div>'
+      +'</div>'
+      +'</div>';
+    return '<div class="cwl-pf-row'+(isIdleCritical?' idle-critical':'')+'" data-filter="'+filterTags.join(' ')+'">'
+      +'<div><div class="cwl-pf-name">'+(unreadCount>0?'<div class="cwl-unread-dot"></div>':'')+'<span>'+escHtml(u.first+' '+u.last)+'</span></div>'
+      +'<div class="cwl-pf-pkg">'+escHtml(P_PKG_NAMES[app.pkg]||app.pkg)+'</div></div>'
+      +pillHtml
+      +lastHtml
+      +'<div>'+pUrgencyFlag(app.updated)+'</div>'
+      +qaHtml
+      +'</div>';
+  }).filter(Boolean).join('');
+
+  var portfolioHtml='<div class="cwl-portfolio">'
+    +'<div class="cwl-pf-hd"><div>Client</div><div>Progress</div><div>Last Active</div><div>Urgency</div><div></div></div>'
+    +(pfRowsHtml||'<div style="padding:24px;text-align:center;color:#94A3B8;font-size:13px;">No clients assigned.</div>')
+    +'</div>';
+
+  /* ── Intelligence Panel ── */
+  var otherCMs=users.filter(function(u){return u.role==='case_manager'&&u.id!==pUser.id;});
+  var myHeatClass=capPct>=90?'red':capPct>=70?'yellow':'';
+  var heatRowsHtml='<div class="cwl-heat-row">'
+    +'<div class="cwl-heat-name">You</div>'
+    +'<div class="cwl-heat-track"><div class="cwl-heat-fill '+myHeatClass+'" style="width:'+capPct+'%"></div></div>'
+    +'<div class="cwl-heat-pct">'+capPct+'%</div>'
+    +'</div>';
+  otherCMs.forEach(function(cm){
+    var cmActive=allApps.filter(function(a){return a.cmId===cm.id&&a.stage<5;}).length;
+    var cmMax=cm.maxCapacity||CM_MAX_CAPACITY;
+    var cmPct=cmMax?Math.round(cmActive/cmMax*100):0;
+    var hc=cmPct>=90?'red':cmPct>=70?'yellow':'';
+    heatRowsHtml+='<div class="cwl-heat-row">'
+      +'<div class="cwl-heat-name">'+escHtml(cm.first)+'</div>'
+      +'<div class="cwl-heat-track"><div class="cwl-heat-fill '+hc+'" style="width:'+cmPct+'%"></div></div>'
+      +'<div class="cwl-heat-pct">'+cmPct+'%</div>'
+      +'</div>';
+  });
+  var completedCount=myApps.filter(function(a){return a.stage===5;}).length;
+  var avgStage=myApps.length?(myApps.reduce(function(s,a){return s+a.stage;},0)/myApps.length).toFixed(1):'\u2014';
+  var tip=capPct>=90
+    ?'\u26A0\uFE0F At capacity. Consider requesting a case transfer or pausing new intakes.'
+    :overdue>0
+    ?'\uD83D\uDEA8 '+overdue+' overdue case'+(overdue>1?'s':'')+'. Prioritise doc review to unblock clients.'
+    :msgs.length>0
+    ?'\uD83D\uDCAC '+msgs.length+' unread message'+(msgs.length>1?'s':'')+' waiting. A quick reply boosts client satisfaction.'
+    :'\u2705 All clear. Great time to proactively check in with idle clients.';
+  var alertStyle=urgentExpiries.length>0?' style="color:#F5A623"':'';
+  var intelHtml='<div class="cwl-intel">'
+    +'<div class="cwl-intel-hd"><div class="cwl-intel-title">Intelligence Panel</div><div class="cwl-intel-sub">Team capacity &amp; case insights</div></div>'
+    +'<div class="cwl-intel-section"><div class="cwl-intel-label">Capacity Load</div>'+heatRowsHtml+'</div>'
+    +'<div class="cwl-intel-section"><div class="cwl-intel-label">My Stats</div>'
+    +'<div class="cwl-intel-stat"><div class="cwl-intel-stat-label">Active Cases</div><div class="cwl-intel-stat-val">'+activeCount+'</div></div>'
+    +'<div class="cwl-intel-stat"><div class="cwl-intel-stat-label">Completed</div><div class="cwl-intel-stat-val">'+completedCount+'</div></div>'
+    +'<div class="cwl-intel-stat"><div class="cwl-intel-stat-label">Avg Stage</div><div class="cwl-intel-stat-val">'+avgStage+'</div></div>'
+    +'<div class="cwl-intel-stat"><div class="cwl-intel-stat-label">Expiry Alerts</div><div class="cwl-intel-stat-val"'+alertStyle+'>'+urgentExpiries.length+'</div></div>'
+    +'</div>'
+    +'<div class="cwl-intel-section"><div class="cwl-intel-tip">'+tip+'</div></div>'
+    +'</div>';
+
+  /* ── Assemble ── */
+  panel.innerHTML=statusHtml
+    +'<div class="cwl-wrap">'
+    +controlHtml
+    +'<div class="cwl-body">'
+    +'<div>'+pqHtml+portfolioHtml+'</div>'
+    +intelHtml
+    +'</div></div>';
+
+  /* Animate progress pills after paint */
+  requestAnimationFrame(function(){
+    document.querySelectorAll('.cwl-pill-fill[data-pct]').forEach(function(el){
+      el.style.width=el.dataset.pct+'%';
+    });
+  });
 }
 function pRenderCMApps(){
   var apps=pGetMyCMApps();var users=pGetUsers();
